@@ -1819,22 +1819,22 @@ class RepoAnalyzer:
                                     full_path = os.path.join(self.local_repo_path, path)
                                     
                                     # Check if it's a directory that should exist
-                                    if pattern.endswith('/') or '.' not in os.path.basename(pattern):
+                                    if path.endswith('/') or '.' not in os.path.basename(path):
                                         if os.path.isdir(full_path) and os.listdir(full_path):  # Directory exists and not empty
-                                            ci_configs_found.append(ci_type)
+                                            security_features.append(feature)
                                             break
                                     # Check if it's a file that should exist
                                     elif os.path.isfile(full_path):
-                                        ci_configs_found.append(ci_type)
+                                        security_features.append(feature)
                                         break
                                         
                                     # Special case for patterns with directories
-                                    elif '/' in pattern:
+                                    elif '/' in path:
                                         dir_path = os.path.dirname(full_path)
                                         # If the directory exists, check if the file exists
                                         if os.path.isdir(dir_path):
                                             if os.path.isfile(full_path):
-                                                ci_configs_found.append(ci_type)
+                                                security_features.append(feature)
                                                 break
                         else:
                             # Usa API GitHub per il controllo
@@ -2498,19 +2498,93 @@ class RepoAnalyzer:
     def _check_discussions_activity(self) -> float:
         """Calcola il livello di attività nelle GitHub Discussions."""
         try:
-            if not self.repo.has_discussions:
+            # Safely check if discussions are enabled - attribute may not exist
+            has_discussions = False
+            try:
+                has_discussions = getattr(self.repo, "has_discussions", False)
+            except Exception:
+                # Fallback check by trying to access discussions directly
+                try:
+                    discussions = self.repo.get_discussions()
+                    has_discussions = True
+                except Exception:
+                    return 0.0  # Discussions not available or not supported by PyGithub version
+            
+            if not has_discussions:
                 return 0.0  # Discussions not enabled
-
-            discussions = self.repo.get_discussions()
-            recent_discussions = [d for d in discussions if (datetime.datetime.now() - d.created_at).days <= 30]
-            total_comments = sum(d.comments_count for d in recent_discussions)
-
-            # Normalize score: more discussions and comments => higher score
-            score = self._normalize_score(len(recent_discussions) + total_comments, 0, 50, 0, 10)
-            return score
+            
+            try:
+                discussions = self.repo.get_discussions()
+                recent_discussions = []
+                for d in discussions[:10]:  # Limit to avoid excessive API calls
+                    if (datetime.datetime.now(datetime.timezone.utc) - self._ensure_tz_aware(d.created_at)).days <= 30:
+                        recent_discussions.append(d)
+                
+                total_comments = sum(getattr(d, "comments_count", 0) for d in recent_discussions)
+                
+                # Normalize score: more discussions and comments => higher score
+                score = self._normalize_score(len(recent_discussions) + total_comments, 0, 50, 0, 10)
+                return score
+            except Exception as e:
+                logger.error(f"Errore nell'accesso alle discussions: {e}", exc_info=True)
+                return 0.0
         except Exception as e:
             logger.error(f"Errore nel calcolo dell'attività delle Discussions: {e}", exc_info=True)
             return 0.0
+
+    def _check_badges_in_readme(self) -> bool:
+        """Verifica la presenza di badge nel README del repository."""
+        try:
+            # Try to get README content
+            readme_content = None
+            
+            if self.local_repo_path:
+                # Look for README files in local repo
+                readme_files = ["README.md", "readme.md", "README.rst", "readme.rst"]
+                for readme_file in readme_files:
+                    readme_path = os.path.join(self.local_repo_path, readme_file)
+                    if os.path.exists(readme_path):
+                        with open(readme_path, 'r', encoding='utf-8') as f:
+                            readme_content = f.read()
+                        break
+            else:
+                # Use GitHub API
+                try:
+                    readme = self._get_cached_data(
+                        "readme_content",
+                        lambda: self.repo.get_readme()
+                    )
+                    if readme:
+                        readme_content = readme.decoded_content.decode('utf-8')
+                except Exception as e:
+                    logger.warning(f"Errore nel recupero del README: {e}")
+                    return False
+            
+            if not readme_content:
+                return False
+                
+            # Check for common badge patterns in README
+            badge_patterns = [
+                r"!\[.*?\]\(https://img\.shields\.io",  # Shields.io badges
+                r"!\[.*?\]\(https://travis-ci\.org",     # Travis CI badges
+                r"!\[.*?\]\(https://github\.com/.*?/workflows",  # GitHub Actions badges
+                r"!\[.*?\]\(https://codecov\.io",        # Codecov badges
+                r"!\[.*?\]\(https://circleci\.com",      # CircleCI badges
+                r"<img.*?src=\"https://img\.shields\.io", # HTML shield badges
+                r"<img.*?src=\"https://github\.com/.*?/workflows", # HTML GitHub Actions badges
+                r"!\[.*?\]\(https://app\.codacy\.com",   # Codacy badges
+                r"!\[.*?\]\(https://coveralls\.io",      # Coveralls badges
+                r"!\[.*?\]\(https://badge\.fury\.io"     # Fury.io badges
+            ]
+            
+            for pattern in badge_patterns:
+                if re.search(pattern, readme_content):
+                    return True
+                    
+            return False
+        except Exception as e:
+            logger.error(f"Errore nella verifica dei badge nel README: {e}", exc_info=True)
+            return False
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")
