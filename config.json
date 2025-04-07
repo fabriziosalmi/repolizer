@@ -220,6 +220,20 @@
                 "testing_cicd": 2.5,
                 "setup_usabilita": 2.5
             }
+        },
+        {
+            "data_analisi": "2025-04-07 15:38:43",
+            "punteggio_totale": 3.87,
+            "punteggi": {
+                "popolarita_impatto": 1.03,
+                "attivita_manutenzione": 6.49,
+                "qualita_codice": 3.02,
+                "documentazione": 6.67,
+                "community_collaborazione": 6.84,
+                "sicurezza": 1.92,
+                "testing_cicd": 2.5,
+                "setup_usabilita": 2.5
+            }
         }
     ]
 }

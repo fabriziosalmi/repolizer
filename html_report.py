@@ -8,6 +8,22 @@ import json
 from datetime import datetime
 from jinja2 import Template
 
+# Import the category mapping from repolizer.py
+try:
+    from repolizer import CATEGORY_LABELS_MAPPING
+except ImportError:
+    # Fallback mapping if the import fails
+    CATEGORY_LABELS_MAPPING = {
+        "attivita_manutenzione": "Manutenzione",
+        "community_collaborazione": "Collaborazione",
+        "documentazione": "Documentazione",
+        "popolarita_impatto": "Distribuzione",
+        "qualita_codice": "Codice",
+        "setup_usabilita": "Adozione",
+        "sicurezza": "Sicurezza",
+        "testing_cicd": "Integrazione"
+    }
+
 def generate_html_report(results, output_file=None):
     """Genera un report HTML dai risultati dell'analisi.
 
@@ -31,15 +47,36 @@ def generate_html_report(results, output_file=None):
     # Prepara i dati per il template
     repo_name = results.get('nome_repository', 'N/A')
     
+    # Map category names using CATEGORY_LABELS_MAPPING
+    punteggi = {}
+    dettagli = {}
+    suggerimenti = {}
+    
+    # Map scores
+    for categoria, punteggio in results.get('punteggi', {}).items():
+        display_name = CATEGORY_LABELS_MAPPING.get(categoria, categoria)
+        punteggi[display_name] = punteggio
+    
+    # Map details
+    for categoria, dettaglio in results.get('dettagli', {}).items():
+        display_name = CATEGORY_LABELS_MAPPING.get(categoria, categoria)
+        dettagli[display_name] = dettaglio
+    
+    # Map suggestions
+    for categoria, sugg in results.get('suggerimenti', {}).items():
+        display_name = CATEGORY_LABELS_MAPPING.get(categoria, categoria)
+        suggerimenti[display_name] = sugg
+    
     # Ensure data is properly formatted for charts
     report_data = {
         'repo_name': repo_name,
         'repo_url': results.get('url', f'https://github.com/{repo_name}'),
         'data_analisi': results.get('data_analisi', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-        'punteggi': results.get('punteggi', {}),
-        'dettagli': results.get('dettagli', {}),
-        'suggerimenti': results.get('suggerimenti', {}),
-        'punteggio_totale': results.get('punteggio_totale', 0)
+        'punteggi': punteggi,
+        'dettagli': dettagli,
+        'suggerimenti': suggerimenti,
+        'punteggio_totale': results.get('punteggio_totale', 0),
+        'category_mapping': CATEGORY_LABELS_MAPPING  # Pass mapping to template
     }
     
     # Process historical data to ensure it's in the right format
