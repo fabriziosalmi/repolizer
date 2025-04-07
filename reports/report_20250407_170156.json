@@ -1,14 +1,14 @@
 {
   "nome_repository": "fabriziosalmi/lws",
   "url": "https://github.com/fabriziosalmi/lws",
-  "data_analisi": "2025-04-07 16:09:04",
+  "data_analisi": "2025-04-07 17:01:41",
   "punteggi": {
-    "popolarita_impatto": 1.03,
+    "popolarita_impatto": 1.41,
     "attivita_manutenzione": 3.78,
-    "qualita_codice": 1.36,
-    "documentazione": 6.67,
+    "qualita_codice": 4.12,
+    "documentazione": 4.76,
     "community_collaborazione": 6.84,
-    "sicurezza": 1.92,
+    "sicurezza": 0.0,
     "testing_cicd": 2.5,
     "setup_usabilita": 2.5
   },
@@ -43,8 +43,8 @@
         "conta_punteggio": true
       },
       "dipendenti": {
-        "valore": "0 progetti dipendenti",
-        "punteggio": 0.0,
+        "valore": "13 progetti dipendenti",
+        "punteggio": 1.3,
         "peso": 5,
         "descrizione": "Impatto reale: quanti altri progetti si basano su questo",
         "conta_punteggio": true
@@ -118,28 +118,28 @@
     "qualita_codice": {
       "complessita_media": {
         "valore": "Media complessit\u00e0",
-        "punteggio": 0.27,
+        "punteggio": 7.8,
         "peso": 3,
         "descrizione": "Misura oggettiva della difficolt\u00e0 di comprensione/manutenzione del codice",
         "conta_punteggio": true
       },
       "aderenza_stile": {
         "valore": "Controllo stile",
-        "punteggio": 0.0,
+        "punteggio": 2.29,
         "peso": 4,
         "descrizione": "Consistenza e leggibilit\u00e0 del codice secondo standard definiti",
         "conta_punteggio": true
       },
       "code_smells": {
         "valore": "Analisi code smells",
-        "punteggio": 3.33,
+        "punteggio": 5.0,
         "peso": 3,
         "descrizione": "Pattern noti che suggeriscono problemi strutturali o di design",
         "conta_punteggio": true
       },
       "commenti_codice": {
         "valore": "Copertura commenti",
-        "punteggio": 2.29,
+        "punteggio": 2.02,
         "peso": 3,
         "descrizione": "Presenza e (potenzialmente) utilit\u00e0 dei commenti per spiegare logiche complesse",
         "conta_punteggio": true
@@ -154,8 +154,8 @@
         "conta_punteggio": true
       },
       "documentazione_estesa": {
-        "valore": "Docs/Wiki rilevati",
-        "punteggio": 10,
+        "valore": "Nessuna doc estesa",
+        "punteggio": 0,
         "peso": 4,
         "descrizione": "Disponibilit\u00e0 di guide pi\u00f9 approfondite (Wiki, /docs, sito esterno)",
         "conta_punteggio": true
@@ -214,25 +214,32 @@
     },
     "sicurezza": {
       "file_security": {
-        "valore": false,
+        "valore": "Non trovato",
         "punteggio": 0,
         "peso": 4,
         "descrizione": "Chiarezza su policy di sicurezza e reporting vulnerabilit\u00e0",
         "conta_punteggio": true
       },
       "github_security_features": {
-        "valore": "Non rilevato",
+        "valore": "Errore verifica",
         "punteggio": 0,
         "peso": 4,
         "descrizione": "Utilizzo di Dependabot, Code Scanning, Secret Scanning",
         "conta_punteggio": true
       },
       "dipendenze_aggiornate": {
-        "valore": "Analisi non disponibile",
-        "punteggio": 5,
+        "valore": "Non analizzato",
+        "punteggio": 0,
         "peso": 5,
         "descrizione": "Indica se le librerie/componenti esterni usati sono recenti (meno vulnerabilit\u00e0 note)",
         "conta_punteggio": true
+      },
+      "bandit_score": {
+        "valore": "Punteggio Bandit: 0.00/10",
+        "punteggio": 0.0,
+        "peso": 1,
+        "descrizione": "Punteggio basato sull'analisi di sicurezza statica con Bandit (0=molti problemi, 10=nessun problema).",
+        "conta_punteggio": false
       }
     },
     "testing_cicd": {
@@ -293,10 +300,7 @@
       "Crea template per issue e PR per standardizzare le richieste e facilitare i contributi",
       "Abilita GitHub Discussions per facilitare conversazioni pi\u00f9 ampie sulla community e sul progetto"
     ],
-    "sicurezza": [
-      "Aggiungi un file SECURITY.md per descrivere la policy di sicurezza del progetto",
-      "Attiva le funzioni di sicurezza di GitHub come Dependabot, CodeQL scanning e CODEOWNERS"
-    ],
+    "sicurezza": [],
     "testing_cicd": [
       "Aggiungi test automatizzati per migliorare la qualit\u00e0 e affidabilit\u00e0 del codice",
       "Configura un sistema di CI/CD come GitHub Actions per automatizzare test e deployment"
@@ -306,15 +310,15 @@
     ]
   },
   "storico": [],
-  "punteggio_totale": 3.33,
-  "valutazione_qualitativa": "VALUTAZIONE QUALITATIVA: Scarso\n\nRepository che richiede significativi miglioramenti.\n\nAree di miglioramento: popolarita_impatto, attivita_manutenzione, qualita_codice, sicurezza, testing_cicd, setup_usabilita",
+  "punteggio_totale": 3.24,
+  "valutazione_qualitativa": "VALUTAZIONE QUALITATIVA: Scarso\n\nRepository che richiede significativi miglioramenti.\n\nAree di miglioramento: Distribuzione, Manutenzione, Sicurezza, Integrazione, Adozione",
   "display_punteggi": {
-    "Distribuzione": 1.03,
+    "Distribuzione": 1.41,
     "Manutenzione": 3.78,
-    "Codice": 1.36,
-    "Documentazione": 6.67,
+    "Codice": 4.12,
+    "Documentazione": 4.76,
     "Collaborazione": 6.84,
-    "Sicurezza": 1.92,
+    "Sicurezza": 0.0,
     "Integrazione": 2.5,
     "Adozione": 2.5
   }

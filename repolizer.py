@@ -35,17 +35,47 @@ try:
 except ImportError:
     bandit = None
 
-# Decoratore per gestire i timeout
+try:
+    import safety  # type: ignore
+    safety_available = True
+except ImportError:
+    safety = None
+    safety_available = False
+
+# Decoratore per gestire i timeout con signal
 def timeout_handler(func):
-    """Decorator per gestire i timeout delle chiamate API."""
+    """Decorator per gestire i timeout delle chiamate API usando signal.
+    Imposta un timeout di DEFAULT_TIMEOUT secondi per la funzione decorata."""
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        # Definisce l'handler del segnale per gestire il timeout
+        def handle_timeout(signum, frame):
+            raise TimeoutError(f"Timeout di {DEFAULT_TIMEOUT}s superato per '{func.__name__}'")
+
         try:
-            return func(*args, **kwargs)
+            # Imposta il timer solo se la piattaforma lo supporta
+            if hasattr(signal, 'SIGALRM'):
+                # Salva il gestore precedente per ripristinarlo successivamente
+                old_handler = signal.signal(signal.SIGALRM, handle_timeout)
+                # Imposta il timeout
+                signal.alarm(DEFAULT_TIMEOUT)
+                
+            # Esegue la funzione
+            result = func(*args, **kwargs)
+            
+            # Cancella il timer se la piattaforma lo supporta
+            if hasattr(signal, 'SIGALRM'):
+                signal.alarm(0)
+                # Ripristina il gestore precedente
+                signal.signal(signal.SIGALRM, old_handler)
+                
+            return result
         except TimeoutError as e:
+            logger.error(f"Timeout durante l'esecuzione di {func.__name__}: {e}")
             print(f"Timeout durante l'esecuzione di {func.__name__}: {e}")
             return None, 0, False
         except Exception as e:
+            logger.error(f"Errore durante l'esecuzione di {func.__name__}: {e}")
             print(f"Errore durante l'esecuzione di {func.__name__}: {e}")
             return None, 0, False
     return wrapper
@@ -481,6 +511,7 @@ class RepoAnalyzer:
             
             # 2. Radon per complessità ciclomatica
             try:
+                # Use radon to scan for complexity-related issues
                 process = subprocess.run(["radon", "cc", effective_path, "--min", "C"], 
                                        capture_output=True, text=True, timeout=30)
                 output = process.stdout
@@ -654,8 +685,8 @@ class RepoAnalyzer:
                 created_at = self._ensure_tz_aware(pr.created_at)
                 if closed_at and created_at:
                     delta_days = (closed_at - created_at).days
-                    if delta_days >= 0: # Avoid negative times if clocks are weird
-                         closed_times.append(delta_days)
+                    if delta_days >= 0:
+                        closed_times.append(delta_days)
         self._cache["pr_data"] = {
             "total": total_pr,
             "merged": merged_pr,
@@ -1156,7 +1187,8 @@ class RepoAnalyzer:
                 valutazione += "Scarso\n\nRepository che richiede significativi miglioramenti."
                 
             # Identifica le aree più problematiche
-            aree_problematiche = [categoria for categoria, punteggio in self.results["punteggi"].items() 
+            aree_problematiche = [CATEGORY_LABELS_MAPPING.get(categoria, categoria) # Use mapped labels
+                                for categoria, punteggio in self.results["punteggi"].items() 
                                 if punteggio < 4]
             if aree_problematiche:
                 valutazione += "\n\nAree di miglioramento: " + ", ".join(aree_problematiche)
@@ -1166,8 +1198,18 @@ class RepoAnalyzer:
         # Aggiorna lo storico dei punteggi
         self._update_history()
         
-        security_score = self._check_security(self.local_repo_path if self.local_repo_path else ".")
-        print(f"Security score (Bandit): {security_score:.2f}")
+        # Esegui analisi di sicurezza aggiuntiva (Bandit) e aggiungi ai risultati
+        # Nota: Questo punteggio non è attualmente integrato nel punteggio totale
+        # ma viene mostrato e salvato nel report.
+        security_score_bandit = self._check_security(self.local_repo_path if self.local_repo_path else ".")
+        self.results["dettagli"].setdefault("sicurezza", {})["bandit_score"] = {
+            "valore": f"Punteggio Bandit: {security_score_bandit:.2f}/10",
+            "punteggio": security_score_bandit,
+            "peso": 1, # Considera se includere nel calcolo del punteggio di categoria
+            "descrizione": "Punteggio basato sull'analisi di sicurezza statica con Bandit (0=molti problemi, 10=nessun problema).",
+            "conta_punteggio": False # Non conta nel punteggio di categoria per ora
+        }
+        print(f"Security score (Bandit): {security_score_bandit:.2f}")
         
         return self.results
 
@@ -1655,7 +1697,7 @@ class RepoAnalyzer:
             elif categoria == "sicurezza":
                 if nome_param == "file_security":
                     # Miglioriamo la verifica della presenza di SECURITY.md e altri file di sicurezza
-                    valore = False
+                    valore = "Non trovato" # Default to not found
                     punteggio = 0
                     security_files_found = []
                     
@@ -1671,13 +1713,20 @@ class RepoAnalyzer:
                             ".github/SECURITY.md"
                         ]
                         
+                        # Check local repo first if available
                         if self.local_repo_path:
                             # Controlla nel filesystem locale
-                            for root, _, files in os.walk(self.local_repo_path):
-                                for filename in files:
-                                    if any(filename.lower() == pattern.lower() for pattern in security_file_patterns):
-                                        security_files_found.append(filename)
-                                        break
+                            # Check root
+                            for pattern in security_file_patterns:
+                                if not '/' in pattern and os.path.exists(os.path.join(self.local_repo_path, pattern)):
+                                    security_files_found.append(pattern)
+                                    break # Found one in root
+                            # Check .github if not found in root
+                            if not security_files_found and os.path.isdir(os.path.join(self.local_repo_path, ".github")):
+                                for pattern in security_file_patterns:
+                                     if pattern.startswith(".github/") and os.path.exists(os.path.join(self.local_repo_path, pattern)):
+                                         security_files_found.append(pattern)
+                                         break # Found one in .github
                         else:
                             # Controlla prima la root tramite API
                             contents = self._get_cached_data(
@@ -1685,40 +1734,54 @@ class RepoAnalyzer:
                                 lambda: list(self.repo.get_contents(""))
                             )
                             
-                            for item in contents:
-                                if item.type == "file" and any(item.name.lower() == pattern.lower() for pattern in security_file_patterns):
-                                    security_files_found.append(item.name)
-                            
-                            # Controlla anche nella directory .github
-                            try:
-                                github_dir = None
-                                for item in contents:
-                                    if item.path.lower() == ".github" and item.type == "dir":
-                                        github_dir = item
-                                        break
+                            root_files = {item.name.lower(): item for item in contents if item.type == "file"}
+                            github_dir_item = next((item for item in contents if item.path.lower() == ".github" and item.type == "dir"), None)
+
+                            for pattern in security_file_patterns:
+                                pattern_lower = pattern.lower()
+                                if not '/' in pattern_lower and pattern_lower in root_files:
+                                     security_files_found.append(pattern)
+                                     break # Found in root
+
+                            # Controlla anche nella directory .github if not found and dir exists
+                            if not security_files_found and github_dir_item:
+                                try:
+                                    github_contents = self._get_cached_data(
+                                        "github_dir_contents",
+                                        lambda: list(self.repo.get_contents(".github"))
+                                    )
+                                    github_files = {item.name.lower(): item for item in github_contents if item.type == "file"}
+                                    
+                                    # Controlla file di template diretti
+                                    if any(path.lower().endswith(("issue_template.md", "pull_request_template.md")) for path in github_files):
+                                        templates_found = True
                                         
-                                if github_dir:
-                                    try:
-                                        github_contents = self._get_cached_data(
-                                            "github_dir_contents",
-                                            lambda: list(self.repo.get_contents(".github"))
-                                        )
+                                    # Controlla directory di template
+                                    if not templates_found:
+                                        template_dirs = [".github/ISSUE_TEMPLATE", ".github/issue_template", 
+                                                        ".github/PULL_REQUEST_TEMPLATE", ".github/pull_request_template"]
                                         
-                                        for item in github_contents:
-                                            if item.type == "file" and any(item.name.lower() == pattern.lower() for pattern in security_file_patterns):
-                                                security_files_found.append(item.name)
-                                    except Exception:
-                                        pass
-                            except Exception:
-                                pass
+                                        for template_dir in template_dirs:
+                                            try:
+                                                template_contents = self.repo.get_contents(template_dir)
+                                                if template_contents:
+                                                    templates_found = True
+                                                    break
+                                            except Exception:
+                                                continue
+                                except Exception:
+                                    pass # Ignore errors fetching .github contents
                         
                         if security_files_found:
-                            valore = True
-                            punteggio = 10
-                        else:
-                            self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Aggiungi un file SECURITY.md per descrivere la policy di sicurezza del progetto"
-                            )
+                            valore = f"Trovato: {security_files_found[0]}" # Show first found file
+                        try:
+                            security_files_found.append(pattern)
+                            "Aggiungi un file SECURITY.md per descrivere la policy di sicurezza del progetto"   
+                        except Exception as e:
+                            logger.warning(f"Errore nella verifica dei file di sicurezza: {e}")
+                            valore = "Errore verifica"
+                            punteggio = 0
+
                     except Exception as e:
                         logger.warning(f"Errore nella verifica dei file di sicurezza: {e}")
                         valore = "Errore verifica"
@@ -1731,101 +1794,93 @@ class RepoAnalyzer:
                     security_features = []
                     
                     try:
-                        special_files = [
-                            ".github/dependabot.yml",
-                            ".github/dependabot.yaml",
-                            ".github/workflows/codeql-analysis.yml",  # GitHub code scanning
-                            ".github/CODEOWNERS",                      # CODEOWNERS file
-                        ]
+                        # Files/dirs to check
+                        check_items = {
+                            "Dependabot": [".github/dependabot.yml", ".github/dependabot.yaml"],
+                            "CodeQL": [".github/workflows/codeql-analysis.yml", ".github/workflows/codeql.yml"], # Common names
+                            "CODEOWNERS": [".github/CODEOWNERS"]
+                        }
                         
                         if self.local_repo_path:
-                            # Cerca i file nel filesystem
-                            for special_file in special_files:
-                                path_parts = special_file.split('/')
-                                curr_path = self.local_repo_path
-                                
-                                # Navigate through the directory structure
-                                valid_path = True
-                                # Bug fix: Correctly iterate through path parts
-                                for part in path_parts[:-1]:
-                                    curr_path = os.path.join(curr_path, part)
-                                    if not os.path.exists(curr_path) or not os.path.isdir(curr_path):
-                                        valid_path = False
+                            # Cerca i file/dir nel filesystem locale
+                            for feature, paths in check_items.items():
+                                for path in paths:
+                                    # Handle both files and directories
+                                    full_path = os.path.join(self.local_repo_path, path)
+                                    
+                                    # Check if it's a directory that should exist
+                                    if pattern.endswith('/') or '.' not in os.path.basename(pattern):
+                                        if os.path.isdir(full_path) and os.listdir(full_path):  # Directory exists and not empty
+                                            ci_configs_found.append(ci_type)
+                                            break
+                                    # Check if it's a file that should exist
+                                    elif os.path.isfile(full_path):
+                                        ci_configs_found.append(ci_type)
                                         break
-                                
-                                if valid_path:
-                                    final_path = os.path.join(curr_path, path_parts[-1])
-                                    if os.path.exists(final_path) and os.path.isfile(final_path):
-                                        security_features.append(os.path.basename(special_file))
+                                        
+                                    # Special case for patterns with directories
+                                    elif '/' in pattern:
+                                        dir_path = os.path.dirname(full_path)
+                                        # If the directory exists, check if the file exists
+                                        if os.path.isdir(dir_path):
+                                            if os.path.isfile(full_path):
+                                                ci_configs_found.append(ci_type)
+                                                break
                         else:
                             # Usa API GitHub per il controllo
-                            # Controlla se esiste .github directory
                             contents = self._get_cached_data(
                                 "root_contents", 
                                 lambda: list(self.repo.get_contents(""))
                             )
-                            
-                            github_dir = None
-                            for item in contents:
-                                if item.path.lower() == ".github" and item.type == "dir":
-                                    github_dir = item
-                                    break
-                            
-                            if github_dir:
+                            github_dir_item = next((item for item in contents if item.path.lower() == ".github" and item.type == "dir"), None)
+
+                            if github_dir_item:
                                 try:
                                     github_contents = self._get_cached_data(
                                         "github_dir_contents",
                                         lambda: list(self.repo.get_contents(".github"))
                                     )
+                                    github_content_paths = {item.path.lower() for item in github_contents}
                                     
-                                    # Cerca Dependabot e CODEOWNERS
-                                    for item in github_contents:
-                                        if item.type == "file" and (
-                                            item.name.lower() in ["dependabot.yml", "dependabot.yaml", "codeowners"]):
-                                            security_features.append(item.name)
-                                    
-                                    # Cerca cartella workflows per azioni di sicurezza
-                                    workflows_dir = None
-                                    for item in github_contents:
-                                        if item.path.lower() == ".github/workflows" and item.type == "dir":
-                                            workflows_dir = item
-                                            break
-                                            
-                                    if workflows_dir:
-                                        try:
-                                            workflows_contents = self._get_cached_data(
-                                                "workflows_dir_contents",
-                                                lambda: list(self.repo.get_contents(".github/workflows"))
-                                            )
-                                            
-                                            for item in workflows_contents:
-                                                if item.type == "file" and "codeql" in item.name.lower():
-                                                    security_features.append("CodeQL scan")
-                                        except Exception:
-                                            pass
+                                    # Check for Dependabot and CODEOWNERS files
+                                    for feature, paths in check_items.items():
+                                         if feature != "CodeQL": # Check CodeQL separately
+                                             for path in paths:
+                                                 if path.lower() in github_content_paths:
+                                                     security_features.append(feature)
+                                                     break # Found feature
+
+                                    # Check for CodeQL workflow
+                                    workflows_dir_item = next((item for item in github_contents if item.path.lower() == ".github/workflows" and item.type == "dir"), None)
+                                    if workflows_dir_item:
+                                         try:
+                                             workflows_contents = self._get_cached_data(
+                                                 "workflows_dir_contents",
+                                                 lambda: list(self.repo.get_contents(".github/workflows"))
+                                             )
+                                             workflow_files = {item.name.lower() for item in workflows_contents if item.type == "file"}
+                                             for path in check_items["CodeQL"]:
+                                                 filename = os.path.basename(path).lower()
+                                                 if filename in workflow_files:
+                                                     security_features.append("CodeQL")
+                                                     break # Found CodeQL
+                                         except Exception:
+                                             pass # Ignore errors fetching workflows
                                 except Exception:
-                                    pass
+                                    pass # Ignore errors fetching .github contents
                         
                         # Valuta i risultati
-                        if security_features:
-                            valore = ", ".join(security_features)
-                            punteggio = min(len(security_features) * 3, 10)  # Più funzionalità, punteggio più alto (max 10)
-                            
-                        if punteggio < 5:
-                            self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Attiva le funzioni di sicurezza di GitHub come Dependabot, CodeQL scanning e CODEOWNERS"
-                            )
+                        unique_features = sorted(list(set(security_features)))
+                        if unique_features:
+                            valore = ", ".join(unique_features)
+                            punteggio = 10
+                        else:
+                            valore = "Nessuna funzionalità di sicurezza rilevata"
+                            punteggio = 0
                     except Exception as e:
-                        logger.warning(f"Errore nella verifica delle funzionalità di sicurezza: {e}")
+                        logger.warning(f"Errore nel controllo delle funzioni di sicurezza: {e}")
                         valore = "Errore verifica"
                         punteggio = 0
-                
-                elif nome_param == "dipendenze_aggiornate":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
-                else:
-                    valore = "Non analizzato"
-                    punteggio = 0
                 
                 return valore, round(punteggio, 2), conta_punteggio
 
@@ -2225,46 +2280,180 @@ class RepoAnalyzer:
         self.console.print(table)
 
     def _update_history(self):
-        """Aggiorna lo storico dei punteggi nel file di configurazione."""
-        try:
-            with open(self.config_file, "r+", encoding="utf-8") as f:
-                config_data = json.load(f)
-                if "storico" not in config_data:
-                    config_data["storico"] = []
-                config_data["storico"].append({
-                    "data_analisi": self.results["data_analisi"],
-                    "punteggio_totale": self.results["punteggio_totale"],
-                    "punteggi": self.results["punteggi"]
-                })
-                f.seek(0)
-                json.dump(config_data, f, indent=4)
-                f.truncate()
-        except Exception as e:
-            logger.error(f"Errore nell'aggiornamento dello storico: {e}", exc_info=True)
+        """Aggiorna lo storico dei punteggi nel file di configurazione. (Disabilitato)"""
+        # Funzionalità disabilitata per evitare di modificare config.json
+        logger.info("Salvataggio dello storico nel file di configurazione è disabilitato.")
+        pass
 
     def _check_security(self, path: str = ".") -> float:
         """Esegue una scansione di sicurezza con Bandit (se disponibile)."""
         if not bandit:
-            logger.warning("Bandit non è installato. Salta l'analisi di sicurezza.")
+            logger.warning("Bandit non è installato. Salta l'analisi di sicurezza statica.")
             return 5.0  # Valore neutro se Bandit non è disponibile
+        if not self.local_repo_path:
+             logger.warning("Bandit richiede il clone del repository (--clone). Salta l'analisi.")
+             return 5.0 # Neutral score if not cloned
 
         try:
-            effective_path = self.local_repo_path if self.local_repo_path else path
-            result = subprocess.run(["bandit", "-r", effective_path, "-f", "json"], capture_output=True, text=True, timeout=60)
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                issues = data.get("results", [])
-                if issues:
-                    # Più problemi di sicurezza => punteggio più basso
-                    return max(0.0, 10.0 - (len(issues) / 10.0))
-                return 10.0  # Nessun problema rilevato
-            else:
-                logger.warning(f"Bandit ha restituito un codice di errore: {result.returncode}")
-                return 5.0  # Valore neutro in caso di errore
-        except (subprocess.TimeoutExpired, json.JSONDecodeError) as e:
-            logger.error(f"Errore durante l'esecuzione di Bandit: {e}", exc_info=True)
-            return 5.0  # Valore neutro in caso di errore
+            effective_path = self.local_repo_path # Always use cloned path for Bandit
+            logger.info(f"Esecuzione di Bandit su: {effective_path}")
+            # Use json output for easier parsing, increase timeout
+            result = subprocess.run(
+                ["bandit", "-r", effective_path, "-f", "json", "-q"], # -q for quieter output
+                capture_output=True, text=True, timeout=120, check=False # Don't check=True, parse results
+            )
             
+            # Bandit exit codes: 0 = no issues, 1 = issues found, >1 = error
+            if result.returncode in [0, 1] and result.stdout:
+                try:
+                    data = json.loads(result.stdout)
+                    issues = data.get("results", [])
+                    metrics = data.get("metrics", {})
+                    total_loc = metrics.get("_totals", {}).get("loc", 1) # Avoid division by zero
+                    
+                    # Calculate score based on severity
+                    # Weights: High=3, Medium=2, Low=1
+                    severity_scores = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+                    for issue in issues:
+                        severity = issue.get("issue_severity", "LOW")
+                        if severity in severity_scores:
+                            severity_scores[severity] += 1
+                            
+                    # Calculate weighted issue count
+                    weighted_issues = (severity_scores["HIGH"] * 3) + (severity_scores["MEDIUM"] * 2) + (severity_scores["LOW"] * 1)
+                    
+                    # Normalize score based on weighted issues per 1000 LOC
+                    # Lower density = better score. Target: < 5 weighted issues / 1kloc = 10 points
+                    issue_density = (weighted_issues / total_loc) * 1000 if total_loc > 0 else 0
+                    
+                    # Inverse normalization: higher density -> lower score
+                    score = self._normalize_score(issue_density, 20, 0, 0, 10) # 20 issues/kloc -> 0 points, 0 issues/kloc -> 10 points
+                    
+                    logger.info(f"Bandit analysis: {len(issues)} issues found ({severity_scores['HIGH']}H, {severity_scores['MEDIUM']}M, {severity_scores['LOW']}L). Density: {issue_density:.2f}/kloc. Score: {score:.2f}")
+                    
+                    # Add suggestions based on severity
+                    if severity_scores["HIGH"] > 0:
+                         self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                             f"Risolvi le {severity_scores['HIGH']} vulnerabilità ad alta severità identificate da Bandit."
+                         )
+                    if severity_scores["MEDIUM"] > 5:
+                         self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                             f"Rivedi le {severity_scores['MEDIUM']} vulnerabilità a media severità identificate da Bandit."
+                         )
+
+                    return score
+                except json.JSONDecodeError as json_e:
+                     logger.error(f"Errore nel parsing dell'output JSON di Bandit: {json_e}\nOutput:\n{result.stdout[:500]}...") # Log beginning of output
+                     return 2.0 # Low score due to parsing error
+            elif result.returncode > 1:
+                logger.warning(f"Bandit ha restituito un codice di errore: {result.returncode}. Stderr: {result.stderr}")
+                return 3.0  # Low score due to execution error
+            else: # No output or unexpected state
+                 logger.warning(f"Bandit non ha prodotto output o ha fallito silenziosamente (return code {result.returncode}).")
+                 return 4.0 # Slightly higher low score for unknown failure
+
+        except subprocess.TimeoutExpired:
+            logger.error("Timeout durante l'esecuzione di Bandit (superati 120s).")
+            return 1.0 # Very low score due to timeout
+        except FileNotFoundError:
+             logger.error("Comando 'bandit' non trovato. Assicurati che Bandit sia installato e nel PATH.")
+             return 5.0 # Neutral score if tool not found
+        except Exception as e:
+            logger.error(f"Errore imprevisto durante l'esecuzione di Bandit: {e}", exc_info=True)
+            return 0.0 # Lowest score for unexpected errors
+
+    def _check_dependencies_safety(self, path: str) -> Tuple[str, float]:
+        """Esegue una scansione delle dipendenze con Safety (se disponibile)."""
+        if not safety:
+            logger.warning("Safety non è installato. Salta l'analisi delle dipendenze.")
+            return "Richiede 'safety'", 5.0
+
+        if not self.local_repo_path:
+            logger.warning("Safety richiede il clone del repository (--clone). Salta l'analisi.")
+            return "Richiede --clone", 5.0
+
+        effective_path = self.local_repo_path
+        requirements_files = []
+        # Find common requirements files
+        for root, _, files in os.walk(effective_path):
+            for file in files:
+                if file in ["requirements.txt", "requirements-dev.txt", "setup.py", "pyproject.toml"]:
+                    # Prioritize requirements.txt if found
+                    if file == "requirements.txt":
+                         requirements_files.insert(0, os.path.join(root, file))
+                    else:
+                         requirements_files.append(os.path.join(root, file))
+        
+        if not requirements_files:
+            logger.info("Nessun file di dipendenze (requirements.txt, setup.py, pyproject.toml) trovato.")
+            return "Nessun file dipendenze", 8.0 # Good score if no deps declared
+
+        # Analyze the first found requirements file (usually requirements.txt)
+        req_file_to_scan = requirements_files[0]
+        logger.info(f"Esecuzione di Safety su: {req_file_to_scan}")
+        
+        try:
+            # Run safety using subprocess to capture output and handle errors
+            # Use --json for structured output
+            cmd = ["safety", "check", "-r", req_file_to_scan, "--json"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=90, check=False)
+
+            if result.returncode == 0 and result.stdout:
+                 # Safety returns 0 even if vulnerabilities are found when using --json
+                 try:
+                     # Safety's JSON output is a list of lists/dicts, not a single JSON object
+                     # We need to parse it carefully line by line or find the JSON part
+                     # Let's assume the primary JSON output is the last line for simplicity
+                     # More robust parsing might be needed for complex outputs.
+                     json_output_str = result.stdout.strip().splitlines()[-1]
+                     vulnerabilities = json.loads(json_output_str)
+                     
+                     # The structure might be [[vuln1], [vuln2], ...] or similar
+                     # Let's count the number of vulnerability entries
+                     num_vulnerabilities = 0
+                     if isinstance(vulnerabilities, list):
+                         # Count non-empty lists/dicts within the main list
+                         num_vulnerabilities = sum(1 for item in vulnerabilities if item) 
+                     
+                     if num_vulnerabilities == 0:
+                         logger.info("Safety non ha trovato vulnerabilità nelle dipendenze.")
+                         return "Nessuna vulnerabilità trovata", 10.0
+                     else:
+                         logger.warning(f"Safety ha trovato {num_vulnerabilities} vulnerabilità nelle dipendenze.")
+                         # Score inversely based on number of vulnerabilities
+                         score = max(0.0, 10.0 - num_vulnerabilities) 
+                         self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                             f"Aggiorna le dipendenze per risolvere le {num_vulnerabilities} vulnerabilità trovate da Safety."
+                         )
+                         return f"{num_vulnerabilities} vulnerabilità trovate", score
+                 except json.JSONDecodeError:
+                     logger.error(f"Errore nel parsing dell'output JSON di Safety: {result.stdout}")
+                     return "Errore parsing Safety", 3.0
+                 except IndexError:
+                      logger.error(f"Output JSON di Safety vuoto o non trovato: {result.stdout}")
+                      return "Output Safety vuoto", 4.0
+
+            elif result.returncode != 0:
+                 logger.warning(f"Safety ha restituito un codice di errore: {result.returncode}. Stderr: {result.stderr}")
+                 # Check stderr for common errors like missing file
+                 if "No such file or directory" in result.stderr:
+                      logger.error(f"File dipendenze non trovato da Safety: {req_file_to_scan}")
+                      return "File dipendenze non trovato", 2.0
+                 return f"Errore Safety (codice {result.returncode})", 2.0
+            else: # Return code 0 but no JSON output (shouldn't happen with --json)
+                 logger.warning(f"Safety non ha prodotto output JSON atteso. Output: {result.stdout}")
+                 return "Output Safety inatteso", 3.0
+
+        except subprocess.TimeoutExpired:
+            logger.error("Timeout durante l'esecuzione di Safety (superati 90s).")
+            return "Timeout Safety", 1.0
+        except FileNotFoundError:
+             logger.error("Comando 'safety' non trovato. Assicurati che Safety sia installato e nel PATH.")
+             return "Richiede 'safety'", 5.0 # Neutral score if tool not found
+        except Exception as e:
+            logger.error(f"Errore imprevisto durante l'esecuzione di Safety: {e}", exc_info=True)
+            return "Errore Safety imprevisto", 0.0
+
     def generate_report(self):
         """Genera il report con i punteggi utilizzando i nomi delle categorie mappati."""
         report_data = self.results.copy()
