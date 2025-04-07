@@ -292,31 +292,52 @@ class RepoAnalyzer:
         valore = "Non analizzato"
         punteggio = 0
         
+        # Assicurati che il dizionario suggerimenti esista nei risultati
+        if "suggerimenti" not in self.results:
+            self.results["suggerimenti"] = {}
+            
+        # Inizializza i suggerimenti per questa categoria se non esistono
+        if categoria not in self.results["suggerimenti"]:
+            self.results["suggerimenti"][categoria] = []
+            
         try:
-            # Imposta un timeout per l'analisi di ogni parametro
+            # Utilizziamo un approccio più compatibile per il timeout
             import signal
+            import platform
             
-            def timeout_handler(signum, frame):
-                raise TimeoutError(f"L'analisi del parametro {nome_param} ha impiegato troppo tempo")
-            
-            # Imposta un timeout di 30 secondi per l'analisi di ogni parametro
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(30)
-            
-            # Inizializza i suggerimenti per questa categoria se non esistono
-            if categoria not in self.results.get("suggerimenti", {}):
-                self.results["suggerimenti"][categoria] = []
+            # Imposta un timeout solo su sistemi che supportano SIGALRM (non Windows)
+            timeout_enabled = platform.system() != "Windows"
+            if timeout_enabled:
+                def timeout_handler(signum, frame):
+                    raise TimeoutError(f"L'analisi del parametro {nome_param} ha impiegato troppo tempo")
+                
+                # Imposta un timeout di 30 secondi per l'analisi di ogni parametro
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(30)
+                
             # Popolarità & Impatto
             if categoria == "popolarita_impatto":
                 if nome_param == "stelle":
                     valore = self.repo.stargazers_count
                     punteggio = self._normalize_score(valore, 0, 10000, 0, 10)
+                    if punteggio < 5:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Considera di promuovere il repository attraverso blog post o social media per aumentare la visibilità"
+                        )
                 elif nome_param == "forks":
                     valore = self.repo.forks_count
                     punteggio = self._normalize_score(valore, 0, 5000, 0, 10)
+                    if punteggio < 5:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Migliora la documentazione e gli esempi per incoraggiare più fork e riutilizzo del codice"
+                        )
                 elif nome_param == "watchers":
                     valore = self.repo.subscribers_count
                     punteggio = self._normalize_score(valore, 0, 1000, 0, 10)
+                    if punteggio < 5:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Mantieni gli utenti informati sugli aggiornamenti attraverso release notes dettagliate"
+                        )
                 elif nome_param == "contributori":
                     contributors = self._get_cached_data(
                         "contributors",
@@ -325,21 +346,115 @@ class RepoAnalyzer:
                     if contributors:
                         valore = len(contributors)
                         punteggio = self._normalize_score(valore, 0, 100, 0, 10)
+                        if punteggio < 5:
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Crea una guida per i contributori e tag 'good first issue' per attrarre nuovi sviluppatori"
+                            )
                     else:
                         valore = 0
                         punteggio = 0
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Non sono stati trovati contributori. Considera di aprire il progetto alla collaborazione"
+                        )
                 elif nome_param == "dipendenti":
-                    # Questo richiede API aggiuntive o analisi più complesse
-                    # Invece di usare N/A, usiamo un valore più descrittivo
-                    valore = "Non disponibile"
-                    punteggio = 5  # Valore di default
+                    try:
+                        # Tenta di ottenere il numero di repository che dipendono da questo
+                        dependents = self._get_cached_data(
+                            "dependents",
+                            lambda: requests.get(
+                                f"https://api.github.com/repos/{self.repo_name}/dependents",
+                                headers={"Accept": "application/vnd.github.v3+json"}
+                            ).json()
+                        )
+                        if dependents and isinstance(dependents, list):
+                            valore = len(dependents)
+                            punteggio = self._normalize_score(valore, 0, 1000, 0, 10)
+                        else:
+                            valore = "Non disponibile"
+                            punteggio = 5
+                    except Exception:
+                        valore = "Non disponibile"
+                        punteggio = 5
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Considera di pubblicare il pacchetto su gestori di pacchetti come npm o PyPI"
+                        )
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
+                
+                return valore, punteggio
 
             # Attività & Manutenzione
             elif categoria == "attivita_manutenzione":
-                if nome_param == "data_ultimo_commit":
+                if nome_param == "release_tag_frequenza":
+                    try:
+                        releases = self._get_cached_data(
+                            "releases",
+                            lambda: list(self.repo.get_releases()[:MAX_ITEMS_PER_REQUEST])
+                        )
+                        if releases:
+                            now = datetime.datetime.now(datetime.timezone.utc)
+                            year_ago = now - datetime.timedelta(days=365)
+                            recent_releases = [r for r in releases if r.created_at > year_ago]
+                            valore = len(recent_releases)
+                            punteggio = self._normalize_score(valore, 0, 12, 0, 10)  # Idealmente una release al mese
+                            
+                            if valore == 0:
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "Non ci sono release negli ultimi 12 mesi. Considera di creare release regolari"
+                                )
+                            elif valore < 4:
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "Aumenta la frequenza delle release per fornire aggiornamenti più regolari"
+                                )
+                        else:
+                            valore = 0
+                            punteggio = 0
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Non sono state trovate release. Considera di utilizzare il sistema di release di GitHub"
+                            )
+                    except Exception as e:
+                        print(f"Errore nell'analisi delle release: {e}")
+                        valore = "Errore analisi"
+                        punteggio = 0
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Si è verificato un errore nell'analisi delle release"
+                        )
+                elif nome_param == "attivita_issues_ratio":
+                    try:
+                        issues = self._get_cached_data(
+                            "issues",
+                            lambda: list(self.repo.get_issues(state='all')[:MAX_ITEMS_PER_REQUEST])
+                        )
+                        if issues:
+                            total_issues = len(issues)
+                            closed_issues = len([i for i in issues if i.state == 'closed'])
+                            ratio = closed_issues / total_issues if total_issues > 0 else 0
+                            valore = round(ratio * 100, 2)  # Percentuale
+                            punteggio = self._normalize_score(ratio, 0.5, 0.9, 0, 10)  # Idealmente tra 50% e 90%
+                            
+                            if ratio < 0.5:
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "La percentuale di issues chiuse è bassa. Dedica più tempo alla risoluzione delle issues"
+                                )
+                            elif ratio > 0.9:
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "Quasi tutte le issues sono chiuse. Verifica di non chiudere le issues troppo rapidamente"
+                                )
+                        else:
+                            valore = 0
+                            punteggio = 5
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Non sono state trovate issues. Considera di abilitare il tracker delle issues"
+                            )
+                    except Exception as e:
+                        print(f"Errore nell'analisi delle issues: {e}")
+                        valore = "Errore analisi"
+                        punteggio = 0
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Si è verificato un errore nell'analisi delle issues"
+                        )
+                elif nome_param == "data_ultimo_commit":
                     # Usa la cache per ottenere il commit più recente
                     last_commit = self._get_cached_data(
                         "last_commit",
@@ -396,192 +511,258 @@ class RepoAnalyzer:
                                 valore = round(commits_per_day, 2)
                                 # Normalizza: 0.5 commit/giorno = 5 punti, 2 commit/giorno = 10 punti
                                 punteggio = self._normalize_score(commits_per_day, 0, 2, 0, 10)
+                                
+                                if commits_per_day < 0.1:  # Meno di un commit ogni 10 giorni
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "La frequenza dei commit è molto bassa. Considera di aumentare l'attività di sviluppo"
+                                    )
+                                elif commits_per_day < 0.3:  # Meno di un commit ogni 3 giorni
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "Aumenta la frequenza dei commit per mantenere un sviluppo più costante"
+                                    )
                             else:
                                 valore = len(commits)
                                 punteggio = self._normalize_score(len(commits), 1, 10, 0, 10)
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "I commit sono troppo ravvicinati. Considera di distribuire meglio le modifiche nel tempo"
+                                )
                         except Exception as e:
                             print(f"Errore nel calcolo della frequenza dei commit: {e}")
                             valore = "Errore calcolo"
                             punteggio = 5
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Si è verificato un errore nel calcolo della frequenza dei commit"
+                            )
                     else:
                         valore = 0
                         punteggio = 0
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Non sono stati trovati commit recenti. Il repository potrebbe essere inattivo"
+                        )
+                elif nome_param == "stato_archivio":
+                    valore = self.repo.archived
+                    punteggio = 0 if valore else 10  # 0 se archiviato, 10 se attivo
+                elif nome_param == "distribuzione_contributi":
+                    # Implementazione semplificata - analisi più dettagliata richiederebbe più chiamate API
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                elif nome_param == "attivita_issues_tempo":
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                elif nome_param == "attivita_pr_ratio" or nome_param == "attivita_pr_tempo":
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
+                
+                return valore, punteggio
 
-            # Qualità & Documentazione
-            elif categoria == "qualita_documentazione":
+            # Qualità del codice
+            elif categoria == "qualita_codice":
+                if nome_param == "complessita_media":
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                elif nome_param == "aderenza_stile":
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                elif nome_param == "code_smells":
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                elif nome_param == "commenti_codice":
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                else:
+                    valore = "Non analizzato"
+                    punteggio = 0
+                
+                return valore, punteggio
+
+            # Documentazione
+            elif categoria == "documentazione":
                 if nome_param == "readme":
                     try:
                         readme = self.repo.get_readme()
-                        content = readme.decoded_content.decode("utf-8")
-                        
-                        # Analizza la qualità del README
-                        lines = content.split("\n")
-                        word_count = len(content.split())
-                        has_sections = any(line.startswith("#") for line in lines)
-                        has_code = "```" in content
-                        has_links = "[" in content and "](" in content
-                        
-                        # Calcola il punteggio
-                        score = 0
-                        if word_count > 100: score += 2  # README base
-                        if word_count > 500: score += 2  # README dettagliato
-                        if has_sections: score += 2      # Struttura organizzata
-                        if has_code: score += 2          # Esempi di codice
-                        if has_links: score += 2         # Collegamenti utili
-                        
-                        valore = {
-                            "parole": word_count,
-                            "sezioni": has_sections,
-                            "codice": has_code,
-                            "link": has_links
-                        }
-                        punteggio = score
-                        
-                        # Aggiungi suggerimenti se necessario
-                        if score < 10:
-                            missing = []
-                            if word_count <= 100: missing.append("contenuto più dettagliato")
-                            if not has_sections: missing.append("sezioni organizzate")
-                            if not has_code: missing.append("esempi di codice")
-                            if not has_links: missing.append("link utili")
-                            
-                            if missing:
-                                self.results["suggerimenti"][categoria].append(
-                                    f"Migliora il README aggiungendo: {', '.join(missing)}"
-                                )
-                    except Exception as e:
-                        print(f"Errore nell'analisi del README: {e}")
-                        valore = "Non trovato"
+                        # Il repository ha un README
+                        valore = True
+                        punteggio = 0.05  # Punteggio base per la presenza del file
+                    except Exception:
+                        valore = False
                         punteggio = 0
-                        self.results["suggerimenti"][categoria].append(
-                            "Crea un README.md per documentare il progetto"
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Non è stato trovato un file README. Creane uno per documentare il tuo progetto."
                         )
-                else:
-                    valore = "Non analizzato"
-                    punteggio = 0
-
-            # Manutenibilità & Test
-            elif categoria == "manutenibilita_test":
-                # Inizializza le variabili di default
-                valore = "Non analizzato"
-                punteggio = 0
-                
-                if nome_param == "test":
-                    # Cerca file di test nel repository
+                elif nome_param == "file_license":
+                    try:
+                        license_content = self.repo.get_license()
+                        valore = True
+                        punteggio = 10
+                    except Exception:
+                        valore = False
+                        punteggio = 0
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Non è stata trovata una licenza. Considera di aggiungerne una per chiarire i termini di utilizzo."
+                        )
+                elif nome_param == "file_contrib_coc":
+                    # Verifichiamo la presenza di CONTRIBUTING.md e CODE_OF_CONDUCT.md
+                    valore = {"CONTRIBUTING.md": False, "CODE_OF_CONDUCT.md": False}
+                    punteggio = 0  # Punteggio iniziale
+                    
                     try:
                         contents = self.repo.get_contents("")
-                        test_files = []
-                        test_dirs = []
+                        files = [f.name.upper() for f in contents if f.type == "file"]
                         
-                        while contents:
-                            file_content = contents.pop(0)
-                            
-                            if file_content.type == "dir":
-                                if "test" in file_content.name.lower():
-                                    test_dirs.append(file_content.path)
-                                try:
-                                    contents.extend(self.repo.get_contents(file_content.path))
-                                except Exception:
-                                    continue
-                            elif file_content.type == "file":
-                                if "test" in file_content.name.lower():
-                                    test_files.append(file_content.path)
+                        if "CONTRIBUTING.md".upper() in files:
+                            valore["CONTRIBUTING.md"] = True
+                            punteggio += 5
+                        if "CODE_OF_CONDUCT.md".upper() in files:
+                            valore["CODE_OF_CONDUCT.md"] = True
+                            punteggio += 5
                         
-                        # Calcola il punteggio in base ai test trovati
-                        score = 0
-                        if test_dirs: score += 5  # Directory dedicata ai test
-                        score += min(5, len(test_files))  # Fino a 5 punti per i file di test
-                        
-                        valore = {
-                            "directory_test": test_dirs,
-                            "file_test": test_files
-                        }
-                        punteggio = score
-                        
-                        # Aggiungi suggerimenti se necessario
-                        if score < 10:
-                            if not test_dirs:
-                                self.results["suggerimenti"][categoria].append(
-                                    "Crea una directory dedicata ai test"
-                                )
-                            if len(test_files) < 5:
-                                self.results["suggerimenti"][categoria].append(
-                                    "Aumenta la copertura dei test aggiungendo più test"
-                                )
-                    except Exception as e:
-                        print(f"Errore nell'analisi dei test: {e}")
-                        valore = "Errore analisi"
-                        punteggio = 0
+                        if punteggio == 0:
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Aggiungi CONTRIBUTING.md e CODE_OF_CONDUCT.md per facilitare la collaborazione"
+                            )
+                        elif punteggio == 5:
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Aggiungi un file mancante (CONTRIBUTING.md o CODE_OF_CONDUCT.md) per completare la documentazione"
+                            )
+                    except Exception:
+                        pass
+                elif nome_param == "documentazione_estesa" or nome_param == "qualita_esempi":
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
+                
+                return valore, punteggio
+
+            # Community & Collaborazione
+            elif categoria == "community_collaborazione":
+                if nome_param in ["issue_pr_templates", "github_discussions", "tono_costruttivita", "uso_label_issues"]:
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                else:
+                    valore = "Non analizzato"
+                    punteggio = 0
+                
+                return valore, punteggio
 
             # Sicurezza
             elif categoria == "sicurezza":
-                if nome_param == "vulnerabilita":
-                    # Questo richiederebbe l'accesso alle API di sicurezza di GitHub
-                    # Per ora, restituiamo un valore di default
+                if nome_param == "file_security":
+                    # Verifichiamo la presenza di SECURITY.md
+                    valore = False
+                    punteggio = 0
+                    
+                    try:
+                        contents = self.repo.get_contents("")
+                        files = [f.name.upper() for f in contents if f.type == "file"]
+                        
+                        if "SECURITY.md".upper() in files:
+                            valore = True
+                            punteggio = 10
+                        else:
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Aggiungi un file SECURITY.md per descrivere la policy di sicurezza"
+                            )
+                    except Exception:
+                        pass
+                elif nome_param in ["github_security_features", "dipendenze_aggiornate"]:
                     valore = "Analisi non disponibile"
-                    punteggio = 5
-                    self.results["suggerimenti"][categoria].append(
-                        "Attiva GitHub Security Alerts per monitorare le vulnerabilità"
-                    )
+                    punteggio = 5  # Valore neutro
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
+                
+                return valore, punteggio
+
+            # Testing & CI/CD
+            elif categoria == "testing_cicd":
+                if nome_param == "presenza_test_suite":
+                    # Verifichiamo la presenza di directory o file di test
+                    valore = False
+                    punteggio = 0
+                    
+                    try:
+                        contents = self.repo.get_contents("")
+                        test_dirs = [f.name for f in contents if f.type == "dir" and "test" in f.name.lower()]
+                        test_files = [f.name for f in contents if f.type == "file" and "test" in f.name.lower()]
+                        
+                        if test_dirs or test_files:
+                            valore = True
+                            punteggio = 10
+                        else:
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Aggiungi test automatizzati per migliorare la qualità del codice"
+                            )
+                    except Exception:
+                        pass
+                elif nome_param == "integrazione_continua":
+                    # Verifichiamo la presenza di configurazione CI
+                    valore = False
+                    punteggio = 0
+                    
+                    try:
+                        # Controlla le common CI configurations
+                        ci_configs = [
+                            ".github/workflows",  # GitHub Actions
+                            ".travis.yml",        # Travis CI
+                            ".gitlab-ci.yml",     # GitLab CI
+                            "azure-pipelines.yml", # Azure Pipelines
+                            "Jenkinsfile",        # Jenkins
+                            ".circleci"           # CircleCI
+                        ]
+                        
+                        contents = self.repo.get_contents("")
+                        files_and_dirs = [f.path for f in contents]
+                        
+                        for config in ci_configs:
+                            if any(config in path for path in files_and_dirs):
+                                valore = True
+                                punteggio = 10
+                                break
+                                
+                        if not valore:
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Configura un sistema di CI/CD per automatizzare i test e il deployment"
+                            )
+                    except Exception:
+                        pass
+                elif nome_param in ["test_coverage", "sicurezza_ci"]:
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                else:
+                    valore = "Non analizzato"
+                    punteggio = 0
+                
+                return valore, punteggio
+
+            # Setup & Usabilità
+            elif categoria == "setup_usabilita":
+                if nome_param == "facilita_setup":
+                    valore = "Analisi non disponibile"
+                    punteggio = 5  # Valore neutro
+                else:
+                    valore = "Non analizzato"
+                    punteggio = 0
+                
+                return valore, punteggio
+                
+            # Se arriviamo qui, non è stata trovata una corrispondenza
+            return "Non analizzato", 0
             
-            # Disattiva il timeout
-            signal.alarm(0)
-            
-            return valore, punteggio
-        
         except TimeoutError:
             print(f"Timeout durante l'analisi del parametro {nome_param}")
             return "Timeout", 0
         except Exception as e:
             print(f"Errore nell'analisi del parametro {nome_param}: {e}")
             return "Errore", 0
-
-    def _normalize_score(self, value: float, min_val: float, max_val: float,
-                        out_min: float = 0, out_max: float = 10,
-                        inverse: bool = False) -> float:
-        """Normalizza un valore in un intervallo specificato.
-
-        Args:
-            value: Valore da normalizzare
-            min_val: Valore minimo dell'intervallo di input
-            max_val: Valore massimo dell'intervallo di input
-            out_min: Valore minimo dell'intervallo di output
-            out_max: Valore massimo dell'intervallo di output
-            inverse: Se True, inverte la scala (più alto diventa più basso)
-
-        Returns:
-            Valore normalizzato nell'intervallo specificato
-        """
-        try:
-            # Assicurati che il valore sia nel range
-            value = max(min_val, min(value, max_val))
-            
-            # Normalizza il valore
-            if max_val == min_val:
-                normalized = 0.5  # Valore medio se min e max sono uguali
-            else:
-                normalized = (value - min_val) / (max_val - min_val)
-            
-            # Inverti se richiesto
-            if inverse:
-                normalized = 1 - normalized
-            
-            # Scala al range di output
-            score = out_min + (normalized * (out_max - out_min))
-            
-            return round(score, 2)
-        except Exception as e:
-            print(f"Errore nella normalizzazione del punteggio: {e}")
-            return 0.0
+        finally:
+            # Disattiva il timeout se abilitato
+            if timeout_enabled:
+                signal.alarm(0)
 
     def _calculate_scores(self) -> None:
         """Calcola i punteggi per ogni categoria basandosi sui parametri analizzati."""
@@ -594,6 +775,11 @@ class RepoAnalyzer:
                 self.results["punteggi"][categoria] = round(punteggio_categoria, 2)
             else:
                 self.results["punteggi"][categoria] = 0.0
+        
+        # Calcola il punteggio totale
+        punteggi = list(self.results["punteggi"].values())
+        if punteggi:
+            self.results["punteggio_totale"] = round(sum(punteggi) / len(punteggi), 2)
 
     def _update_history(self) -> None:
         """Aggiorna lo storico dei punteggi."""

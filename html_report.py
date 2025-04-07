@@ -21,17 +21,27 @@ def generate_html_report(results, output_file=None):
         template = Template(f.read())
     
     # Prepara i dati per il template
+    repo_name = results.get('nome_repository', 'N/A')
+    
     report_data = {
-        'repo_name': results['nome_repository'],
-        'repo_url': results['url'],
-        'data_analisi': results['data_analisi'],
-        'punteggi': results['punteggi'],
-        'dettagli': results['dettagli'],
-        'suggerimenti': results['suggerimenti'],
+        'repo_name': repo_name,
+        'repo_url': results.get('url', f'https://github.com/{repo_name}'),
+        'data_analisi': results.get('data_analisi', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        'punteggi': results.get('punteggi', {}),
+        'dettagli': results.get('dettagli', {}),
+        'suggerimenti': results.get('suggerimenti', {}),
         'storico': results.get('storico', []),
-        'punteggio_totale': round(sum(results['punteggi'].values()) / len(results['punteggi']), 2),
-        'punteggio_totale_percentuale': round((sum(results['punteggi'].values()) / len(results['punteggi'])) * 10, 2)
+        'punteggio_totale': results.get('punteggio_totale', 0)
     }
+    
+    # Assicurati che il punteggio totale sia un numero
+    try:
+        report_data['punteggio_totale'] = float(report_data['punteggio_totale'])
+    except (ValueError, TypeError):
+        report_data['punteggio_totale'] = 0
+    
+    # Calcola la percentuale per la visualizzazione della barra di progresso
+    report_data['punteggio_totale_percentuale'] = report_data['punteggio_totale'] * 10
     
     # Genera l'HTML
     html_content = template.render(
@@ -41,7 +51,7 @@ def generate_html_report(results, output_file=None):
     
     # Se non è specificato un file di output, usa il nome del repository
     if not output_file:
-        output_file = f"{results['nome_repository'].replace('/', '_')}_report.html"
+        output_file = f"{repo_name.replace('/', '_')}_report.html"
     
     # Salva il report HTML
     with open(output_file, 'w', encoding='utf-8') as f:
