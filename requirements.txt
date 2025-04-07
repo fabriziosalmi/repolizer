@@ -12,3 +12,7 @@ radon==6.0.1
 
 # Testing
 pytest==7.4.0
+
+pycodestyle
+bandit
+flake8

@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Repolizer - Analizzatore di Repository GitHub
-
-Questo script analizza repository GitHub in base a diversi parametri di qualità,
-attività, manutenzione e impatto, calcolando punteggi ponderati.
-"""
-
 import os
 import json
 import argparse
@@ -217,63 +210,6 @@ class RepoAnalyzer:
         except Exception as e:
             logger.error(f"Errore nel salvataggio del report HTML: {e}")
             return ""
-            
-    def _save_report_json(self, report_data: Dict, report_dir: str = "reports") -> str:
-        """Salva il report JSON in un file con nome basato sul repository e data/ora.
-        
-        Args:
-            report_data: Dati del report da salvare
-            report_dir: Directory dove salvare i report (default: "reports")
-            
-        Returns:
-            Percorso del file JSON creato
-        """
-        try:
-            # Crea la directory se non esiste
-            os.makedirs(report_dir, exist_ok=True)
-            
-            # Genera nome file con nome repo e timestamp
-            repo_name = report_data.get("repo_name", "report").replace("/", "_")
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            json_file = os.path.join(report_dir, f"{repo_name}_{timestamp}.json")
-            
-            # Salva il report
-            with open(json_file, "w", encoding="utf-8") as f:
-                json.dump(report_data, f, indent=2)
-                
-            return json_file
-        except Exception as e:
-            logger.error(f"Errore nel salvataggio del report JSON: {e}")
-            return ""
-            
-    def _save_report_html(self, html_content: str, report_data: Dict, report_dir: str = "reports") -> str:
-        """Salva il report HTML in un file con nome basato sul repository e data/ora.
-        
-        Args:
-            html_content: Contenuto HTML del report
-            report_data: Dati del report per generare il nome
-            report_dir: Directory dove salvare i report (default: "reports")
-            
-        Returns:
-            Percorso del file HTML creato
-        """
-        try:
-            # Crea la directory se non esiste
-            os.makedirs(report_dir, exist_ok=True)
-            
-            # Genera nome file con nome repo e timestamp
-            repo_name = report_data.get("repo_name", "report").replace("/", "_")
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            html_file = os.path.join(report_dir, f"{repo_name}_{timestamp}.html")
-            
-            # Salva il report
-            with open(html_file, "w", encoding="utf-8") as f:
-                f.write(html_content)
-                
-            return html_file
-        except Exception as e:
-            logger.error(f"Errore nel salvataggio del report HTML: {e}")
-            return ""
 
     def _check_api_limits(self) -> None:
         """Verifica i limiti delle API GitHub e mostra informazioni utili."""
@@ -299,9 +235,17 @@ class RepoAnalyzer:
             Oggetto Repository o None in caso di errore
         """
         try:
-            return self.github.get_repo(self.repo_name)
+            repo = self.github.get_repo(self.repo_name)
+            logger.info(f"Repository '{self.repo_name}' recuperato con successo.")
+            return repo
         except GithubException as e:
-            print(f"Errore nel recupero del repository: {e}")
+            logger.error(f"Errore nel recupero del repository '{self.repo_name}': {e.status} {e.data}")
+            if e.status == 404:
+                print(f"Errore: Repository '{self.repo_name}' non trovato.")
+            elif e.status == 401:
+                print("Errore: Autenticazione GitHub fallita. Verifica il tuo GITHUB_TOKEN.")
+            else:
+                print(f"Errore nel recupero del repository: {e}")
             return None
             
     def _get_cached_data(self, key: str, fetch_func, *args, **kwargs):
@@ -344,89 +288,94 @@ class RepoAnalyzer:
                 print(f"Timeout durante il recupero dei dati per {key}: {e}")
                 return None
             except Exception as e:
+                # Log more specific error for debugging
+                logger.error(f"Errore nel recupero dei dati per {key}: {e}", exc_info=True)
                 print(f"Errore nel recupero dei dati per {key}: {e}")
                 return None
-        return self._cache[key]
+        # Ensure the key exists before returning
+        return self._cache.get(key)
 
     def _check_complexity(self, path: str = ".") -> float:
         """Esegue una scansione con Radon per calcolare la complessità media."""
+        # Default neutral value
+        default_complexity = 5.0
+        
         try:
-            effective_path = self.local_repo_path if self.local_repo_path else path
-            
-            # Modificato per gestire meglio i possibili errori di Radon
+            # Check if radon is installed first
             try:
-                # Inizializza la variabile complexities qui per garantire che esista sempre
-                complexities = []
+                subprocess.run(["radon", "--version"], check=True, capture_output=True, timeout=5)
+            except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                logger.warning("Radon non trovato o non eseguibile. Assicurati che sia installato e nel PATH.")
+                return default_complexity
+
+            effective_path = self.local_repo_path if self.local_repo_path else path
+            complexities = []
+
+            if self.local_repo_path:
+                python_files = []
+                for root, _, files in os.walk(effective_path):
+                    python_files.extend([os.path.join(root, f) for f in files if f.endswith('.py')])
                 
-                # Utilizza una directory più specifica se disponibile
-                if self.local_repo_path:
-                    # Trova tutti i file Python nella directory
-                    python_files = []
-                    for root, _, files in os.walk(effective_path):
-                        python_files.extend([os.path.join(root, f) for f in files if f.endswith('.py')])
-                    
-                    # Se ci sono file Python, analizza ciascun file separatamente
-                    if python_files:
-                        for py_file in python_files[:20]:  # Limita a 20 file per evitare timeout
-                            try:
-                                cmd_result = subprocess.run(
-                                    ["radon", "cc", py_file, "-s", "-a"], 
-                                    capture_output=True, 
-                                    text=True, 
-                                    timeout=10
-                                )
-                                if cmd_result.returncode == 0 and cmd_result.stdout.strip():
-                                    for line in cmd_result.stdout.splitlines():
-                                        match = re.search(r"\((\d+)\)$", line.strip())
-                                        if match:
-                                            complexities.append(int(match.group(1)))
-                            except (subprocess.SubprocessError, subprocess.TimeoutExpired):
-                                continue  # Salta il file in caso di errore
+                if python_files:
+                    # Analyze individual files if found
+                    files_to_analyze = python_files[:20] # Limit analysis for performance
+                    logger.debug(f"Analisi complessità su {len(files_to_analyze)} file Python...")
+                    for py_file in files_to_analyze:
+                        try:
+                            cmd_result = subprocess.run(
+                                ["radon", "cc", py_file, "-s", "-a"], 
+                                capture_output=True, text=True, timeout=10, check=False # Don't check=True, parse output manually
+                            )
+                            if cmd_result.returncode == 0 and cmd_result.stdout.strip():
+                                for line in cmd_result.stdout.splitlines():
+                                    match = re.search(r"\((\d+)\)$", line.strip())
+                                    if match:
+                                        complexities.append(int(match.group(1)))
+                            elif cmd_result.returncode != 0:
+                                logger.debug(f"Radon ha fallito per il file {py_file}: {cmd_result.stderr}")
+                        except subprocess.TimeoutExpired:
+                            logger.warning(f"Timeout analisi complessità per il file: {py_file}")
+                        except Exception as e_file:
+                            logger.warning(f"Errore analisi complessità per il file {py_file}: {e_file}")
+                            
+                    if complexities:
+                        avg_complexity = sum(complexities) / len(complexities)
+                        logger.info(f"Complessità media calcolata da {len(complexities)} blocchi: {avg_complexity:.2f}")
+                        return avg_complexity
                     else:
-                        # Fallback all'analisi semplice della directory corrente
-                        cmd_result = subprocess.run(
-                            ["radon", "cc", ".", "-s", "--average-only"], 
-                            capture_output=True, 
-                            text=True, 
-                            timeout=30
-                        )
-                        if cmd_result.returncode == 0:
-                            # Cerca solo il valore medio
-                            match = re.search(r"Average complexity: (\d+\.\d+)", cmd_result.stdout)
-                            if match:
-                                return float(match.group(1))
-                else:
-                    # Se non abbiamo clonato, prova ad analizzare il codice nella directory corrente
-                    cmd_result = subprocess.run(
-                        ["radon", "cc", ".", "-s", "--average-only"], 
-                        capture_output=True, 
-                        text=True, 
-                        timeout=30
-                    )
-                    if cmd_result.returncode == 0:
-                        match = re.search(r"Average complexity: (\d+\.\d+)", cmd_result.stdout)
-                        if match:
-                            return float(match.group(1))
+                        logger.warning("Nessun dato di complessità raccolto dai file Python individuali.")
+                        # Fall through to directory analysis if individual file analysis failed or yielded no results
                 
-                # Se abbiamo raccolto dati di complessità dai file individuali
-                if complexities:
-                    return sum(complexities) / len(complexities)
-                
-            except FileNotFoundError:
-                logger.warning("Radon non trovato. Assicurati che sia installato.")
-                return 5.0  # Valore neutro
-            except Exception as e:
-                logger.warning(f"Errore nell'esecuzione di radon: {e}")
-                if hasattr(e, 'output') and e.output:
-                    logger.debug(f"Output di radon: {e.output}")
-                return 5.0  # Valore neutro
-                
+            # Fallback: Analyze directory average if no local repo or no complexities found in files
+            logger.debug(f"Tentativo di analisi complessità media sulla directory: {effective_path}")
+            try:
+                cmd_result = subprocess.run(
+                    ["radon", "cc", effective_path, "-s", "-a"], # Use -a for average directly
+                    capture_output=True, text=True, timeout=30, check=False
+                )
+                if cmd_result.returncode == 0 and cmd_result.stdout.strip():
+                    # Search for the average value, typically the last line
+                    avg_line = cmd_result.stdout.strip().splitlines()[-1]
+                    match = re.search(r"Average complexity:.*?(\d+\.\d+)", avg_line)
+                    if match:
+                        avg_complexity = float(match.group(1))
+                        logger.info(f"Complessità media della directory: {avg_complexity:.2f}")
+                        return avg_complexity
+                    else:
+                         logger.warning(f"Impossibile estrarre la complessità media dall'output di Radon: {avg_line}")
+                elif cmd_result.returncode != 0:
+                     logger.warning(f"Radon ha fallito per la directory {effective_path}: {cmd_result.stderr}")
+
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Timeout analisi complessità per la directory: {effective_path}")
+            except Exception as e_dir:
+                logger.warning(f"Errore analisi complessità per la directory {effective_path}: {e_dir}")
+
         except Exception as e:
-            logger.error(f"Errore imprevisto durante l'analisi della complessità: {e}")
-            return 5.0  # Valore di default neutro in caso di errore
-            
-        # Se non siamo riusciti a calcolare la complessità
-        return 5.0  # Valore di default neutro
+            logger.error(f"Errore imprevisto durante l'analisi della complessità: {e}", exc_info=True)
+
+        logger.warning(f"Impossibile calcolare la complessità, restituendo valore di default: {default_complexity}")
+        return default_complexity # Return default if all attempts fail
 
     def _check_style(self, path: str = ".") -> float:
         """Esegue una scansione per valutare l'aderenza allo stile (meno errori => punteggio più alto).
@@ -455,7 +404,7 @@ class RepoAnalyzer:
                     logger.debug(f"Flake8 analysis complete: {errors} issues found, score: {flake8_score:.2f}/10")
             except (FileNotFoundError, subprocess.TimeoutExpired) as e:
                 logger.debug(f"Flake8 analysis skipped: {e}")
-                pass
+                # Non aggiungere nulla allo score o ai tools usati
                 
             # Prova con pylint
             try:
@@ -489,7 +438,7 @@ class RepoAnalyzer:
                         logger.debug(f"Pylint analysis complete: {error_count} errors found, estimated score: {pylint_fallback_score:.2f}/10")
             except (FileNotFoundError, subprocess.TimeoutExpired) as e:
                 logger.debug(f"Pylint analysis skipped: {e}")
-                pass
+                # Non aggiungere nulla allo score o ai tools usati
                 
             # Calcola punteggio medio se almeno uno strumento è stato usato
             if tools_used > 0:
@@ -499,7 +448,7 @@ class RepoAnalyzer:
                 return 5.0  # Valore neutro se nessuno strumento è disponibile
         except Exception as e:
             logger.error(f"Style analysis error: {e}", exc_info=True)
-            return 0.0
+            return 0.0 # Return 0 in case of unexpected error
 
     def _check_code_smells(self, path: str = ".") -> float:
         """Esegue un'analisi per rilevare 'code smells'. Punteggio più alto con meno segnalazioni.
@@ -528,7 +477,7 @@ class RepoAnalyzer:
                     logger.debug(f"Flake8 smell analysis: {smells} issues found, score: {flake8_smell_score:.2f}/10")
             except (FileNotFoundError, subprocess.TimeoutExpired) as e:
                 logger.debug(f"Flake8 smell analysis skipped: {e}")
-                pass
+                # Non aggiungere nulla allo score o ai tools usati
             
             # 2. Radon per complessità ciclomatica
             try:
@@ -543,7 +492,7 @@ class RepoAnalyzer:
                 logger.debug(f"Radon analysis: {complex_funcs} complex functions found, score: {radon_smell_score:.2f}/10")
             except (FileNotFoundError, subprocess.TimeoutExpired) as e:
                 logger.debug(f"Radon analysis skipped: {e}")
-                pass
+                # Non aggiungere nulla allo score o ai tools usati
 
             # 3. Pycodestyle per errori di stile ulteriori
             try:
@@ -557,7 +506,7 @@ class RepoAnalyzer:
                 logger.debug(f"Pycodestyle analysis: {style_issues} issues found, score: {pycodestyle_score:.2f}/10")
             except (FileNotFoundError, subprocess.TimeoutExpired) as e:
                 logger.debug(f"Pycodestyle analysis skipped: {e}")
-                pass
+                # Non aggiungere nulla allo score o ai tools usati
             
             # 4. Verifica presenza di code smell comunemente riconoscibili nei file
             try:
@@ -593,7 +542,7 @@ class RepoAnalyzer:
                     logger.debug(f"Custom smell analysis: {custom_smells} issues found, score: {custom_smell_score:.2f}/10")
             except Exception as e:
                 logger.debug(f"Custom smell analysis error: {e}")
-                pass
+                # Non aggiungere nulla allo score o ai tools usati
                                 
             # Calcola il punteggio medio se almeno uno strumento è stato usato
             if tools_used > 0:
@@ -604,7 +553,7 @@ class RepoAnalyzer:
                 
         except Exception as e:
             logger.error(f"Code smell analysis error: {e}", exc_info=True)
-            return 0.0
+            return 0.0 # Return 0 in case of unexpected error
 
     def _check_comment_coverage(self, path: str = ".") -> float:
         """Esempio elementare: conta righe di commento vs righe totali (solo .py)."""
@@ -622,9 +571,19 @@ class RepoAnalyzer:
                                 if line_stripped:
                                     total_lines += 1
             ratio = comment_lines / total_lines if total_lines else 0
-            return min(ratio * 20.0, 10.0)  # max 10 points if heavily commented
-        except Exception:
+            # Scale score: 0% comments -> 0 points, 50% comments -> 10 points
+            score = min(ratio * 20.0, 10.0) 
+            logger.debug(f"Comment coverage: {ratio*100:.1f}%, score: {score:.1f}")
+            return score
+        except Exception as e:
+            logger.error(f"Errore nel calcolo della copertura dei commenti: {e}", exc_info=True)
             return 0.0
+
+    def _ensure_tz_aware(self, dt: Optional[datetime.datetime]) -> Optional[datetime.datetime]:
+        """Ensure a datetime object is timezone-aware (UTC)."""
+        if dt and dt.tzinfo is None:
+            return dt.replace(tzinfo=datetime.timezone.utc)
+        return dt
 
     def _fetch_issues_data(self):
         """Ottiene dati su issues aperte/chiuse e calcola i tempi medi di chiusura e risposta."""
@@ -642,10 +601,10 @@ class RepoAnalyzer:
                 total_issues += 1
                 if issue.state == 'closed':
                     closed_issues += 1
-                    if issue.closed_at and issue.created_at:
-                        # Bug fix: Ensure dates have timezone info for comparison
-                        closed_at = issue.closed_at if issue.closed_at.tzinfo else issue.closed_at.replace(tzinfo=datetime.timezone.utc)
-                        created_at = issue.created_at if issue.created_at.tzinfo else issue.created_at.replace(tzinfo=datetime.timezone.utc)
+                    closed_at = self._ensure_tz_aware(issue.closed_at)
+                    created_at = self._ensure_tz_aware(issue.created_at)
+                    if closed_at and created_at:
+                        # Ensure dates are comparable
                         delta = (closed_at - created_at).days
                         if delta >= 0:
                             closed_times.append(delta)
@@ -656,12 +615,12 @@ class RepoAnalyzer:
                     if comments and issue.user and comments[0].user:
                         # Verifica che la prima risposta non sia dell'autore dell'issue
                         if issue.user.id != comments[0].user.id:
-                            # Bug fix: Ensure dates have timezone info
-                            comment_date = comments[0].created_at if comments[0].created_at.tzinfo else comments[0].created_at.replace(tzinfo=datetime.timezone.utc)
-                            issue_date = issue.created_at if issue.created_at.tzinfo else issue.created_at.replace(tzinfo=datetime.timezone.utc)
-                            first_response_time = (comment_date - issue_date).days
-                            if first_response_time >= 0:
-                                response_times.append(first_response_time)
+                            comment_date = self._ensure_tz_aware(comments[0].created_at)
+                            issue_date = self._ensure_tz_aware(issue.created_at)
+                            if comment_date and issue_date:
+                                first_response_time = (comment_date - issue_date).days
+                                if first_response_time >= 0:
+                                    response_times.append(first_response_time)
                 except Exception as e:
                     logger.debug(f"Errore nel calcolo del tempo di risposta per issue #{issue.number}: {e}")
             
@@ -689,12 +648,14 @@ class RepoAnalyzer:
         merged_pr = 0
         closed_times = []
         for pr in pulls:
-            if pr.merged and pr.created_at and pr.closed_at:
+            if pr.merged:
                 merged_pr += 1
-                # Bug fix: Ensure dates have timezone info
-                closed_at = pr.closed_at if pr.closed_at.tzinfo else pr.closed_at.replace(tzinfo=datetime.timezone.utc)
-                created_at = pr.created_at if pr.created_at.tzinfo else pr.created_at.replace(tzinfo=datetime.timezone.utc)
-                closed_times.append((closed_at - created_at).days)
+                closed_at = self._ensure_tz_aware(pr.closed_at)
+                created_at = self._ensure_tz_aware(pr.created_at)
+                if closed_at and created_at:
+                    delta_days = (closed_at - created_at).days
+                    if delta_days >= 0: # Avoid negative times if clocks are weird
+                         closed_times.append(delta_days)
         self._cache["pr_data"] = {
             "total": total_pr,
             "merged": merged_pr,
@@ -722,13 +683,18 @@ class RepoAnalyzer:
             tag_dates = []
             for tag in tags:
                 try:
-                    if tag.commit and tag.commit.commit and tag.commit.commit.author:
-                        tag_date = tag.commit.commit.author.date
+                    # Attempt to get commit date associated with the tag
+                    commit_info = tag.commit
+                    if commit_info and commit_info.commit and commit_info.commit.author:
+                        tag_date = self._ensure_tz_aware(commit_info.commit.author.date)
                         if tag_date:
-                            # Bug fix: Ensure date has timezone info
-                            if not tag_date.tzinfo:
-                                tag_date = tag_date.replace(tzinfo=datetime.timezone.utc)
                             tag_dates.append((tag.name, tag_date))
+                    # Fallback: try getting the date from the tag object itself if commit date fails
+                    elif hasattr(tag, 'object') and hasattr(tag.object, 'created_at'):
+                         tag_date = self._ensure_tz_aware(tag.object.created_at)
+                         if tag_date:
+                             tag_dates.append((tag.name, tag_date))
+
                 except Exception as e:
                     logger.warning(f"Impossibile ottenere la data per il tag {tag.name}: {e}")
                     continue
@@ -739,8 +705,10 @@ class RepoAnalyzer:
             # Calcola le differenze di giorni tra tag consecutivi
             date_diffs = []
             for i in range(len(tag_dates) - 1):
-                date_diff = abs((tag_dates[i+1][1] - tag_dates[i][1]).days)
-                date_diffs.append(date_diff)
+                # Ensure dates are valid before subtraction
+                if tag_dates[i+1][1] and tag_dates[i][1]:
+                    date_diff = abs((tag_dates[i+1][1] - tag_dates[i][1]).days)
+                    date_diffs.append(date_diff)
             
             # Calcola la media
             avg_days = sum(date_diffs) / len(date_diffs) if date_diffs else 0.0
@@ -766,10 +734,22 @@ class RepoAnalyzer:
         }
         
         try:
-            # Ottieni il conteggio dei contributori
-            contributors = list(self.repo.get_contributors())
-            repo_data["contributori"] = len(contributors)
+            # Ottieni il conteggio dei contributori (handle potential pagination issues)
+            contributors_paginator = self.repo.get_contributors()
+            # Efficiently get count if available, otherwise iterate (up to a limit)
+            if hasattr(contributors_paginator, 'totalCount'):
+                 repo_data["contributori"] = contributors_paginator.totalCount
+            else:
+                 # Fallback: iterate manually but limit to avoid excessive API calls
+                 count = 0
+                 for _ in contributors_paginator[:500]: # Limit to 500 contributors check
+                     count += 1
+                 repo_data["contributori"] = count
+                 if count == 500:
+                     logger.warning("Raggiunto limite di 500 contributori durante il conteggio manuale.")
+
         except Exception as e:
+            logger.error(f"Errore nel recupero dei contributori: {e}", exc_info=True)
             print(f"Errore nel recupero dei contributori: {e}")
         
         try:
@@ -777,11 +757,21 @@ class RepoAnalyzer:
             used_by_url = f"https://github.com/{self.repo_name}/network/dependents"
             repo_data["dipendenti_url"] = used_by_url
             
-            # Semplice approssimazione usando search API
-            dependents = self.github.search_repositories(f"depends on:{self.repo_name}")
-            repo_data["dipendenti"] = dependents.totalCount
+            # Semplice approssimazione usando search API (può essere imprecisa)
+            # Note: GitHub search API might not be perfectly accurate for dependents
+            query = f'"{self.repo_name}" in:readme,description' # Broader search might yield more results
+            dependents = self.github.search_code(query)
+            repo_data["dipendenti"] = dependents.totalCount if dependents else 0
+        except GithubException as e:
+             if e.status == 403: # Often rate limit or access issue
+                 logger.warning(f"Errore API GitHub (403) nel recupero dei dipendenti: {e.data.get('message', '')}")
+                 print(f"Avviso: Impossibile cercare i dipendenti a causa di limiti API o permessi.")
+             else:
+                 logger.error(f"Errore nel recupero dei dipendenti: {e}", exc_info=True)
+                 print(f"Errore nel recupero dei dipendenti: {e}")
         except Exception as e:
-            print(f"Errore nel recupero dei dipendenti: {e}")
+            logger.error(f"Errore generico nel recupero dei dipendenti: {e}", exc_info=True)
+            print(f"Errore generico nel recupero dei dipendenti: {e}")
         
         self._cache["popolarita_data"] = repo_data
         return repo_data
@@ -1360,15 +1350,9 @@ class RepoAnalyzer:
                             # Ensure that all datetimes have timezone information
                             recent_releases = []
                             for r in releases:
-                                if r.created_at:
-                                    # Add timezone info if missing
-                                    if not r.created_at.tzinfo:
-                                        release_date = r.created_at.replace(tzinfo=datetime.timezone.utc)
-                                    else:
-                                        release_date = r.created_at
-                                        
-                                    if release_date > year_ago:
-                                        recent_releases.append(r)
+                                release_date = self._ensure_tz_aware(r.created_at)
+                                if release_date and release_date > year_ago:
+                                    recent_releases.append(r)
                             
                             release_count = len(recent_releases)
                             valore = f"{release_count} release negli ultimi 12 mesi"
@@ -1443,98 +1427,107 @@ class RepoAnalyzer:
                     # Usa la cache per ottenere il commit più recente
                     last_commit = self._get_cached_data(
                         "last_commit",
-                        lambda: self.repo.get_commits()[0] if self.repo.get_commits().totalCount > 0 else None
+                        lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
                     )
                     
                     if last_commit:
                         try:
-                            last_commit_date = last_commit.commit.author.date if last_commit.commit and last_commit.commit.author else None
+                            # Ensure commit and author data exist
+                            commit_data = last_commit.commit
+                            author_data = commit_data.author if commit_data else None
+                            last_commit_date = self._ensure_tz_aware(author_data.date) if author_data else None
+
                             if last_commit_date:
-                                # Assicuriamoci che la data abbia timezone
-                                if not last_commit_date.tzinfo:
-                                    last_commit_date = last_commit_date.replace(tzinfo=datetime.timezone.utc)
-                                    
                                 now = datetime.datetime.now(datetime.timezone.utc)
                                 days_since_last_commit = (now - last_commit_date).days
                                 # Assicuriamoci che il valore sia positivo
                                 days_since_last_commit = max(0, days_since_last_commit)
-                                valore = days_since_last_commit
-                                punteggio = self._normalize_score(days_since_last_commit, 365, 0, 0, 10, inverse=True)  # Più recente è meglio
+                                valore = f"{days_since_last_commit} giorni fa"
+                                # Inverse scoring: more recent = higher score. Normalize based on 1 year.
+                                punteggio = self._normalize_score(days_since_last_commit, 365, 0, 0, 10) 
                             else:
                                 valore = "Data non disponibile"
-                                punteggio = 5
+                                punteggio = 5 # Neutral score if date is missing
+                                logger.warning("Data autore non trovata per l'ultimo commit.")
                         except Exception as e:
+                            logger.error(f"Errore nel calcolo della data dell'ultimo commit: {e}", exc_info=True)
                             print(f"Errore nel calcolo della data dell'ultimo commit: {e}")
                             valore = "Errore data"
                             punteggio = 5  # Valore neutro in caso di errore
                     else:
-                        valore = "Non disponibile"
+                        valore = "Nessun commit trovato"
                         punteggio = 0
+                        logger.warning("Nessun commit trovato nel repository.")
                 elif nome_param == "frequenza_commit":
                     # Usa la cache per ottenere i commit
                     commits = self._get_cached_data(
                         "recent_commits",
-                        lambda: list(self.repo.get_commits()[:100])
+                        lambda: list(self.repo.get_commits()[:100]) if self.repo else []
                     )
                     
                     if commits and len(commits) >= 2:
                         try:
-                            # Assicuriamoci che le date abbiano timezone
-                            first_date = commits[-1].commit.author.date
-                            last_date = commits[0].commit.author.date
+                            # Get dates safely, ensuring commit and author exist
+                            first_commit_data = commits[-1].commit
+                            first_author_data = first_commit_data.author if first_commit_data else None
+                            first_date = self._ensure_tz_aware(first_author_data.date) if first_author_data else None
+
+                            last_commit_data = commits[0].commit
+                            last_author_data = last_commit_data.author if last_commit_data else None
+                            last_date = self._ensure_tz_aware(last_author_data.date) if last_author_data else None
                             
-                            # Aggiungi timezone se mancante
-                            if not first_date.tzinfo:
-                                first_date = first_date.replace(tzinfo=datetime.timezone.utc)
-                            if not last_date.tzinfo:
-                                last_date = last_date.replace(tzinfo=datetime.timezone.utc)
+                            # Proceed only if both dates are valid
+                            if first_date and last_date:
+                                # Ensure last_date is more recent
+                                if first_date > last_date:
+                                    first_date, last_date = last_date, first_date
                                 
-                            # Assicuriamoci che last_date sia più recente di first_date
-                            if first_date > last_date:
-                                first_date, last_date = last_date, first_date
-                            
-                            # Calcola la frequenza media dei commit
-                            days_diff = (last_date - first_date).days
-                            if days_diff > 0:
-                                commits_per_day = len(commits) / days_diff
-                                valore = round(commits_per_day, 2)
-                                # Normalizza: 0.5 commit/giorno = 5 punti, 2 commit/giorno = 10 punti
-                                punteggio = self._normalize_score(commits_per_day, 0, 2, 0, 10)
+                                days_diff = (last_date - first_date).days
                                 
-                                if commits_per_day < 0.1:  # Meno di un commit ogni 10 giorni
-                                    self.results["suggerimenti"].setdefault(categoria, []).append(
-                                        "La frequenza dei commit è molto bassa. Considera di aumentare l'attività di sviluppo"
-                                    )
-                                elif commits_per_day < 0.3:  # Meno di un commit ogni 3 giorni
-                                    self.results["suggerimenti"].setdefault(categoria, []).append(
-                                        "Aumenta la frequenza dei commit per mantenere un sviluppo più costante"
-                                    )
+                                # Avoid division by zero if commits are on the same day
+                                if days_diff > 0:
+                                    commits_per_day = len(commits) / days_diff
+                                    valore = f"{commits_per_day:.2f} commit/giorno (ultimi {len(commits)})"
+                                    # Normalize: 0.5 commit/giorno = 5 punti, 2 commit/giorno = 10 punti
+                                    punteggio = self._normalize_score(commits_per_day, 0, 2, 0, 10)
+                                    
+                                    if commits_per_day < 0.1:  # Meno di un commit ogni 10 giorni
+                                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                                            "La frequenza dei commit è molto bassa. Considera di aumentare l'attività di sviluppo"
+                                        )
+                                    elif commits_per_day < 0.3:  # Meno di un commit ogni 3 giorni
+                                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                                            "Aumenta la frequenza dei commit per mantenere un sviluppo più costante"
+                                        )
+                                else:
+                                    # Handle case where all commits are within the same day or less than 24h apart
+                                    valore = f"{len(commits)} commit recenti (stesso giorno)"
+                                    # Score based on number of commits if timeframe is too short
+                                    punteggio = self._normalize_score(len(commits), 1, 10, 0, 10) 
+                                    logger.debug("Commit troppo ravvicinati per calcolare frequenza giornaliera sensata.")
                             else:
-                                valore = len(commits)
-                                punteggio = self._normalize_score(len(commits), 1, 10, 0, 10)
-                                self.results["suggerimenti"].setdefault(categoria, []).append(
-                                    "I commit sono troppo ravvicinati. Considera di distribuire meglio le modifiche nel tempo"
-                                )
+                                valore = "Date commit non valide"
+                                punteggio = 5 # Neutral score if dates are missing
+                                logger.warning("Date autore non trovate per alcuni commit recenti.")
                         except Exception as e:
+                            logger.error(f"Errore nel calcolo della frequenza dei commit: {e}", exc_info=True)
                             print(f"Errore nel calcolo della frequenza dei commit: {e}")
                             valore = "Errore calcolo"
                             punteggio = 5
                             self.results["suggerimenti"].setdefault(categoria, []).append(
                                 "Si è verificato un errore nel calcolo della frequenza dei commit"
                             )
-                    else:
-                        valore = 0
+                    elif commits and len(commits) == 1:
+                         valore = "1 commit recente"
+                         punteggio = 1 # Low score for single commit
+                    else: # No commits or empty list
+                        valore = "Nessun commit recente"
                         punteggio = 0
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Non sono stati trovati commit recenti. Il repository potrebbe essere inattivo"
                         )
                 elif nome_param == "stato_archivio":
-                    valore = self.repo.archived
-                    punteggio = 0 if valore else 10  # 0 se archiviato, 10 se attivo
-                elif nome_param == "distribuzione_contributi":
-                    # Implementazione semplificata - analisi più dettagliata richiederebbe più chiamate API
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
+                    valore = "Archiviato" if self.repo.archived else "Attivo"
                 elif nome_param == "attivita_issues_tempo":
                     issues_data = self._fetch_issues_data()
                     closed_times = issues_data.get("closed_times", [])
