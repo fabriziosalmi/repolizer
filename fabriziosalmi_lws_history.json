@@ -54,5 +54,19 @@
       "setup_usabilita": 0.0
     },
     "punteggio_totale": 0.4
+  },
+  {
+    "data": "2025-04-07 10:01:19",
+    "punteggi": {
+      "popolarita_impatto": 1.51,
+      "attivita_manutenzione": 1.68,
+      "qualita_codice": 0.0,
+      "documentazione": 0.0,
+      "community_collaborazione": 0.0,
+      "sicurezza": 0.0,
+      "testing_cicd": 0.0,
+      "setup_usabilita": 0.0
+    },
+    "punteggio_totale": 0.4
   }
 ]

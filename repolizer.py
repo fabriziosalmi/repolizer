@@ -580,12 +580,22 @@ class RepoAnalyzer:
             return
 
         try:
+            # Visualizza i suggerimenti nel terminale
+            if self.results.get("suggerimenti"):
+                print("\nSuggerimenti per il miglioramento:")
+                for categoria, suggerimenti in self.results["suggerimenti"].items():
+                    if suggerimenti:
+                        print(f"\n{categoria.replace('_', ' ').title()}:")
+                        for suggerimento in suggerimenti:
+                            print(f"- {suggerimento}")
+
             # Genera il report HTML utilizzando il modulo html_report
             output_file = generate_html_report(self.results)
             print(f"\nReport HTML generato: {output_file}")
             print("Apri il file nel tuo browser per visualizzare il report interattivo.")
         except Exception as e:
             print(f"Errore nella generazione del report HTML: {e}")
+
 
 
 def main():
