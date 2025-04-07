@@ -19,10 +19,10 @@ except ImportError:
         "community_collaborazione": "Collaborazione",
         "documentazione": "Documentazione",
         "distribuzione": "Distribuzione",
-        "qualita_codice": "Codice",
-        "setup_usabilita": "Adozione",
+        "codice": "Codice",
+        "adozione": "Adozione",
         "sicurezza": "Sicurezza",
-        "testing_cicd": "Integrazione"
+        "integrazione": "Integrazione"
     }
 
 def generate_html_report(results, output_file=None):

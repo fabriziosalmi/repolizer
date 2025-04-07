@@ -107,10 +107,10 @@ CATEGORY_LABELS_MAPPING = {
     "community_collaborazione": "Collaborazione",
     "documentazione": "Documentazione",
     "distribuzione": "Distribuzione",
-    "qualita_codice": "Codice",
-    "setup_usabilita": "Adozione",
+    "codice": "Codice",
+    "adozione": "Adozione",
     "sicurezza": "Sicurezza",
-    "testing_cicd": "Integrazione"
+    "integrazione": "Integrazione"
 }
 
 
@@ -1651,7 +1651,7 @@ class RepoAnalyzer:
                 return valore, round(punteggio, 2), conta_punteggio
 
             # Qualità del codice
-            elif categoria == "qualita_codice":
+            elif categoria == "codice":
                 if nome_param == "complessita_media":
                     valore = "Media complessità"
                     complexity = self._check_complexity(".")
@@ -2092,7 +2092,7 @@ class RepoAnalyzer:
                 return valore, round(punteggio, 2), conta_punteggio
 
             # Testing & CI/CD
-            elif categoria == "testing_cicd":
+            elif categoria == "integrazione":
                 if nome_param == "presenza_test_suite":
                     # Verifichiamo la presenza di directory o file di test con modalità più approfondita
                     valore = False
@@ -2281,7 +2281,7 @@ class RepoAnalyzer:
                 return valore, round(punteggio, 2), conta_punteggio
 
             # Setup & Usabilità
-            elif categoria == "setup_usabilita":
+            elif categoria == "adozione":
                 if nome_param == "facilita_setup":
                     # Improve the setup analysis with actual checks
                     valore = "Analisi in corso"
