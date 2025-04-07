@@ -2748,35 +2748,62 @@ class RepoAnalyzer:
                 capture_output=True, text=True, timeout=120, check=False
             )
 
+            # Process the output if we have any (return code 0 = no issues, 1 = issues found)
             if result.returncode in [0, 1] and result.stdout:
                 try:
                     data = json.loads(result.stdout)
                     issues = data.get("results", [])
                     metrics = data.get("metrics", {})
-                    total_loc = metrics.get("_totals", {}).get("loc", 1)  # Avoid division by zero
-
-                    severity_scores = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+                    
+                    # Get total lines of code analyzed
+                    total_loc = metrics.get("_totals", {}).get("loc", 0) 
+                    if total_loc == 0:  # Avoid division by zero
+                        total_loc = 1
+                    
+                    # Count issues by severity
+                    severity_counts = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
                     for issue in issues:
                         severity = issue.get("issue_severity", "LOW")
-                        if severity in severity_scores:
-                            severity_scores[severity] += 1
-
-                    weighted_issues = (severity_scores["HIGH"] * 3) + (severity_scores["MEDIUM"] * 2) + (severity_scores["LOW"] * 1)
+                        if severity in severity_counts:
+                            severity_counts[severity] += 1
+                    
+                    # Calculate weighted issues (HIGH issues are most important)
+                    weighted_issues = (
+                        severity_counts["HIGH"] * 5.0 + 
+                        severity_counts["MEDIUM"] * 2.0 + 
+                        severity_counts["LOW"] * 0.5
+                    )
+                    
+                    # Calculate issue density per 1000 lines
                     issue_density = (weighted_issues / total_loc) * 1000 if total_loc > 0 else 0
-                    score = self._normalize_score(issue_density, 20, 0, 0, 10)
-
-                    logger.info(f"Bandit analysis: {len(issues)} issues found ({severity_scores['HIGH']}H, {severity_scores['MEDIUM']}M, {severity_scores['LOW']}L). Density: {issue_density:.2f}/kloc. Score: {score:.2f}")
+                    
+                    # Score calculation: 10 = no issues, 0 = high density
+                    # A moderate density (~5 weighted issues per 1000 LOC) scores around 5
+                    if len(issues) == 0:
+                        score = 10.0  # Perfect score for no issues
+                    else:
+                        # Exponential decay formula for more responsive scoring
+                        # This penalizes more for the first few issues, gradually leveling out
+                        score = 10.0 * math.exp(-0.2 * issue_density)
+                        score = max(0.0, min(10.0, score))  # Ensure score is between 0-10
+                    
+                    logger.info(
+                        f"Bandit analysis: {len(issues)} issues found "
+                        f"({severity_counts['HIGH']}H, {severity_counts['MEDIUM']}M, {severity_counts['LOW']}L). "
+                        f"Density: {issue_density:.2f}/kloc. Score: {score:.2f}"
+                    )
 
                     # Clear previous security suggestions before adding new ones
                     self.results["suggerimenti"].setdefault("sicurezza", [])
                     
-                    if severity_scores["HIGH"] > 0:
+                    # Add targeted suggestions based on findings
+                    if severity_counts["HIGH"] > 0:
                         self.results["suggerimenti"]["sicurezza"].append(
-                            f"Risolvi le {severity_scores['HIGH']} vulnerabilità ad alta severità identificate da Bandit."
+                            f"Risolvi le {severity_counts['HIGH']} vulnerabilità ad alta severità identificate da Bandit."
                         )
-                    if severity_scores["MEDIUM"] > 5:
+                    if severity_counts["MEDIUM"] > 0:
                         self.results["suggerimenti"]["sicurezza"].append(
-                            f"Rivedi le {severity_scores['MEDIUM']} vulnerabilità a media severità identificate da Bandit."
+                            f"Rivedi le {severity_counts['MEDIUM']} vulnerabilità a media severità identificate da Bandit."
                         )
                     if len(issues) == 0:
                         # Add positive feedback if no issues found
@@ -2785,25 +2812,37 @@ class RepoAnalyzer:
                         )
 
                     return score
+                    
                 except json.JSONDecodeError as json_e:
                     logger.error(f"Errore nel parsing dell'output JSON di Bandit: {json_e}\nOutput:\n{result.stdout[:500]}...")
-                    return 2.0
-            elif result.returncode > 1:
-                logger.warning(f"Bandit ha restituito un codice di errore: {result.returncode}. Stderr: {result.stderr}")
-                return 3.0
+                    return 3.0  # Lower default score on parsing error
+                    
+            elif result.returncode == 0 and not result.stdout:
+                # No issues found and no output
+                logger.info("Bandit non ha rilevato vulnerabilità (nessun output)")
+                self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                    "Nessuna vulnerabilità rilevata da Bandit. Continua a mantenere questo standard."
+                )
+                return 10.0  # Perfect score for no issues
+                
             else:
-                logger.warning(f"Bandit non ha prodotto output o ha fallito silenziosamente (return code {result.returncode}).")
-                return 4.0
+                # Handle error cases
+                if result.returncode > 1:
+                    logger.warning(f"Bandit ha restituito un codice di errore: {result.returncode}. Stderr: {result.stderr}")
+                    return 4.0  # Slightly below neutral on error
+                else:
+                    logger.warning(f"Bandit non ha prodotto output o ha fallito silenziosamente (return code {result.returncode}).")
+                    return 5.0  # Neutral score on unexpected behavior
 
         except subprocess.TimeoutExpired:
             logger.error("Timeout durante l'esecuzione di Bandit (superati 120s).")
-            return 1.0
+            return 3.0  # Lower score on timeout
         except FileNotFoundError:
             logger.error("Comando 'bandit' non trovato. Assicurati che Bandit sia installato e nel PATH.")
-            return 5.0
+            return 5.0  # Neutral score if command not found
         except Exception as e:
             logger.error(f"Errore imprevisto durante l'esecuzione di Bandit: {e}", exc_info=True)
-            return 0.0
+            return 2.0  # Low score on unexpected error
 
     def _check_dependencies_safety(self, path: str) -> Tuple[str, float]:
         """Esegue una scansione delle dipendenze con Safety (se disponibile)."""
@@ -3371,14 +3410,472 @@ class RepoAnalyzer:
     def _check_dependencies_freshness(self) -> float:
         """
         Verifica se le dipendenze del progetto sono aggiornate.
+        
+        Analizza i file di dipendenze comuni (requirements.txt, package.json, etc.) 
+        e valuta quanto sono aggiornate le versioni specificate rispetto alle più recenti.
+        
+        Returns:
+            float: Punteggio da 0 a 10, dove 10 indica dipendenze completamente aggiornate
         """
         try:
-            # Esempio di placeholder per logica di verifica versioni e aggiornamenti
-            # Si ipotizza un punteggio pieno se si rilevano versioni recenti, altrimenti decresce
-            # ...implementazione effettiva dipende dal file e dalla piattaforma usata...
-            return 8.0  # Simulazione di punteggio
-        except Exception:
-            return 0.0
+            logger.info("Verificando l'aggiornamento delle dipendenze...")
+            
+            # Assicurati di avere un repository clonato
+            if not self.local_repo_path:
+                logger.warning("Verifica dipendenze richiede --clone. Restituisco valore di default.")
+                return 5.0  # Valore neutro se non abbiamo accesso locale
+            
+            # Definisce i tipi di file di dipendenze da cercare e le loro funzioni di analisi
+            dependency_file_types = {
+                "python": ["requirements.txt", "Pipfile", "Pipfile.lock", "pyproject.toml"],
+                "javascript": ["package.json", "package-lock.json", "yarn.lock"],
+                "java": ["pom.xml", "build.gradle"],
+                "ruby": ["Gemfile", "Gemfile.lock"],
+                "php": ["composer.json", "composer.lock"],
+                "dotnet": ["*.csproj", "packages.config"]
+            }
+            
+            # Inizializza le statistiche
+            total_deps = 0
+            outdated_deps = 0
+            severely_outdated_deps = 0  # Per versioni criticamente vecchie
+            dependency_files_found = {}
+            
+            # 1. Trova i file di dipendenze nel repository
+            for root, _, files in os.walk(self.local_repo_path):
+                for filename in files:
+                    file_path = os.path.join(root, filename)
+                    
+                    # Controlla ogni tipo di file di dipendenze
+                    for platform, file_patterns in dependency_file_types.items():
+                        for pattern in file_patterns:
+                            if pattern.startswith('*') and filename.endswith(pattern[1:]):
+                                # Pattern wildcard
+                                dependency_files_found.setdefault(platform, []).append(file_path)
+                                break
+                            elif filename.lower() == pattern.lower():
+                                # Match esatto
+                                dependency_files_found.setdefault(platform, []).append(file_path)
+                                break
+            
+            # Se non troviamo file di dipendenze, restituisci un valore neutro
+            if not dependency_files_found:
+                logger.info("Nessun file di dipendenze trovato. Restituisco valore neutro.")
+                return 5.0
+            
+            logger.info(f"File di dipendenze trovati: {dependency_files_found}")
+            
+            # 2. Analizza i file di dipendenze per piattaforma
+            for platform, file_paths in dependency_files_found.items():
+                if platform == "python":
+                    python_results = self._check_python_dependencies(file_paths)
+                    total_deps += python_results.get('total', 0)
+                    outdated_deps += python_results.get('outdated', 0)
+                    severely_outdated_deps += python_results.get('severely_outdated', 0)
+                    
+                elif platform == "javascript":
+                    js_results = self._check_js_dependencies(file_paths)
+                    total_deps += js_results.get('total', 0)
+                    outdated_deps += js_results.get('outdated', 0)
+                    severely_outdated_deps += js_results.get('severely_outdated', 0)
+                    
+                # Per le altre piattaforme, usa un'analisi semplificata
+                else:
+                    other_results = self._check_generic_dependencies(file_paths, platform)
+                    total_deps += other_results.get('total', 0)
+                    outdated_deps += other_results.get('outdated', 0)
+            
+            # 3. Calcola il punteggio finale basato sulle statistiche
+            if total_deps == 0:
+                logger.info("Nessuna dipendenza analizzabile trovata")
+                return 5.0  # Valore neutro
+                
+            # Calcola percentuali
+            outdated_percent = min(100, (outdated_deps / total_deps) * 100)
+            severely_outdated_percent = min(100, (severely_outdated_deps / total_deps) * 100)
+            
+            # Calcola punteggio: pesa di più le dipendenze gravemente obsolete
+            base_score = 10.0 - (outdated_percent / 10)  # Perde 1 punto ogni 10% di dipendenze obsolete
+            penalty = severely_outdated_percent / 5      # Penalità aggiuntiva per dipendenze gravemente obsolete
+            
+            final_score = max(0, min(10, base_score - penalty))
+            
+            logger.info(f"Analisi dipendenze completata: {total_deps} dipendenze trovate, " +
+                        f"{outdated_deps} obsolete ({outdated_percent:.1f}%), " +
+                        f"{severely_outdated_deps} gravemente obsolete ({severely_outdated_percent:.1f}%)")
+            logger.info(f"Punteggio freschezza dipendenze: {final_score:.2f}/10")
+            
+            # Aggiungi suggerimenti basati sui risultati
+            if outdated_deps > 0:
+                suggestion = f"Aggiorna le {outdated_deps} dipendenze obsolete per migliorare sicurezza e performance"
+                if severely_outdated_deps > 0:
+                    suggestion += f", di cui {severely_outdated_deps} criticamente vecchie"
+                if "sicurezza" in self.results.get("suggerimenti", {}):
+                    self.results["suggerimenti"]["sicurezza"].append(suggestion)
+            
+            return round(final_score, 2)
+            
+        except Exception as e:
+            logger.error(f"Errore nella verifica della freschezza delle dipendenze: {e}", exc_info=True)
+            return 5.0  # Valore neutro in caso di errore
+        
+    def _check_python_dependencies(self, file_paths: List[str]) -> Dict[str, int]:
+        """
+        Analizza i file di dipendenze Python e verifica se sono aggiornate.
+        
+        Args:
+            file_paths: Lista di percorsi di file di dipendenze Python
+            
+        Returns:
+            Dizionario con statistiche delle dipendenze
+        """
+        result = {'total': 0, 'outdated': 0, 'severely_outdated': 0}
+        
+        try:
+            # Prioritizza requirements.txt se presente
+            requirements_files = [f for f in file_paths if os.path.basename(f).lower() == 'requirements.txt']
+            if not requirements_files:
+                requirements_files = file_paths
+                
+            for file_path in requirements_files:
+                if not os.path.exists(file_path):
+                    continue
+                    
+                filename = os.path.basename(file_path).lower()
+                
+                # Usa pip per verificare le dipendenze obsolete
+                if filename == 'requirements.txt':
+                    try:
+                        # Usa pip per controllare le versioni obsolete
+                        with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False) as temp_file:
+                            # Copia il contenuto del requirements nel file temporaneo
+                            with open(file_path, 'r', encoding='utf-8') as req_file:
+                                # Filtra le righe di commento e vuote
+                                valid_lines = [line.strip() for line in req_file if line.strip() and not line.strip().startswith('#')]
+                                # Scrivi solo dipendenze valide nel file temporaneo
+                                temp_file.write('\n'.join(valid_lines))
+                        
+                        # Usa pip check per verificare le dipendenze obsolete
+                        pip_cmd = ["pip", "list", "--outdated", "--format=json"]
+                        env = os.environ.copy()
+                        env["PIP_REQUIRE_VIRTUALENV"] = "false"  # Consenti pip di funzionare fuori da un virtualenv
+                        
+                        process = subprocess.run(
+                            pip_cmd,
+                            capture_output=True, 
+                            text=True, 
+                            timeout=60,
+                            check=False,
+                            env=env
+                        )
+                        
+                        if process.returncode == 0 and process.stdout:
+                            try:
+                                outdated_packages = json.loads(process.stdout)
+                                
+                                # Conta quanti pacchetti nel requirements.txt sono nell'elenco degli obsoleti
+                                with open(file_path, 'r', encoding='utf-8') as f:
+                                    for line in f:
+                                        line = line.strip()
+                                        if line and not line.startswith('#'):
+                                            # Estrai il nome del pacchetto
+                                            match = re.match(r'^([a-zA-Z0-9_-]+).*?(?:==|>=|<=|>|<|~=|!=)?\s*([0-9a-zA-Z.-]+)?', line)
+                                            if match:
+                                                package_name = match.group(1).lower()
+                                                package_version = match.group(2) if len(match.groups()) > 1 else None
+                                                
+                                                result['total'] += 1
+                                                
+                                                # Controlla se è obsoleto
+                                                for outdated in outdated_packages:
+                                                    if outdated.get('name', '').lower() == package_name:
+                                                        result['outdated'] += 1
+                                                        
+                                                        # Calcola se è gravemente obsoleto (più di 2 versioni principali indietro)
+                                                        if package_version and 'latest_version' in outdated:
+                                                            current_parts = package_version.split('.')
+                                                            latest_parts = outdated['latest_version'].split('.')
+                                                            
+                                                            if len(current_parts) >= 1 and len(latest_parts) >= 1:
+                                                                try:
+                                                                    # Se la MAJOR version è indietro di 2 o più
+                                                                    if int(latest_parts[0]) - int(current_parts[0]) >= 2:
+                                                                        result['severely_outdated'] += 1
+                                                                except ValueError:
+                                                                    pass
+                                                        break
+                            except json.JSONDecodeError:
+                                logger.warning("Errore nel parsing dell'output JSON di pip list --outdated")
+                    except Exception as e:
+                        logger.warning(f"Errore nell'esecuzione di pip list --outdated: {e}")
+
+                # Analisi di Pipfile/Pipfile.lock
+                elif filename in ['pipfile', 'pipfile.lock']:
+                    try:
+                        if filename == 'pipfile':
+                            # Analisi semplice di Pipfile
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                in_packages = False
+                                for line in f:
+                                    line = line.strip()
+                                    if '[packages]' in line:
+                                        in_packages = True
+                                        continue
+                                    if in_packages and line.startswith('['):
+                                        in_packages = False
+                                        continue
+                                    if in_packages and '=' in line:
+                                        result['total'] += 1
+                                        # Semplice euristica per versioni specifiche
+                                        if '==' in line:
+                                            result['outdated'] += 1
+                        
+                        elif filename == 'pipfile.lock':
+                            # Analisi di Pipfile.lock (formato JSON)
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                try:
+                                    data = json.load(f)
+                                    if 'default' in data:
+                                        result['total'] += len(data['default'])
+                                        # Difficile determinare se sono obsolete senza API esterne
+                                        # Proviamo a stimare in base all'hash
+                                        if '_meta' in data and 'pipfile-spec' in data['_meta']:
+                                            if data['_meta']['pipfile-spec'] < 6:  # spec versione vecchia
+                                                result['outdated'] += len(data['default']) // 2
+                                except json.JSONDecodeError:
+                                    pass
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi del file {filename}: {e}")
+                
+                # Analisi di pyproject.toml
+                elif filename == 'pyproject.toml':
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            # Cerca sezioni di dipendenze in formato TOML
+                            dependencies_section = re.search(r'\[tool\.poetry\.dependencies\](.*?)(\[|\Z)', content, re.DOTALL)
+                            if dependencies_section:
+                                deps = dependencies_section.group(1)
+                                # Conta le dipendenze
+                                package_matches = re.findall(r'^([a-zA-Z0-9_-]+)\s*=\s*["\'](.+?)["\']', deps, re.MULTILINE)
+                                result['total'] += len(package_matches)
+                                
+                                # Stima dipendenze obsolete (dipendenze con versioni fisse specificate)
+                                fixed_versions = re.findall(r'^[a-zA-Z0-9_-]+\s*=\s*["\']={2,3}[0-9]+\.[0-9]+\.[0-9]+["\']', deps, re.MULTILINE)
+                                result['outdated'] += len(fixed_versions)
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi di pyproject.toml: {e}")
+        
+        except Exception as e:
+            logger.error(f"Errore nell'analisi delle dipendenze Python: {e}", exc_info=True)
+        
+        return result
+
+    def _check_js_dependencies(self, file_paths: List[str]) -> Dict[str, int]:
+        """
+        Analizza i file di dipendenze JavaScript/Node.js e verifica se sono aggiornate.
+        
+        Args:
+            file_paths: Lista di percorsi di file di dipendenze JavaScript
+            
+        Returns:
+            Dizionario con statistiche delle dipendenze
+        """
+        result = {'total': 0, 'outdated': 0, 'severely_outdated': 0}
+        
+        try:
+            # Prioritizza package.json
+            package_json_files = [f for f in file_paths if os.path.basename(f).lower() == 'package.json']
+            if not package_json_files:
+                package_json_files = file_paths
+            
+            for file_path in package_json_files:
+                if not os.path.exists(file_path):
+                    continue
+                
+                filename = os.path.basename(file_path).lower()
+                
+                if filename == 'package.json':
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            
+                            # Controlla le dipendenze
+                            dependencies = {}
+                            dependencies.update(data.get('dependencies', {}))
+                            dependencies.update(data.get('devDependencies', {}))
+                            
+                            result['total'] += len(dependencies)
+                            
+                            for pkg, version in dependencies.items():
+                                # Conta dipendenze con versioni fisse o intervalli stretti
+                                if version.startswith('^0.') or version.startswith('~0.'):
+                                    result['outdated'] += 1
+                                    result['severely_outdated'] += 1
+                                elif version.startswith('^') or version.startswith('~'):
+                                    # Le versioni con ^ o ~ sono generalmente meno problematiche
+                                    pass
+                                elif version.startswith('>='):
+                                    # Il formato >= è generalmente aggiornato
+                                    pass
+                                else:
+                                    # Versioni esatte sono spesso obsolete
+                                    version_match = re.match(r'^([0-9]+)\.([0-9]+)\.([0-9]+)', version)
+                                    if version_match:
+                                        major = int(version_match.group(1))
+                                        if major == 0:
+                                            result['outdated'] += 1
+                                            result['severely_outdated'] += 1
+                                        elif major == 1:
+                                            result['outdated'] += 0.5  # Contiamo come mezza dipendenza obsoleta
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Errore nel parsing di package.json: {e}")
+                
+                elif filename in ['package-lock.json', 'yarn.lock']:
+                    # Un approccio più complesso sarebbe confrontare con i dati di un registry npm
+                    # Ma per semplicità facciamo solo una stima basata sulla data del file
+                    try:
+                        file_age_days = (datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(file_path))).days
+                        
+                        # Stima basata sull'età del file di lock
+                        if file_age_days > 365:  # Più di un anno
+                            result['total'] += 10  # Stima
+                            result['outdated'] += 8
+                            result['severely_outdated'] += 5
+                        elif file_age_days > 180:  # Più di sei mesi
+                            result['total'] += 10  # Stima
+                            result['outdated'] += 5
+                            result['severely_outdated'] += 2
+                        elif file_age_days > 90:  # Più di tre mesi
+                            result['total'] += 10  # Stima
+                            result['outdated'] += 3
+                        else:  # Relativamente recente
+                            result['total'] += 10  # Stima
+                            result['outdated'] += 1
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi dell'età del file {filename}: {e}")
+        
+        except Exception as e:
+            logger.error(f"Errore nell'analisi delle dipendenze JavaScript: {e}", exc_info=True)
+        
+        return result
+
+    def _check_generic_dependencies(self, file_paths: List[str], platform: str) -> Dict[str, int]:
+        """
+        Analisi generica per altre piattaforme di dipendenze.
+        
+        Args:
+            file_paths: Lista di percorsi di file di dipendenze
+            platform: Nome della piattaforma
+            
+        Returns:
+            Dizionario con statistiche delle dipendenze
+        """
+        result = {'total': 0, 'outdated': 0, 'severely_outdated': 0}
+        
+        try:
+            for file_path in file_paths:
+                if not os.path.exists(file_path):
+                    continue
+                    
+                filename = os.path.basename(file_path).lower()
+                
+                # Per Java/Maven
+                if platform == "java" and filename == "pom.xml":
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            # Cerca dipendenze
+                            dependencies = re.findall(r'<dependency>.*?</dependency>', content, re.DOTALL)
+                            result['total'] += len(dependencies)
+                            
+                            # Stima euristica delle dipendenze obsolete
+                            for dep in dependencies:
+                                version_match = re.search(r'<version>(.*?)</version>', dep)
+                                if version_match:
+                                    version = version_match.group(1)
+                                    if '$' in version:  # Variable reference - probably up to date
+                                        pass
+                                    elif version.startswith('1.'):
+                                        result['outdated'] += 1
+                                        if version.startswith('1.0.') or version.startswith('1.1.') or version.startswith('1.2.'):
+                                            result['severely_outdated'] += 1
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi di pom.xml: {e}")
+                
+                # Per Gradle
+                elif platform == "java" and filename == "build.gradle":
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            # Cerca dipendenze
+                            dependencies = re.findall(r'(implementation|api|compile)\s+[\'"]([^\'"]*)[\'":]', content)
+                            result['total'] += len(dependencies)
+                            
+                            # Stima euristica
+                            for _, dep in dependencies:
+                                if ':1.' in dep:  # Vecchia versione 1.x
+                                    result['outdated'] += 1
+                                    if ':1.0.' in dep or ':1.1.' in dep:
+                                        result['severely_outdated'] += 1
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi di build.gradle: {e}")
+                
+                # Per Ruby/Gemfile
+                elif platform == "ruby" and filename in ["gemfile", "gemfile.lock"]:
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            if filename == "gemfile":
+                                gems = re.findall(r'gem\s+[\'"]([^\'"]*)[\'"](?:,\s*[\'"]([^\'"]*)[\'"])?', content)
+                                result['total'] += len(gems)
+                            else:  # gemfile.lock
+                                gems = re.findall(r'^\s{4}([^ ]+) \((.*?)\)', content, re.MULTILINE)
+                                result['total'] += len(gems)
+                                
+                            # Stima euristica basata sull'età del file
+                            file_age_days = (datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(file_path))).days
+                            if file_age_days > 365:
+                                result['outdated'] = result['total'] * 0.7  # 70% obsoleto se file vecchio > 1 anno
+                                result['severely_outdated'] = result['total'] * 0.3
+                            elif file_age_days > 180:
+                                result['outdated'] = result['total'] * 0.4
+                                result['severely_outdated'] = result['total'] * 0.1
+                            elif file_age_days > 90:
+                                result['outdated'] = result['total'] * 0.2
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi di {filename}: {e}")
+                        
+                # Altri file di dipendenze generici - stima basata sull'età del file
+                else:
+                    try:
+                        # Leggi il file e prova a contare le dipendenze in modo generico
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            # Cerca pattern di versione generici
+                            versions = re.findall(r'[0-9]+\.[0-9]+\.[0-9]+', content)
+                            result['total'] += len(versions)
+                            
+                            # Stima basata sull'età del file
+                            file_age_days = (datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(file_path))).days
+                            if file_age_days > 365:
+                                result['outdated'] = result['total'] * 0.6  # 60% obsoleto se file vecchio > 1 anno
+                            elif file_age_days > 180:
+                                result['outdated'] = result['total'] * 0.3
+                            elif file_age_days > 90:
+                                result['outdated'] = result['total'] * 0.1
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi generica del file {filename}: {e}")
+        
+        except Exception as e:
+            logger.error(f"Errore nell'analisi delle dipendenze {platform}: {e}", exc_info=True)
+        
+        # Assicura che i valori siano interi
+        result['total'] = int(result['total'])
+        result['outdated'] = int(result['outdated'])
+        result['severely_outdated'] = int(result['severely_outdated'])
+        
+        return result
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")

@@ -364,7 +364,11 @@
                     if (info.punteggio === null || info.punteggio === undefined || info.score_is_na) {
                         scoreDisplay = 'N/A';
                     } else {
-                        scoreDisplay = `${info.punteggio}/10`;
+                        // Format the score to have a maximum of 2 decimal places
+                        const formattedScore = Number.isInteger(info.punteggio) ? 
+                            info.punteggio : 
+                            parseFloat(info.punteggio).toFixed(2);
+                        scoreDisplay = `${formattedScore}/10`;
                     }
                     
                     row.innerHTML = `
