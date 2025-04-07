@@ -79,7 +79,7 @@ def timeout_handler(func):
 # Configurazione del logger
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(name)s - %(levellevelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger('repolizer')
@@ -1300,95 +1300,252 @@ class RepoAnalyzer:
                         punteggio = 0
                     
                     # More granular suggestion based on score
-                    if punteggio < 2:
+                    if punteggio < 1:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Il repository ha pochissima visibilità. Promuovilo attivamente attraverso blog post, social media e conferenze"
+                            "Visibilità inesistente. Richiede un'azione immediata e su vasta scala. Concentrati su annunci iniziali su tutte le piattaforme rilevanti e contatta influencer."
+                        )
+                    elif punteggio < 2:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Visibilità molto bassa. È cruciale iniziare una promozione attiva e mirata. Condividi su social media specifici, forum e considera un breve post di blog introduttivo."
+                        )
+                    elif punteggio < 3:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "La visibilità è ancora molto bassa. Intensifica gli sforzi di promozione di base e cerca le prime interazioni."
+                        )
+                    elif punteggio < 4:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Visibilità in crescita, ma ancora limitata. Aumenta la frequenza della promozione e valuta guest post su blog di settore."
                         )
                     elif punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Considera di promuovere il repository attraverso blog post o social media per aumentare la visibilità"
+                            "La visibilità sta migliorando. Continua a promuovere e inizia a interagire con i primi osservatori."
+                        )
+                    elif punteggio < 6:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Buona base di visibilità iniziale. Inizia a concentrarti sull'engagement dei primi utenti e chiedi feedback."
+                        )
+                    elif punteggio < 7:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Visibilità solida. Continua a condividere aggiornamenti e crea contenuti più coinvolgenti come brevi tutorial."
                         )
                     elif punteggio < 8:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Il repository ha una buona base di stelle. Mantieni l'engagement con la community per continuare la crescita"
+                            "Ottima visibilità. Mantieni un engagement attivo e cerca opportunità di collaborazione con altri progetti simili."
+                        )
+                    elif punteggio < 9:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Visibilità elevata. Nutri la community e cerca modi per espandere ulteriormente la portata, magari con eventi online."
+                        )
+                    elif punteggio <= 10:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Visibilità eccezionale. Continua a mantenere l'impegno e ascolta i feedback per una crescita continua, valutando un programma per contributori."
                         )
                         
                 elif nome_param == "forks":
                     valore = f"{pop_data['forks']} fork"
                     punteggio = self._normalize_score(pop_data['forks'], 0, 500, 0, 10)
-                    
-                    # More granular suggestion based on score
-                    if punteggio < 2:
+
+                    # Suggerimenti più granulari basati sul punteggio
+                    if punteggio < 1:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Pochissimi fork. Incoraggia il riutilizzo del codice con esempi chiari e casi d'uso ben documentati"
+                            "Numero di fork estremamente basso. Rendi il progetto più accessibile con una documentazione basilare e un README chiaro."
+                        )
+                    elif punteggio < 2:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Pochissimi fork. Incoraggia il riutilizzo del codice con esempi chiari e casi d'uso ben documentati. Evidenzia i vantaggi del fork."
+                        )
+                    elif punteggio < 3:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Il numero di fork è ancora molto basso. Mostra come contribuire facilmente e come il fork può beneficiare altri sviluppatori."
+                        )
+                    elif punteggio < 4:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Il numero di fork è in crescita, ma migliorabile. Fornisci guide su come personalizzare e estendere il progetto tramite fork."
                         )
                     elif punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Migliora la documentazione e gli esempi per incoraggiare più fork e riutilizzo del codice"
+                            "Migliora la documentazione e gli esempi per incoraggiare più fork e riutilizzo del codice. Sottolinea la licenza e i termini d'uso."
+                        )
+                    elif punteggio < 6:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Un numero discreto di fork. Mantieni la documentazione aggiornata e rispondi alle domande sui fork."
+                        )
+                    elif punteggio < 7:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Buon numero di fork. Considera di evidenziare i progetti che utilizzano il tuo codice e di mostrare i fork più attivi."
                         )
                     elif punteggio < 8:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Buon numero di fork. Considera di evidenziare i progetti che utilizzano il tuo codice"
+                            "Ottimo numero di fork. Continua a supportare la community dei fork e considera di integrarne i contributi più validi."
+                        )
+                    elif punteggio < 9:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Numero di fork elevato. Promuovi le best practice per il forking e la contribuzione al progetto principale."
+                        )
+                    elif punteggio <= 10:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Numero di fork eccezionale. Mantieni un ambiente collaborativo e valorizza i contributi derivati dai fork."
                         )
                         
                 elif nome_param == "watchers":
                     valore = f"{pop_data['watchers']} watchers"
                     punteggio = self._normalize_score(pop_data['watchers'], 0, 200, 0, 10)
-                    
-                    # More granular suggestion based on score
-                    if punteggio < 2:
+
+                    # Suggerimenti più granulari basati sul punteggio
+                    if punteggio < 1:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Pochissimi osservatori. Comunica attivamente gli aggiornamenti e incoraggia gli utenti a seguire il repository"
+                            "Numero di osservatori estremamente basso. Inizia a comunicare anche i minimi progressi e spiega come seguire il repository per rimanere aggiornati."
+                        )
+                    elif punteggio < 2:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Pochissimi osservatori. Comunica attivamente gli aggiornamenti e incoraggia gli utenti a seguire il repository per non perdere novità importanti."
+                        )
+                    elif punteggio < 3:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Il numero di osservatori è ancora basso. Sottolinea il valore di seguire il progetto per essere informati su bugfix, nuove funzionalità e release."
+                        )
+                    elif punteggio < 4:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Il numero di osservatori sta crescendo lentamente. Mantieni una comunicazione costante e mostra i vantaggi di seguire attivamente il progetto."
                         )
                     elif punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Mantieni gli utenti informati sugli aggiornamenti attraverso release notes dettagliate"
+                            "Mantieni gli utenti informati sugli aggiornamenti attraverso release notes dettagliate e annunci chiari sulle nuove funzionalità o correzioni."
+                        )
+                    elif punteggio < 6:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Un buon numero di osservatori sta seguendo il progetto. Continua a fornire aggiornamenti significativi e tempestivi."
+                        )
+                    elif punteggio < 7:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Buon numero di osservatori. Mantieni il loro interesse con aggiornamenti regolari, magari evidenziando le prossime roadmap o funzionalità in sviluppo."
                         )
                     elif punteggio < 8:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Buon numero di osservatori. Mantieni il loro interesse con aggiornamenti regolari"
+                            "Ottimo numero di osservatori. Continua a comunicare in modo efficace e considera di utilizzare canali multipli per gli aggiornamenti (es. newsletter, social media)."
+                        )
+                    elif punteggio < 9:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Numero di osservatori elevato. Mantieni un flusso costante di informazioni di valore e interagisci con la community di osservatori."
+                        )
+                    elif punteggio <= 10:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Numero di osservatori eccezionale. Continua a fornire aggiornamenti di alta qualità e considera di coinvolgere attivamente gli osservatori nel futuro del progetto."
                         )
                         
                 elif nome_param == "contributori":
                     valore = f"{pop_data['contributori']} contributori"
                     punteggio = self._normalize_score(pop_data['contributori'], 0, 50, 0, 10)
-                    
-                    # More granular suggestion based on score
-                    if punteggio < 2:
+
+                    # Suggerimenti più granulari basati sul punteggio
+                    if punteggio < 1:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Pochi contributori. Crea issue con 'good first issue' e 'help wanted' per incoraggiare la partecipazione"
+                            "Nessun contributore. È fondamentale creare un ambiente accogliente per i nuovi arrivati. Inizia con issue 'good first issue' molto chiare e semplici."
+                        )
+                    elif punteggio < 2:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Pochi contributori. Crea issue con 'good first issue' e 'help wanted' ben definite per incoraggiare la partecipazione. Offri supporto ai nuovi contributori."
+                        )
+                    elif punteggio < 3:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Il numero di contributori è molto basso. Documenta chiaramente il processo di contribuzione e mostra come anche piccoli cambiamenti sono apprezzati."
+                        )
+                    elif punteggio < 4:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Il numero di contributori è in crescita, ma ancora limitato. Crea una guida per i contributori e tag 'good first issue' per attrarre nuovi sviluppatori. Sii reattivo alle loro PR."
                         )
                     elif punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Crea una guida per i contributori e tag 'good first issue' per attrarre nuovi sviluppatori"
+                            "Crea una guida per i contributori dettagliata e tagga le issue adatte ai principianti ('good first issue'). Incoraggia la discussione e il feedback sulle PR."
+                        )
+                    elif punteggio < 6:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Un numero discreto di contributori. Mantieni la comunicazione aperta e riconosci i loro contributi pubblicamente."
+                        )
+                    elif punteggio < 7:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Buon numero di contributori. Riconosci il loro lavoro regolarmente e mantieni la community attiva con discussioni e proposte."
                         )
                     elif punteggio < 8:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Buon numero di contributori. Riconosci il loro lavoro e mantieni la community attiva"
+                            "Ottimo numero di contributori. Valorizza i contributi significativi e considera di coinvolgere i contributori attivi nel processo decisionale."
+                        )
+                    elif punteggio < 9:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Numero di contributori elevato. Promuovi un ambiente collaborativo e considera di nominare maintainer per aree specifiche del progetto."
+                        )
+                    elif punteggio <= 10:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Numero di contributori eccezionale. Continua a coltivare la community, ringrazia pubblicamente i contributori e mantieni una governance chiara."
                         )
                         
                 elif nome_param == "dipendenti":
                     valore = f"{pop_data['dipendenti']} progetti dipendenti"
                     punteggio = self._normalize_score(pop_data['dipendenti'], 0, 100, 0, 10)
-                    
-                    # More granular suggestion based on score
-                    if punteggio < 2:
+
+                    # Suggerimenti più granulari basati sul punteggio
+                    if punteggio < 1:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Pochissimi progetti dipendenti. Pubblica su gestori di pacchetti e crea tutorial per facilitare l'adozione"
+                            "Nessun progetto dipendente. È fondamentale rendere il tuo progetto facilmente utilizzabile. Pubblica su gestori di pacchetti e crea una documentazione di base."
+                        )
+                    elif punteggio < 2:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Pochissimi progetti dipendenti. Pubblica su gestori di pacchetti (es. Maven, NuGet) e crea tutorial o guide introduttive per facilitare l'adozione."
+                        )
+                    elif punteggio < 3:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Il numero di progetti dipendenti è molto basso. Concentrati sulla creazione di esempi d'uso pratici e sulla promozione del tuo pacchetto nelle community pertinenti."
+                        )
+                    elif punteggio < 4:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Il numero di progetti dipendenti è in crescita, ma migliorabile. Considera di scrivere articoli di blog o brevi video che mostrino come integrare il tuo progetto."
                         )
                     elif punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Considera di pubblicare il pacchetto su gestori di pacchetti come npm o PyPI per aumentarne l'adozione"
+                            "Considera di pubblicare il pacchetto su gestori di pacchetti come npm o PyPI per aumentarne l'adozione. Fornisci esempi di codice ben documentati."
+                        )
+                    elif punteggio < 6:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Un numero discreto di progetti dipendenti. Mantieni la compatibilità con le versioni precedenti e comunica chiaramente eventuali breaking changes."
+                        )
+                    elif punteggio < 7:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Discreto numero di dipendenti. Mantieni compatibilità e comunica chiaramente le breaking changes. Considera di offrire supporto alla migrazione per le nuove versioni."
                         )
                     elif punteggio < 8:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Discreto numero di dipendenti. Mantieni compatibilità e comunica chiaramente le breaking changes"
+                            "Buon numero di dipendenti. Continua a rilasciare aggiornamenti stabili e ben documentati. Monitora l'utilizzo e raccogli feedback dai progetti dipendenti."
+                        )
+                    elif punteggio < 9:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Numero elevato di progetti dipendenti. Concentrati sulla stabilità, sulla fornitura di API chiare e ben documentate e sull'ascolto delle esigenze dei tuoi utenti."
+                        )
+                    elif punteggio <= 10:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Numero eccezionale di progetti dipendenti. Mantieni un'alta qualità del codice, una comunicazione trasparente e considera di coinvolgere la community dei progetti dipendenti nello sviluppo futuro."
                         )
                         
                 elif nome_param == "engagement_rate":
                     valore = f"{self._check_engagement_rate():.2f}"
                     punteggio = self._check_engagement_rate()
                     
+                elif nome_param == "distribuzione_contributi":
+                    distribution_score = self._check_contributor_distribution()
+                    if distribution_score > 0:
+                        valore = f"Punteggio distribuzione: {distribution_score:.2f}/10"
+                    else:
+                        valore = "Non calcolabile"
+                    punteggio = distribution_score
+                    
+                    if punteggio < 3:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "La maggior parte del lavoro è svolto da un singolo contributore. Incentiva una partecipazione più ampia della community"
+                        )
+                    elif punteggio < 6:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "La distribuzione dei contributi è moderatamente centralizzata. Considera di incoraggiare più partecipazione da altri contributori"
+                        )
+                
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
