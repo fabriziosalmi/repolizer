@@ -30,6 +30,16 @@
             font-size: 1.2rem;
         }
         .category-content.hidden { display: none; } /* Ensure hidden class works */
+        
+        /* Score color classes */
+        .score-high { color: #16a34a; } /* text-green-600 */
+        .score-medium { color: #eab308; } /* text-yellow-500 */
+        .score-low { color: #dc2626; } /* text-red-600 */
+        
+        /* Progress bar color classes */
+        .progress-high { background-color: #16a34a; } /* bg-green-600 */
+        .progress-medium { background-color: #eab308; } /* bg-yellow-500 */
+        .progress-low { background-color: #dc2626; } /* bg-red-600 */
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -57,11 +67,11 @@
             <!-- Punteggio Totale -->
             <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
                 <h3 class="text-2xl font-semibold mb-6">Punteggio Totale</h3>
-                <div class="text-6xl font-bold {% if punteggio_totale >= 7 %}text-green-600{% elif punteggio_totale >= 4 %}text-yellow-500{% else %}text-red-600{% endif %} mb-6">
+                <div id="total-score" class="text-6xl font-bold mb-6">
                     {{punteggio_totale}}<span class="text-3xl text-gray-400">/10</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-3">
-                    <div class="{% if punteggio_totale >= 7 %}bg-green-600{% elif punteggio_totale >= 4 %}bg-yellow-500{% else %}bg-red-600{% endif %} h-3 rounded-full transition-all duration-1000 ease-out"
+                    <div id="score-progress-bar" class="h-3 rounded-full transition-all duration-1000 ease-out" 
                          style="width: {{report_data.punteggio_totale_percentuale}}%;">
                     </div>
                 </div>
@@ -118,6 +128,24 @@
 
     <script>
         const reportData = {{report_data|tojson}};
+
+        // Set the total score color based on the score value
+        function setTotalScoreColors() {
+            const scoreElement = document.getElementById('total-score');
+            const scoreBar = document.getElementById('score-progress-bar');
+            const score = parseFloat("{{punteggio_totale}}");
+            
+            if (score >= 7) {
+                scoreElement.classList.add('score-high');
+                scoreBar.classList.add('progress-high');
+            } else if (score >= 4) {
+                scoreElement.classList.add('score-medium');
+                scoreBar.classList.add('progress-medium');
+            } else {
+                scoreElement.classList.add('score-low');
+                scoreBar.classList.add('progress-low');
+            }
+        }
 
         function initCharts() {
             Chart.defaults.font.family = '"Inter", sans-serif';
@@ -249,6 +277,15 @@
                     const parameterName = nome.replace(/_/g, ' ').toUpperCase();
                     const parameterIcon = getParameterIcon(info.tipo || 'default');
                     const description = info.descrizione || 'Nessuna descrizione disponibile';
+                    
+                    // Handle the score display
+                    let scoreDisplay;
+                    if (info.punteggio === null || info.punteggio === undefined || info.score_is_na) {
+                        scoreDisplay = 'N/A';
+                    } else {
+                        scoreDisplay = `${info.punteggio}/10`;
+                    }
+                    
                     row.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             <div class="flex items-center gap-2" data-tippy-content="${description}">
@@ -260,11 +297,11 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <span class="font-mono bg-gray-100 px-2 py-1 rounded">${info.valore !== null && info.valore !== undefined ? info.valore : '-'}</span>
+                            <span class="font-mono bg-gray-100 px-2 py-1 rounded">${info.valore !== null && info.valore !== undefined ? info.valore : 'N/A'}</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getScoreClass(info.punteggio)}">
-                                ${info.punteggio !== null && info.punteggio !== undefined ? info.punteggio + '/10' : 'N/A'}
+                                ${scoreDisplay}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">${description}</td>
@@ -310,9 +347,6 @@
             });
         }
 
-        // Removing the populateSuggestions function as it's no longer needed
-        // Also remove its call from the DOMContentLoaded event listener
-
         function getParameterIcon(tipo) {
             const icons = {
                 'performance': '<svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
@@ -324,13 +358,19 @@
         }
 
         function getScoreClass(punteggio) {
+            // Handle null, undefined or N/A scores
+            if (punteggio === null || punteggio === undefined) {
+                return 'bg-gray-100 text-gray-500'; // Grey for N/A values
+            }
+            
+            // Handle numeric scores
             if (punteggio >= 7) return 'bg-green-100 text-green-800';
             if (punteggio >= 4) return 'bg-yellow-100 text-yellow-800';
-            if (punteggio > 0) return 'bg-red-100 text-red-800';
-            return 'bg-gray-100 text-gray-800'; // Score 0 = Not analyzed/unavailable
+            return 'bg-red-100 text-red-800'; // Any score < 4, including 0
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            setTotalScoreColors(); // Set colors for the total score
             initCharts();
             populateCategoryDetails();
             // Removing populateSuggestions() call

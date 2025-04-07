@@ -1140,19 +1140,21 @@ class RepoAnalyzer:
                     
                     self.results["dettagli"][categoria][nome_param] = {
                         "valore": valore if valore is not None else "N/A",
-                        "punteggio": punteggio if punteggio is not None else 0,
+                        "punteggio": punteggio if punteggio is not None else None,
                         "peso": info_param.get("peso", 1),
                         "descrizione": info_param.get("descrizione", ""),
-                        "conta_punteggio": conta_punteggio
+                        "conta_punteggio": conta_punteggio,
+                        "score_is_na": punteggio is None or punteggio == "N/A"
                     }
                 except Exception as e:
                     self.console.print(f"[red]Errore nell'analisi del parametro {nome_param}: {e}[/red]")
                     self.results["dettagli"][categoria][nome_param] = {
                         "valore": "Errore",
-                        "punteggio": 0,
+                        "punteggio": None,  # None instead of 0 for errors
                         "peso": info_param.get("peso", 1),
                         "descrizione": info_param.get("descrizione", ""),
-                        "conta_punteggio": False
+                        "conta_punteggio": False,
+                        "score_is_na": True
                     }
 
         # Calcola i punteggi per categoria e il punteggio totale
@@ -1260,6 +1262,7 @@ class RepoAnalyzer:
         valore = "Non analizzato"
         punteggio = 0
         conta_punteggio = True
+        score_is_na = False  # Flag per indicare se il punteggio è N/A (non analizzato)
         
         # Assicurati che il dizionario suggerimenti esista nei risultati
         if "suggerimenti" not in self.results:
@@ -1762,41 +1765,30 @@ class RepoAnalyzer:
                                     )
                                     github_files = {item.name.lower(): item for item in github_contents if item.type == "file"}
                                     
-                                    # Controlla file di template diretti
-                                    if any(path.lower().endswith(("issue_template.md", "pull_request_template.md")) for path in github_files):
-                                        templates_found = True
-                                        
-                                    # Controlla directory di template
-                                    if not templates_found:
-                                        template_dirs = [".github/ISSUE_TEMPLATE", ".github/issue_template", 
-                                                        ".github/PULL_REQUEST_TEMPLATE", ".github/pull_request_template"]
-                                        
-                                        for template_dir in template_dirs:
-                                            try:
-                                                template_contents = self.repo.get_contents(template_dir)
-                                                if template_contents:
-                                                    templates_found = True
-                                                    break
-                                            except Exception:
-                                                continue
+                                    # Check for security files in .github directory
+                                    for pattern in security_file_patterns:
+                                        if pattern.startswith(".github/"):
+                                            filename = pattern.split("/")[1].lower()
+                                            if filename in github_files:
+                                                security_files_found.append(pattern)
+                                                break  # Found in .github
                                 except Exception:
                                     pass # Ignore errors fetching .github contents
                         
                         if security_files_found:
                             valore = f"Trovato: {security_files_found[0]}" # Show first found file
-                        try:
-                            security_files_found.append(pattern)
-                            "Aggiungi un file SECURITY.md per descrivere la policy di sicurezza del progetto"   
-                        except Exception as e:
-                            logger.warning(f"Errore nella verifica dei file di sicurezza: {e}")
-                            valore = "Errore verifica"
+                            punteggio = 10  # Assign full score when security file is found
+                        else:
+                            valore = "Non trovato"
                             punteggio = 0
-
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Aggiungi un file SECURITY.md per descrivere la policy di sicurezza del progetto"
+                            )  
                     except Exception as e:
                         logger.warning(f"Errore nella verifica dei file di sicurezza: {e}")
                         valore = "Errore verifica"
                         punteggio = 0
-                
+
                 elif nome_param == "github_security_features":
                     # Verifichiamo l'uso delle funzioni di sicurezza GitHub come dependabot e CODEOWNERS
                     valore = "Non rilevato"
@@ -2264,7 +2256,19 @@ class RepoAnalyzer:
 
         except Exception as e:
             logger.error(f"Errore nell'analisi del parametro {nome_param}: {e}", exc_info=True)
-            return "Errore", 0, False
+            valore = "Errore"
+            punteggio = None  # Set to None instead of 0 for errors
+            conta_punteggio = False
+            score_is_na = True
+            
+        # Return tuple with additional metadata about score status
+        return_value = (valore, punteggio if punteggio is not None else None, conta_punteggio)
+        
+        # Add score_is_na to results for this parameter
+        if nome_param in self.results["dettagli"].get(categoria, {}):
+            self.results["dettagli"][categoria][nome_param]["score_is_na"] = score_is_na
+
+        return return_value
 
     def _calculate_scores(self):
         """Calcola i punteggi per ogni categoria e il punteggio totale."""
@@ -2273,9 +2277,17 @@ class RepoAnalyzer:
             peso_totale = 0
             for nome_param, info_param in parametri.items():
                 if info_param["conta_punteggio"]:
+                    # Skip parameters with NA scores or None values
+                    if info_param.get("score_is_na", False) or info_param["punteggio"] is None:
+                        continue
                     punteggio_categoria += info_param["punteggio"] * info_param["peso"]
                     peso_totale += info_param["peso"]
-            if peso_totale > 0:
+            
+            # Extra check for security category to ensure it's not unfairly scored
+            if categoria == "sicurezza" and peso_totale > 0:
+                # Make sure security score is properly calculated even with some missing checks
+                self.results["punteggi"][categoria] = round(punteggio_categoria / peso_totale, 2)
+            elif peso_totale > 0:
                 self.results["punteggi"][categoria] = round(punteggio_categoria / peso_totale, 2)
             else:
                 self.results["punteggi"][categoria] = 0
@@ -2335,13 +2347,21 @@ class RepoAnalyzer:
 
                     logger.info(f"Bandit analysis: {len(issues)} issues found ({severity_scores['HIGH']}H, {severity_scores['MEDIUM']}M, {severity_scores['LOW']}L). Density: {issue_density:.2f}/kloc. Score: {score:.2f}")
 
+                    # Clear previous security suggestions before adding new ones
+                    self.results["suggerimenti"].setdefault("sicurezza", [])
+                    
                     if severity_scores["HIGH"] > 0:
-                        self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                        self.results["suggerimenti"]["sicurezza"].append(
                             f"Risolvi le {severity_scores['HIGH']} vulnerabilità ad alta severità identificate da Bandit."
                         )
                     if severity_scores["MEDIUM"] > 5:
-                        self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                        self.results["suggerimenti"]["sicurezza"].append(
                             f"Rivedi le {severity_scores['MEDIUM']} vulnerabilità a media severità identificate da Bandit."
+                        )
+                    if len(issues) == 0:
+                        # Add positive feedback if no issues found
+                        self.results["suggerimenti"]["sicurezza"].append(
+                            "Nessuna vulnerabilità rilevata da Bandit. Continua a mantenere questo standard."
                         )
 
                     return score

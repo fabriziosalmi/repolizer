@@ -7,6 +7,7 @@ import os
 import json
 from datetime import datetime
 from jinja2 import Template
+from typing import Dict, Any
 
 # Import the category mapping from repolizer.py
 try:
@@ -124,4 +125,45 @@ def generate_html_report(results, output_file=None):
         except Exception as e:
             print(f"Errore nel salvataggio del report HTML: {e}")
             
+    return html_content
+
+def generate_html_report(report_data: Dict[str, Any]) -> str:
+    """Genera un report HTML basato sui dati forniti.
+    
+    Args:
+        report_data: Dizionario contenente i dati del report
+        
+    Returns:
+        Contenuto HTML del report
+    """
+    # Calculate percentage for the total score
+    report_data["punteggio_totale_percentuale"] = report_data.get("punteggio_totale", 0) * 10
+    
+    # Add timestamp formatting for the report
+    if "data_analisi" in report_data:
+        report_data["data_analisi_formatted"] = report_data["data_analisi"]
+    
+    # Process scores to ensure proper NA handling for the UI display
+    for categoria, parametri in report_data.get("dettagli", {}).items():
+        for nome_param, info in parametri.items():
+            # Ensure score_is_na is set for all parameters
+            if "score_is_na" not in info:
+                info["score_is_na"] = info["punteggio"] is None
+    
+    # Load the template
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "report_template.html")
+    try:
+        with open(template_path, "r", encoding="utf-8") as f:
+            template = f.read()
+    except FileNotFoundError:
+        return "<html><body><p>Template HTML non trovato. Assicurati che il file templates/report_template.html esista.</p></body></html>"
+    
+    # Replace variables in the template
+    html_content = template
+    html_content = html_content.replace("{{repo_name}}", report_data.get("nome_repository", "Repository"))
+    html_content = html_content.replace("{{repo_url}}", report_data.get("url", "#"))
+    html_content = html_content.replace("{{data_analisi}}", report_data.get("data_analisi_formatted", ""))
+    html_content = html_content.replace("{{punteggio_totale}}", str(report_data.get("punteggio_totale", "N/A")))
+    html_content = html_content.replace("{{report_data|tojson}}", json.dumps(report_data))
+    
     return html_content
