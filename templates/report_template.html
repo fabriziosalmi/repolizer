@@ -114,6 +114,18 @@
         <!-- Removing the "Tutti i Suggerimenti" section as it's redundant now -->
     </div>
 
+    <!-- Nuova sezione info analisi -->
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden fade-in mt-8">
+        <div class="px-8 py-4 bg-gray-50">
+            <h3 class="text-2xl font-semibold">Dettagli Analisi</h3>
+        </div>
+        <div class="p-8">
+            <p class="text-gray-700 mb-4">Versione di Repolizer: {{report_data.versione_repolizer}}</p>
+            <p class="text-gray-700 mb-4">Strumenti Utilizzati: {{report_data.tools_usati|join(', ')}}</p>
+            <button onclick="downloadJSON()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors duration-200">Scarica JSON</button>
+        </div>
+    </div>
+
     <script>
         const reportData = {{report_data|tojson}};
 
@@ -337,6 +349,16 @@
                 arrow: true
             });
         });
+
+        function downloadJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "report_data.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
     </script>
 </body>
 </html>
