@@ -1,15 +1,15 @@
 {
   "nome_repository": "fabriziosalmi/lws",
   "url": "https://github.com/fabriziosalmi/lws",
-  "data_analisi": "2025-04-07 17:08:45",
+  "data_analisi": "2025-04-07 17:13:48",
   "punteggi": {
     "popolarita_impatto": 1.41,
-    "attivita_manutenzione": 3.78,
+    "attivita_manutenzione": 3.39,
     "qualita_codice": 4.12,
     "documentazione": 4.76,
     "community_collaborazione": 6.84,
     "sicurezza": 0.0,
-    "testing_cicd": 2.5,
+    "testing_cicd": 2.14,
     "setup_usabilita": 2.5
   },
   "dettagli": {
@@ -48,6 +48,13 @@
         "peso": 5,
         "descrizione": "Impatto reale: quanti altri progetti si basano su questo",
         "conta_punteggio": true
+      },
+      "engagement_rate": {
+        "valore": "Errore",
+        "punteggio": 0,
+        "peso": 3,
+        "descrizione": "Misura l'interazione degli utenti con il repository (stelle, fork, watchers per mese)",
+        "conta_punteggio": false
       }
     },
     "attivita_manutenzione": {
@@ -113,6 +120,13 @@
         "peso": 3,
         "descrizione": "Indica se il repository \u00e8 stato ufficialmente archiviato dai maintainer",
         "conta_punteggio": true
+      },
+      "tempo_risposta_issues": {
+        "valore": "Non analizzato",
+        "punteggio": 0,
+        "peso": 4,
+        "descrizione": "Tempo medio di risposta alla prima interazione su un'issue",
+        "conta_punteggio": true
       }
     },
     "qualita_codice": {
@@ -143,6 +157,13 @@
         "peso": 3,
         "descrizione": "Presenza e (potenzialmente) utilit\u00e0 dei commenti per spiegare logiche complesse",
         "conta_punteggio": true
+      },
+      "test_flake8": {
+        "valore": "Non analizzato",
+        "punteggio": 0,
+        "peso": 3,
+        "descrizione": "Valutazione della qualit\u00e0 del codice tramite flake8",
+        "conta_punteggio": false
       }
     },
     "documentazione": {
@@ -180,6 +201,13 @@
         "peso": 4,
         "descrizione": "Chiarezza e utilit\u00e0 degli esempi forniti per capire come usare il progetto",
         "conta_punteggio": true
+      },
+      "badge_readme": {
+        "valore": "Errore",
+        "punteggio": 0,
+        "peso": 3,
+        "descrizione": "Presenza di badge informativi nel README (es. build status, coverage)",
+        "conta_punteggio": false
       }
     },
     "community_collaborazione": {
@@ -210,6 +238,13 @@
         "peso": 2,
         "descrizione": "Organizzazione e categorizzazione efficace delle issues (bug, feature, etc.)",
         "conta_punteggio": true
+      },
+      "attivita_discussions": {
+        "valore": "Errore",
+        "punteggio": 0,
+        "peso": 3,
+        "descrizione": "Numero di discussioni attive e risolte nella sezione GitHub Discussions",
+        "conta_punteggio": false
       }
     },
     "sicurezza": {
@@ -232,6 +267,13 @@
         "punteggio": 0,
         "peso": 5,
         "descrizione": "Indica se le librerie/componenti esterni usati sono recenti (meno vulnerabilit\u00e0 note)",
+        "conta_punteggio": true
+      },
+      "analisi_sast": {
+        "valore": "Non analizzato",
+        "punteggio": 0,
+        "peso": 4,
+        "descrizione": "Presenza di analisi di sicurezza statica (SAST) nella pipeline CI",
         "conta_punteggio": true
       },
       "bandit_score": {
@@ -270,6 +312,13 @@
         "peso": 4,
         "descrizione": "Integrazione di tool di scansione sicurezza (SAST, DAST, SCA) nella pipeline CI",
         "conta_punteggio": true
+      },
+      "test_flake8": {
+        "valore": "Non analizzato",
+        "punteggio": 0,
+        "peso": 3,
+        "descrizione": "Esecuzione di flake8 per verificare errori di stile e bug potenziali",
+        "conta_punteggio": true
       }
     },
     "setup_usabilita": {
@@ -279,6 +328,13 @@
         "peso": 4,
         "descrizione": "Presenza di istruzioni chiare e complete per l'installazione e configurazione",
         "conta_punteggio": true
+      },
+      "presenza_dockerfile": {
+        "valore": "Errore",
+        "punteggio": 0,
+        "peso": 3,
+        "descrizione": "Presenza di un Dockerfile per facilitare il setup del progetto",
+        "conta_punteggio": false
       }
     }
   },
@@ -310,16 +366,16 @@
     ]
   },
   "storico": [],
-  "punteggio_totale": 3.24,
+  "punteggio_totale": 3.15,
   "valutazione_qualitativa": "VALUTAZIONE QUALITATIVA: Scarso\n\nRepository che richiede significativi miglioramenti.\n\nAree di miglioramento: Distribuzione, Manutenzione, Sicurezza, Integrazione, Adozione",
   "display_punteggi": {
     "Distribuzione": 1.41,
-    "Manutenzione": 3.78,
+    "Manutenzione": 3.39,
     "Codice": 4.12,
     "Documentazione": 4.76,
     "Collaborazione": 6.84,
     "Sicurezza": 0.0,
-    "Integrazione": 2.5,
+    "Integrazione": 2.14,
     "Adozione": 2.5
   }
 }

@@ -3,12 +3,12 @@
         "popolarita_impatto": {
             "stelle": {
                 "descrizione": "Indicatore diretto di apprezzamento e visibilit\u00e0",
-                "metodo": "API GitHub (Conteggio)",
+                "metodo": "API GitHub (Conteggio), Analisi trend (storico stelle)",
                 "peso": 4
             },
             "forks": {
                 "descrizione": "Interesse nel modificare/usare il codice come base",
-                "metodo": "API GitHub (Conteggio)",
+                "metodo": "API GitHub (Conteggio), Analisi trend (storico fork)",
                 "peso": 4
             },
             "watchers": {
@@ -25,6 +25,11 @@
                 "descrizione": "Impatto reale: quanti altri progetti si basano su questo",
                 "metodo": "API GitHub ('Used by'), API Package Manager (npm, PyPI, etc.)",
                 "peso": 5
+            },
+            "engagement_rate": {
+                "descrizione": "Misura l'interazione degli utenti con il repository (stelle, fork, watchers per mese)",
+                "metodo": "API GitHub (storico attività)",
+                "peso": 3
             }
         },
         "attivita_manutenzione": {
@@ -35,7 +40,7 @@
             },
             "frequenza_commit": {
                 "descrizione": "Regolarit\u00e0 e intensit\u00e0 dello sviluppo nel tempo",
-                "metodo": "API GitHub (analisi storico commit con script Python)",
+                "metodo": "API GitHub (analisi storico commit con script Python), Analisi trend (commit per mese)",
                 "peso": 4
             },
             "release_tag_frequenza": {
@@ -72,6 +77,11 @@
                 "descrizione": "Indica se il repository \u00e8 stato ufficialmente archiviato dai maintainer",
                 "metodo": "API GitHub (flag archived)",
                 "peso": 3
+            },
+            "tempo_risposta_issues": {
+                "descrizione": "Tempo medio di risposta alla prima interazione su un'issue",
+                "metodo": "API GitHub (analisi timestamp primo commento su issue)",
+                "peso": 4
             }
         },
         "qualita_codice": {
@@ -93,6 +103,11 @@
             "commenti_codice": {
                 "descrizione": "Presenza e (potenzialmente) utilit\u00e0 dei commenti per spiegare logiche complesse",
                 "metodo": "Analisi Statica (densit\u00e0), LLM (valutazione qualitativa/semantica)",
+                "peso": 3
+            },
+            "test_flake8": {
+                "descrizione": "Valutazione della qualità del codice tramite flake8",
+                "metodo": "Esecuzione flake8 su tutti i file Python",
                 "peso": 3
             }
         },
@@ -121,6 +136,11 @@
                 "descrizione": "Chiarezza e utilit\u00e0 degli esempi forniti per capire come usare il progetto",
                 "metodo": "LLM (valutazione chiarezza e praticit\u00e0), Analisi struttura repo (presenza cartella /examples)",
                 "peso": 4
+            },
+            "badge_readme": {
+                "descrizione": "Presenza di badge informativi nel README (es. build status, coverage)",
+                "metodo": "Analisi contenuto README",
+                "peso": 3
             }
         },
         "community_collaborazione": {
@@ -143,6 +163,11 @@
                 "descrizione": "Organizzazione e categorizzazione efficace delle issues (bug, feature, etc.)",
                 "metodo": "API GitHub (analisi label usate sulle issues)",
                 "peso": 2
+            },
+            "attivita_discussions": {
+                "descrizione": "Numero di discussioni attive e risolte nella sezione GitHub Discussions",
+                "metodo": "API GitHub (analisi Discussions)",
+                "peso": 3
             }
         },
         "sicurezza": {
@@ -160,6 +185,11 @@
                 "descrizione": "Indica se le librerie/componenti esterni usati sono recenti (meno vulnerabilit\u00e0 note)",
                 "metodo": "Analisi file dipendenze (requirements.txt, package.json, etc.) + Check versioni (script Python, API pkg)",
                 "peso": 5
+            },
+            "analisi_sast": {
+                "descrizione": "Presenza di analisi di sicurezza statica (SAST) nella pipeline CI",
+                "metodo": "Analisi file CI (ricerca step SAST)",
+                "peso": 4
             }
         },
         "testing_cicd": {
@@ -182,6 +212,11 @@
                 "descrizione": "Integrazione di tool di scansione sicurezza (SAST, DAST, SCA) nella pipeline CI",
                 "metodo": "Analisi file configurazione CI (ricerca step specifici di security scan)",
                 "peso": 4
+            },
+            "test_flake8": {
+                "descrizione": "Esecuzione di flake8 per verificare errori di stile e bug potenziali",
+                "metodo": "Analisi file Python con flake8",
+                "peso": 3
             }
         },
         "setup_usabilita": {
@@ -189,6 +224,11 @@
                 "descrizione": "Presenza di istruzioni chiare e complete per l'installazione e configurazione",
                 "metodo": "LLM (valutazione chiarezza istruzioni), Analisi README e docs",
                 "peso": 4
+            },
+            "presenza_dockerfile": {
+                "descrizione": "Presenza di un Dockerfile per facilitare il setup del progetto",
+                "metodo": "Analisi struttura repo (ricerca file Dockerfile)",
+                "peso": 3
             }
         }
     }

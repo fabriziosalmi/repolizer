@@ -1369,6 +1369,10 @@ class RepoAnalyzer:
                             "Discreto numero di dipendenti. Mantieni compatibilità e comunica chiaramente le breaking changes"
                         )
                         
+                elif nome_param == "engagement_rate":
+                    valore = f"{self._check_engagement_rate():.2f}"
+                    punteggio = self._check_engagement_rate()
+                    
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
@@ -1652,6 +1656,9 @@ class RepoAnalyzer:
                 elif nome_param == "qualita_esempi":
                     valore = "Cartella /examples esistente" if doc_data["has_examples"] else "Nessun esempio"
                     punteggio = 10 if doc_data["has_examples"] else 0
+                elif nome_param == "badge_readme":
+                    valore = "Presente" if self._check_badges_in_readme() else "Assente"
+                    punteggio = 10 if self._check_badges_in_readme() else 0
 
                 return valore, round(punteggio, 2), conta_punteggio
 
@@ -1690,6 +1697,9 @@ class RepoAnalyzer:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Utilizza i label nelle issue per organizzare meglio le richieste e facilitarne la gestione"
                         )
+                elif nome_param == "attivita_discussions":
+                    valore = f"{self._check_discussions_activity():.2f}"
+                    punteggio = self._check_discussions_activity()
 
                 return valore, round(punteggio, 2), conta_punteggio
 
@@ -2234,6 +2244,10 @@ class RepoAnalyzer:
                         logger.warning(f"Errore nell'analisi della documentazione di installazione: {e}")
                         valore = "Errore nell'analisi"
                         punteggio = 5
+                
+                elif nome_param == "presenza_dockerfile":
+                    valore = "Presente" if self._check_dockerfile_presence() else "Assente"
+                    punteggio = 10 if self._check_dockerfile_presence() else 0
                 
                 else:
                     valore = "Non analizzato"
