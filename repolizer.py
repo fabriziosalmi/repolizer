@@ -21,6 +21,7 @@ import tempfile
 import shutil
 import logging
 import signal
+import math
 
 import requests
 import pandas as pd
@@ -220,21 +221,81 @@ class RepoAnalyzer:
         """Esegue una scansione con Radon per calcolare la complessità media."""
         try:
             effective_path = self.local_repo_path if self.local_repo_path else path
-            output = subprocess.check_output(["radon", "cc", effective_path, "-s", "-A"], stderr=subprocess.STDOUT).decode("utf-8")
-            complexities = []
-            for line in output.splitlines():
-                match = re.search(r"\((\d+)\)$", line.strip())
-                if match:
-                    complexities.append(int(match.group(1)))
-            if complexities:
-                return sum(complexities) / len(complexities)
-        except FileNotFoundError:
-            print("Radon non trovato. Assicurati che sia installato.")
-        except subprocess.SubprocessError as e:
-            print(f"Errore nell'esecuzione di radon: {e}")
+            
+            # Modificato per gestire meglio i possibili errori di Radon
+            try:
+                # Inizializza la variabile complexities qui per garantire che esista sempre
+                complexities = []
+                
+                # Utilizza una directory più specifica se disponibile
+                if self.local_repo_path:
+                    # Trova tutti i file Python nella directory
+                    python_files = []
+                    for root, _, files in os.walk(effective_path):
+                        python_files.extend([os.path.join(root, f) for f in files if f.endswith('.py')])
+                    
+                    # Se ci sono file Python, analizza ciascun file separatamente
+                    if python_files:
+                        for py_file in python_files[:20]:  # Limita a 20 file per evitare timeout
+                            try:
+                                cmd_result = subprocess.run(
+                                    ["radon", "cc", py_file, "-s", "-a"], 
+                                    capture_output=True, 
+                                    text=True, 
+                                    timeout=10
+                                )
+                                if cmd_result.returncode == 0 and cmd_result.stdout.strip():
+                                    for line in cmd_result.stdout.splitlines():
+                                        match = re.search(r"\((\d+)\)$", line.strip())
+                                        if match:
+                                            complexities.append(int(match.group(1)))
+                            except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+                                continue  # Salta il file in caso di errore
+                    else:
+                        # Fallback all'analisi semplice della directory corrente
+                        cmd_result = subprocess.run(
+                            ["radon", "cc", ".", "-s", "--average-only"], 
+                            capture_output=True, 
+                            text=True, 
+                            timeout=30
+                        )
+                        if cmd_result.returncode == 0:
+                            # Cerca solo il valore medio
+                            match = re.search(r"Average complexity: (\d+\.\d+)", cmd_result.stdout)
+                            if match:
+                                return float(match.group(1))
+                else:
+                    # Se non abbiamo clonato, prova ad analizzare il codice nella directory corrente
+                    cmd_result = subprocess.run(
+                        ["radon", "cc", ".", "-s", "--average-only"], 
+                        capture_output=True, 
+                        text=True, 
+                        timeout=30
+                    )
+                    if cmd_result.returncode == 0:
+                        match = re.search(r"Average complexity: (\d+\.\d+)", cmd_result.stdout)
+                        if match:
+                            return float(match.group(1))
+                
+                # Se abbiamo raccolto dati di complessità dai file individuali
+                if complexities:
+                    return sum(complexities) / len(complexities)
+                
+            except FileNotFoundError:
+                logger.warning("Radon non trovato. Assicurati che sia installato.")
+                return 5.0  # Valore neutro
+            except Exception as e:
+                logger.warning(f"Errore nell'esecuzione di radon: {e}")
+                if hasattr(e, 'output') and e.output:
+                    logger.debug(f"Output di radon: {e.output}")
+                return 5.0  # Valore neutro
+                
         except Exception as e:
-            print(f"Errore imprevisto durante l'analisi della complessità: {e}")
-        return 0.0
+            logger.error(f"Errore imprevisto durante l'analisi della complessità: {e}")
+            return 5.0  # Valore di default neutro in caso di errore
+            
+        # Se non siamo riusciti a calcolare la complessità
+        return 5.0  # Valore di default neutro
 
     def _check_style(self, path: str = ".") -> float:
         """Esegue una scansione per valutare l'aderenza allo stile (meno errori => punteggio più alto).
@@ -1043,7 +1104,13 @@ class RepoAnalyzer:
                 pop_data = self._fetch_popolarita_data()
                 if nome_param == "stelle":
                     valore = f"{pop_data['stars']} stelle"
-                    punteggio = self._normalize_score(pop_data['stars'], 0, 1000, 0, 10)
+                    # Improved stars scoring with logarithmic scale for more realistic assessment
+                    # Log scale rewards early stars more significantly while still giving credit to highly starred repos
+                    if pop_data['stars'] > 0:
+                        log_stars = max(0, min(10, 2.5 * (1 + (math.log10(pop_data['stars'] + 1) / math.log10(1000)))))
+                        punteggio = log_stars
+                    else:
+                        punteggio = 0
                     
                     if punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
