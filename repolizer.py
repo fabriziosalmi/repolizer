@@ -2316,6 +2316,21 @@ class RepoAnalyzer:
                         valore = "Errore verifica CI/CD"
                         punteggio = 0
                 
+                elif nome_param == "build_tool_standard":
+                    # Verifica la presenza di strumenti di build standard
+                    description, score = self._check_build_tools_standard()
+                    valore = description
+                    punteggio = score
+                    
+                    if punteggio == 0:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Aggiungi strumenti di build standard per il linguaggio del tuo progetto (es. Maven/Gradle per Java, npm/yarn per JavaScript)."
+                        )
+                    elif punteggio < 5:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Considera l'utilizzo di altri strumenti di build standard per facilitare la compilazione e il deployment."
+                        )
+
                 elif nome_param in ["test_coverage", "sicurezza_ci"]:
                     valore = "Analisi non disponibile"
                     punteggio = 5  # Valore neutro
@@ -3075,6 +3090,123 @@ class RepoAnalyzer:
         except Exception as e:
             logger.error(f"Errore nella verifica della licenza OSI: {e}", exc_info=True)
             return False, "Errore verifica licenza"
+
+    def _check_build_tools_standard(self) -> Tuple[str, float]:
+        """Verifica la presenza di strumenti di build standard nel repository.
+        
+        Returns:
+            Tuple[str, float]: Una tupla con la descrizione dei build tool trovati e il punteggio normalizzato
+        """
+        try:
+            # Dictionary of common build tools by language/platform with their standard files
+            build_tools = {
+                "Java": ["pom.xml", "build.gradle", "build.gradle.kts", "gradlew", "mvnw", "build.xml"],
+                "JavaScript/Node.js": ["package.json", "package-lock.json", "yarn.lock", "npm-shrinkwrap.json", "webpack.config.js", "rollup.config.js"],
+                "Python": ["setup.py", "pyproject.toml", "requirements.txt", "Pipfile", "poetry.lock"],
+                "C/C++": ["Makefile", "CMakeLists.txt", ".cmake", "configure.ac", "autogen.sh"],
+                "Go": ["go.mod", "go.sum", "Makefile.go"],
+                "Rust": ["Cargo.toml", "Cargo.lock"],
+                "Ruby": ["Gemfile", "Gemfile.lock", "Rakefile", ".gemspec"],
+                "PHP": ["composer.json", "composer.lock"],
+                "C#/.NET": ["*.csproj", "*.sln", "packages.config", "NuGet.Config"],
+                "Swift": ["Package.swift", "Podfile", "Cartfile"],
+                "Scala": ["build.sbt", ".scala-build"],
+                "Haskell": ["stack.yaml", "package.yaml", "cabal.project"],
+                "Docker": ["Dockerfile", "docker-compose.yml", "docker-compose.yaml"],
+            }
+            
+            detected_tools = {}
+            
+            if self.local_repo_path:
+                # Search in local repository
+                for root, dirs, files in os.walk(self.local_repo_path):
+                    # Avoid going too deep in the repository structure
+                    if root.count(os.sep) - self.local_repo_path.count(os.sep) > 3:
+                        continue
+                    
+                    # Scan files in the current directory
+                    for file in files:
+                        # Check each language's build tools
+                        for language, tool_files in build_tools.items():
+                            for tool_file in tool_files:
+                                # Handle wildcard patterns (e.g., *.csproj)
+                                if tool_file.startswith('*') and file.endswith(tool_file[1:]):
+                                    detected_tools.setdefault(language, []).append(file)
+                                # Exact file match
+                                elif file.lower() == tool_file.lower():
+                                    detected_tools.setdefault(language, []).append(file)
+            else:
+                # Use GitHub API
+                # First check root directory
+                contents = self._get_cached_data(
+                    "root_contents",
+                    lambda: list(self.repo.get_contents(""))
+                )
+                
+                # Scan the root directory first
+                for item in contents:
+                    if item.type == "file":
+                        # Check each language's build tools
+                        for language, tool_files in build_tools.items():
+                            for tool_file in tool_files:
+                                # Handle wildcard patterns (e.g., *.csproj)
+                                if tool_file.startswith('*') and item.name.endswith(tool_file[1:]):
+                                    detected_tools.setdefault(language, []).append(item.name)
+                                # Exact file match
+                                elif item.name.lower() == tool_file.lower():
+                                    detected_tools.setdefault(language, []).append(item.name)
+                
+                # If needed, check a few key subdirectories for common structure patterns
+                # This is limited to avoid excessive API calls
+                common_subdirs = ["build", "tools", "scripts"]
+                for subdir in common_subdirs:
+                    try:
+                        subdir_path = next((item.path for item in contents if item.type == "dir" and item.name.lower() == subdir), None)
+                        if subdir_path:
+                            subdir_contents = self._get_cached_data(
+                                f"{subdir}_contents",
+                                lambda path=subdir_path: list(self.repo.get_contents(path))
+                            )
+                            
+                            for item in subdir_contents:
+                                if item.type == "file":
+                                    # Check each language's build tools
+                                    for language, tool_files in build_tools.items():
+                                        for tool_file in tool_files:
+                                            # Handle wildcard patterns
+                                            if tool_file.startswith('*') and item.name.endswith(tool_file[1:]):
+                                                detected_tools.setdefault(language, []).append(f"{subdir}/{item.name}")
+                                            # Exact file match
+                                            elif item.name.lower() == tool_file.lower():
+                                                detected_tools.setdefault(language, []).append(f"{subdir}/{item.name}")
+                    except Exception as e:
+                        logger.debug(f"Errore nell'analisi del sottodirettorio {subdir}: {e}")
+            
+            # Calculate score and prepare description
+            if detected_tools:
+                num_languages = len(detected_tools)
+                description_parts = []
+                
+                for language, files in detected_tools.items():
+                    unique_files = list(set(files))  # Remove duplicates
+                    if len(unique_files) > 2:
+                        description_parts.append(f"{language}: {unique_files[0]}, {unique_files[1]}, ...")
+                    else:
+                        description_parts.append(f"{language}: {', '.join(unique_files)}")
+                
+                description = "; ".join(description_parts)
+                
+                # Score based on number of detected build tools and languages
+                # More languages with build tools = higher score, up to 10
+                score = min(10.0, 5.0 + (num_languages * 1.5))
+                
+                return description, score
+            else:
+                return "Nessuno strumento di build standard rilevato", 0.0
+                
+        except Exception as e:
+            logger.error(f"Errore nell'analisi degli strumenti di build: {e}", exc_info=True)
+            return "Errore nell'analisi", 0.0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")
