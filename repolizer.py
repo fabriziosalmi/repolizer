@@ -79,7 +79,7 @@ def timeout_handler(func):
 # Configurazione del logger
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levellevelname)s - %(message)s',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger('repolizer')
@@ -1360,7 +1360,7 @@ class RepoAnalyzer:
                         )
                     elif punteggio < 4:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Il numero di fork è in crescita, ma migliorabile. Fornisci guide su come personalizzare e estendere il progetto tramite fork."
+                            "Il numero di fork è in crescita, ma ancora limitato. Fornisci guide su come personalizzare e estendere il progetto tramite fork."
                         )
                     elif punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
