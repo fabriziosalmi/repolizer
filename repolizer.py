@@ -128,20 +128,23 @@ class RepoAnalyzer:
         """
         if key not in self._cache:
             try:
-                # Imposta un timeout per evitare blocchi nelle richieste API
-                import signal
+                # Utilizza il timeout del client GitHub invece del signal
+                if hasattr(fetch_func, '__wrapped__'):
+                    # Se la funzione è wrappata (es. da decoratori), accedi alla funzione originale
+                    original_func = fetch_func.__wrapped__
+                else:
+                    original_func = fetch_func
                 
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("La richiesta API ha impiegato troppo tempo")
-                
-                # Imposta un timeout di 20 secondi per le richieste API
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(20)
+                # Imposta il timeout solo se la funzione è un metodo dell'API GitHub
+                if hasattr(original_func, '__self__') and isinstance(original_func.__self__, Github):
+                    old_timeout = self.github.timeout
+                    self.github.timeout = 20
                 
                 result = fetch_func(*args, **kwargs)
                 
-                # Disattiva il timeout
-                signal.alarm(0)
+                # Ripristina il timeout originale se necessario
+                if hasattr(original_func, '__self__') and isinstance(original_func.__self__, Github):
+                    self.github.timeout = old_timeout
                 
                 # Assicurati che il risultato sia una lista se è un iteratore
                 if hasattr(result, '__iter__') and not isinstance(result, (list, dict, str)):
@@ -205,10 +208,74 @@ class RepoAnalyzer:
         # Calcola i punteggi per categoria e il punteggio totale
         self._calculate_scores()
         
+        # Visualizza i suggerimenti nel terminale
+        if self.results.get("suggerimenti"):
+            self.console.print("\n[bold]Suggerimenti per il miglioramento:[/bold]")
+            for categoria, suggerimenti in self.results["suggerimenti"].items():
+                if suggerimenti:  # Mostra la categoria solo se ci sono suggerimenti
+                    self.console.print(f"\n[bold]{categoria.upper()}:[/bold]")
+                    for suggerimento in suggerimenti:
+                        self.console.print(f"  • {suggerimento}")
+        
+        # Calcola il punteggio totale
+        punteggi = list(self.results["punteggi"].values())
+        if punteggi:
+            self.results["punteggio_totale"] = round(sum(punteggi) / len(punteggi), 2)
+            
+            # Aggiungi una valutazione qualitativa
+            valutazione = "VALUTAZIONE QUALITATIVA: "
+            if self.results["punteggio_totale"] >= 8:
+                valutazione += "Eccellente\n\nRepository di alta qualità con ottime pratiche di sviluppo."
+            elif self.results["punteggio_totale"] >= 6:
+                valutazione += "Buono\n\nRepository ben mantenuto con alcune aree di miglioramento."
+            elif self.results["punteggio_totale"] >= 4:
+                valutazione += "Mediocre\n\nRepository con significative carenze in diverse aree."
+            else:
+                valutazione += "Scarso\n\nRepository che richiede significativi miglioramenti."
+                
+            # Identifica le aree più problematiche
+            aree_problematiche = [categoria for categoria, punteggio in self.results["punteggi"].items() 
+                                if punteggio < 4]
+            if aree_problematiche:
+                valutazione += "\n\nAree di miglioramento: " + ", ".join(aree_problematiche)
+                
+            self.results["valutazione_qualitativa"] = valutazione
+        
         # Aggiorna lo storico dei punteggi
         self._update_history()
         
         return self.results
+
+    def _normalize_score(self, value: float, min_val: float, max_val: float, out_min: float = 0, out_max: float = 10, inverse: bool = False) -> float:
+        """Normalizza un valore in un range specifico.
+
+        Args:
+            value: Valore da normalizzare
+            min_val: Valore minimo del range di input
+            max_val: Valore massimo del range di input
+            out_min: Valore minimo del range di output (default: 0)
+            out_max: Valore massimo del range di output (default: 10)
+            inverse: Se True, inverte la scala (valori più alti diventano più bassi)
+
+        Returns:
+            Valore normalizzato nel range specificato
+        """
+        try:
+            if min_val == max_val:
+                return out_min if inverse else out_max
+
+            # Limita il valore all'intervallo di input
+            value = max(min_val, min(value, max_val))
+
+            # Calcola il valore normalizzato
+            normalized = (value - min_val) / (max_val - min_val)
+            if inverse:
+                normalized = 1 - normalized
+
+            # Scala al range di output
+            return out_min + (normalized * (out_max - out_min))
+        except (TypeError, ValueError):
+            return 0.0
 
     def _analyze_parameter(self, categoria: str, nome_param: str, info_param: Dict) -> Tuple[Any, float]:
         """Analizza un singolo parametro del repository e genera suggerimenti.
@@ -517,61 +584,49 @@ class RepoAnalyzer:
             return 0.0
 
     def _calculate_scores(self) -> None:
-        """Calcola i punteggi per ogni categoria e il punteggio totale."""
-        try:
-            # Calcola i punteggi per categoria
-            for categoria, parametri in self.results["dettagli"].items():
-                valid_scores = []
-                total_weight = 0
-                
-                for nome_param, info in parametri.items():
-                    if info["punteggio"] is not None and info["valore"] not in ["Errore", "N/A"]:
-                        weight = info.get("peso", 1)
-                        valid_scores.append(info["punteggio"] * weight)
-                        total_weight += weight
-                
-                if valid_scores and total_weight > 0:
-                    # Media ponderata dei punteggi
-                    self.results["punteggi"][categoria] = round(sum(valid_scores) / total_weight, 2)
-                else:
-                    self.results["punteggi"][categoria] = 0
-            
-            # Calcola il punteggio totale come media dei punteggi delle categorie
-            if self.results["punteggi"]:
-                self.results["punteggio_totale"] = round(
-                    sum(self.results["punteggi"].values()) / len(self.results["punteggi"]),
-                    2
-                )
+        """Calcola i punteggi per ogni categoria basandosi sui parametri analizzati."""
+        for categoria, dettagli in self.results["dettagli"].items():
+            # Calcola la media pesata dei punteggi per questa categoria
+            pesi_totali = sum(param["peso"] for param in dettagli.values())
+            if pesi_totali > 0:
+                punteggio_categoria = sum(param["punteggio"] * param["peso"] 
+                                        for param in dettagli.values()) / pesi_totali
+                self.results["punteggi"][categoria] = round(punteggio_categoria, 2)
             else:
-                self.results["punteggio_totale"] = 0
-        except Exception as e:
-            print(f"Errore nel calcolo dei punteggi: {e}")
-            self.results["punteggio_totale"] = 0
+                self.results["punteggi"][categoria] = 0.0
 
     def _update_history(self) -> None:
-        """Aggiorna lo storico dei punteggi del repository."""
+        """Aggiorna lo storico dei punteggi."""
         try:
             # Carica lo storico esistente se presente
             history_file = f"{self.repo_name.replace('/', '_')}_history.json"
-            history = []
             if os.path.exists(history_file):
                 with open(history_file, 'r', encoding='utf-8') as f:
                     history = json.load(f)
-            
-            # Aggiungi i punteggi attuali allo storico
-            history.append({
+            else:
+                history = []
+
+            # Aggiungi l'analisi corrente allo storico
+            current_analysis = {
                 "data": self.results["data_analisi"],
-                "punteggi": self.results["punteggi"],
-                "punteggio_totale": self.results["punteggio_totale"]
-            })
-            
+                "punteggio_totale": self.results.get("punteggio_totale", 0),
+                "punteggi": self.results["punteggi"]
+            }
+            history.append(current_analysis)
+
+            # Mantieni solo le ultime 10 analisi
+            history = history[-10:]
+
             # Salva lo storico aggiornato
             with open(history_file, 'w', encoding='utf-8') as f:
                 json.dump(history, f, indent=2, ensure_ascii=False)
-            
+
+            # Aggiorna i risultati con lo storico
             self.results["storico"] = history
+
         except Exception as e:
             print(f"Errore nell'aggiornamento dello storico: {e}")
+            self.results["storico"] = []
 
     def visualize_results(self) -> None:
         """Visualizza i risultati dell'analisi generando un report HTML interattivo."""
