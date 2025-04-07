@@ -107,11 +107,7 @@
             </template>
         </div>
         <br>
-        <!-- Suggerimenti -->
-        <div class="bg-white rounded-2xl shadow-lg p-8 mb-16 fade-in">
-            <h3 class="text-2xl font-semibold mb-8">Tutti i Suggerimenti</h3>
-            <div id="suggestions" class="space-y-4"></div>
-        </div>
+        <!-- Removing the "Tutti i Suggerimenti" section as it's redundant now -->
     </div>
 
     <script>
@@ -275,39 +271,8 @@
             });
         }
 
-        function populateSuggestions() {
-            const container = document.getElementById('suggestions');
-            container.innerHTML = '';
-
-            // Verifica se ci sono suggerimenti
-            const hasSuggestions = Object.values(reportData.suggerimenti).some(arr => arr.length > 0);
-            
-            if (!hasSuggestions) {
-                container.innerHTML = '<p class="text-gray-500 italic">Non ci sono suggerimenti per questo repository.</p>';
-                return;
-            }
-
-            Object.entries(reportData.suggerimenti).forEach(([categoria, suggerimenti]) => {
-                if (suggerimenti.length > 0) {
-                    const categorySection = document.createElement('div');
-                    categorySection.className = 'mb-6';
-                    categorySection.innerHTML = `<h4 class="text-lg font-semibold mb-4">${categoria.replace('_', ' ').toUpperCase()}</h4>`;
-                    
-                    const suggestionsContainer = document.createElement('div');
-                    suggestionsContainer.className = 'space-y-3';
-                    
-                    suggerimenti.forEach(suggerimento => {
-                        const item = document.createElement('div');
-                        item.className = 'p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg';
-                        item.innerHTML = `<p class="text-gray-700">${suggerimento}</p>`;
-                        suggestionsContainer.appendChild(item);
-                    });
-                    
-                    categorySection.appendChild(suggestionsContainer);
-                    container.appendChild(categorySection);
-                }
-            });
-        }
+        // Removing the populateSuggestions function as it's no longer needed
+        // Also remove its call from the DOMContentLoaded event listener
 
         function getParameterIcon(tipo) {
             const icons = {
@@ -329,7 +294,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initCharts();
             populateCategoryDetails();
-            populateSuggestions();
+            // Removing populateSuggestions() call
             tippy('[data-tippy-content]', {
                 theme: 'light',
                 placement: 'top',
