@@ -223,6 +223,160 @@ class RepoAnalyzer:
         except Exception:
             return 0.0
 
+    def _fetch_issues_data(self):
+        """Ottiene dati su issues aperte/chiuse e calcola i tempi medi di chiusura."""
+        if "issues_data" in self._cache:
+            return self._cache["issues_data"]
+        issues = self.repo.get_issues(state="all")
+        closed_times = []
+        for issue in issues:
+            if issue.closed_at and issue.created_at:
+                delta = (issue.closed_at - issue.created_at).days
+                if delta >= 0:
+                    closed_times.append(delta)
+        self._cache["issues_data"] = closed_times
+        return closed_times
+
+    def _fetch_pr_data(self):
+        """Ottiene dati su PR aperte/chiuse e calcola ratio e tempi chiusura."""
+        if "pr_data" in self._cache:
+            return self._cache["pr_data"]
+        pulls = self.repo.get_pulls(state="all")
+        total_pr = pulls.totalCount
+        merged_pr = 0
+        closed_times = []
+        for pr in pulls:
+            if pr.merged and pr.created_at and pr.closed_at:
+                merged_pr += 1
+                closed_times.append((pr.closed_at - pr.created_at).days)
+        self._cache["pr_data"] = {
+            "total": total_pr,
+            "merged": merged_pr,
+            "merged_times": closed_times
+        }
+        return self._cache["pr_data"]
+
+    def _fetch_tags_data(self):
+        """Ottiene la frequenza approssimativa tra i tag (in giorni), se presenti."""
+        if "tags_data" in self._cache:
+            return self._cache["tags_data"]
+        tags = list(self.repo.get_tags())
+        if len(tags) < 2:
+            self._cache["tags_data"] = 0.0
+            return 0.0
+        date_diffs = []
+        for i in range(len(tags) - 1):
+            t1 = tags[i].commit.commit.author.date
+            t2 = tags[i+1].commit.commit.author.date
+            date_diffs.append(abs((t2 - t1).days))
+        avg_days = sum(date_diffs)/len(date_diffs) if date_diffs else 0.0
+        self._cache["tags_data"] = avg_days
+        return avg_days
+
+    def _fetch_popolarita_data(self):
+        """Ottiene dati relativi a stelle, fork, watchers, contributori e dipendenti."""
+        if "popolarita_data" in self._cache:
+            return self._cache["popolarita_data"]
+        
+        repo_data = {
+            "stars": self.repo.stargazers_count if self.repo else 0,
+            "forks": self.repo.forks_count if self.repo else 0,
+            "watchers": self.repo.subscribers_count if self.repo else 0,
+            "contributori": 0,
+            "dipendenti": 0
+        }
+        
+        try:
+            # Ottieni il conteggio dei contributori
+            contributors = list(self.repo.get_contributors())
+            repo_data["contributori"] = len(contributors)
+        except Exception as e:
+            print(f"Errore nel recupero dei contributori: {e}")
+        
+        try:
+            # Cerca repository che dipendono da questo (GitHub API)
+            used_by_url = f"https://github.com/{self.repo_name}/network/dependents"
+            repo_data["dipendenti_url"] = used_by_url
+            
+            # Semplice approssimazione usando search API
+            dependents = self.github.search_repositories(f"depends on:{self.repo_name}")
+            repo_data["dipendenti"] = dependents.totalCount
+        except Exception as e:
+            print(f"Errore nel recupero dei dipendenti: {e}")
+        
+        self._cache["popolarita_data"] = repo_data
+        return repo_data
+
+    def _check_documentation_files(self):
+        """Verifica se readme, doc estesa, license, contributo e esempi sono presenti (in modo minimale)."""
+        if "doc_files_data" in self._cache:
+            return self._cache["doc_files_data"]
+        data = {
+            "has_readme": False,
+            "has_extended_docs": False,
+            "has_license": False,
+            "has_contrib_coc": False,
+            "has_examples": False
+        }
+        try:
+            contents = self.repo.get_contents("")
+            file_names = [c.name.lower() for c in contents]
+            data["has_readme"] = any("readme" in fn for fn in file_names)
+            data["has_license"] = any("license" in fn or "copying" in fn for fn in file_names)
+            data["has_contrib_coc"] = any("contributing" in fn or "code_of_conduct" in fn for fn in file_names)
+            # Verifica se esiste cartella /docs o wiki
+            if "docs" in [c.name.lower() for c in contents] or self.repo.has_wiki:
+                data["has_extended_docs"] = True
+            # Verifica presenza directory /examples
+            if "examples" in file_names:
+                data["has_examples"] = True
+        except:
+            pass
+        self._cache["doc_files_data"] = data
+        return data
+
+    def _fetch_community_data(self):
+        if "community_data" in self._cache:
+            return self._cache["community_data"]
+        data = {
+            "discussions_enabled": False,
+            "templates_enabled": False,
+            "tono_costruttivita": 5,  # Placeholder
+            "label_usage": False
+        }
+        try:
+            # Verifica se Discussions è abilitato
+            # Nota: Alcune versioni di PyGithub potrebbero non supportare `has_discussions`
+            # Qui assumiamo bozza, come fallback: controlliamo se esiste almeno una Discussion
+            discussions = self.repo.get_discussions()
+            if discussions.totalCount > 0:
+                data["discussions_enabled"] = True
+        except:
+            pass
+
+        try:
+            # Controllo file in .github/ISSUE_TEMPLATE e PULL_REQUEST_TEMPLATE
+            contents = self.repo.get_contents(".github")
+            template_files = [c.name.lower() for c in contents]
+            if any("template" in fn for fn in template_files):
+                data["templates_enabled"] = True
+        except:
+            pass
+
+        try:
+            # Controlla se c'è almeno un label usato in qualche issue
+            issues = self.repo.get_issues(state="all")
+            for issue in issues:
+                if issue.labels:
+                    data["label_usage"] = True
+                    break
+        except:
+            pass
+
+        # "tono_costruttivita" rimane un placeholder
+        self._cache["community_data"] = data
+        return data
+
     def analyze(self) -> Dict:
         """Analizza il repository in base ai parametri configurati.
 
@@ -384,73 +538,59 @@ class RepoAnalyzer:
                 
             # Popolarità & Impatto
             if categoria == "popolarita_impatto":
+                pop_data = self._fetch_popolarita_data()
                 if nome_param == "stelle":
-                    valore = self.repo.stargazers_count
-                    punteggio = self._normalize_score(valore, 0, 10000, 0, 10)
+                    valore = f"{pop_data['stars']} stelle"
+                    punteggio = self._normalize_score(pop_data['stars'], 0, 1000, 0, 10)
+                    
                     if punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Considera di promuovere il repository attraverso blog post o social media per aumentare la visibilità"
                         )
+                        
                 elif nome_param == "forks":
-                    valore = self.repo.forks_count
-                    punteggio = self._normalize_score(valore, 0, 5000, 0, 10)
+                    valore = f"{pop_data['forks']} fork"
+                    punteggio = self._normalize_score(pop_data['forks'], 0, 500, 0, 10)
+                    
                     if punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Migliora la documentazione e gli esempi per incoraggiare più fork e riutilizzo del codice"
                         )
+                        
                 elif nome_param == "watchers":
-                    valore = self.repo.subscribers_count
-                    punteggio = self._normalize_score(valore, 0, 1000, 0, 10)
+                    valore = f"{pop_data['watchers']} watchers"
+                    punteggio = self._normalize_score(pop_data['watchers'], 0, 200, 0, 10)
+                    
                     if punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Mantieni gli utenti informati sugli aggiornamenti attraverso release notes dettagliate"
                         )
+                        
                 elif nome_param == "contributori":
-                    contributors = self._get_cached_data(
-                        "contributors",
-                        lambda: list(self.repo.get_contributors()[:MAX_ITEMS_PER_REQUEST])
-                    )
-                    if contributors:
-                        valore = len(contributors)
-                        punteggio = self._normalize_score(valore, 0, 100, 0, 10)
-                        if punteggio < 5:
-                            self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Crea una guida per i contributori e tag 'good first issue' per attrarre nuovi sviluppatori"
-                            )
-                    else:
-                        valore = 0
-                        punteggio = 0
+                    valore = f"{pop_data['contributori']} contributori"
+                    punteggio = self._normalize_score(pop_data['contributori'], 0, 50, 0, 10)
+                    
+                    if punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Non sono stati trovati contributori. Considera di aprire il progetto alla collaborazione"
+                            "Crea una guida per i contributori e tag 'good first issue' per attrarre nuovi sviluppatori"
                         )
+                        
                 elif nome_param == "dipendenti":
-                    try:
-                        # Tenta di ottenere il numero di repository che dipendono da questo
-                        dependents = self._get_cached_data(
-                            "dependents",
-                            lambda: requests.get(
-                                f"https://api.github.com/repos/{self.repo_name}/dependents",
-                                headers={"Accept": "application/vnd.github.v3+json"}
-                            ).json()
-                        )
-                        if dependents and isinstance(dependents, list):
-                            valore = len(dependents)
-                            punteggio = self._normalize_score(valore, 0, 1000, 0, 10)
-                        else:
-                            valore = "Non disponibile"
-                            punteggio = 5
-                    except Exception:
-                        valore = "Non disponibile"
-                        punteggio = 5
+                    valore = f"{pop_data['dipendenti']} progetti dipendenti"
+                    punteggio = self._normalize_score(pop_data['dipendenti'], 0, 100, 0, 10)
+                    
+                    if punteggio < 5:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Considera di pubblicare il pacchetto su gestori di pacchetti come npm o PyPI"
+                            "Considera di pubblicare il pacchetto su gestori di pacchetti come npm o PyPI per aumentarne l'adozione"
                         )
+                        
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
+                    conta_punteggio = False
                 
                 return valore, round(punteggio, 2), conta_punteggio
-
+            
             # Attività & Manutenzione
             elif categoria == "attivita_manutenzione":
                 if nome_param == "release_tag_frequenza":
@@ -614,11 +754,41 @@ class RepoAnalyzer:
                     valore = "Analisi non disponibile"
                     punteggio = 5  # Valore neutro
                 elif nome_param == "attivita_issues_tempo":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
-                elif nome_param == "attivita_pr_ratio" or nome_param == "attivita_pr_tempo":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
+                    closed_times = self._fetch_issues_data()
+                    if closed_times:
+                        valore = f"Tempo medio chiusura issues: {round(sum(closed_times)/len(closed_times), 1)} giorni"
+                        punteggio = max(0.0, 10.0 - ((sum(closed_times)/len(closed_times)) / 10.0))
+                    else:
+                        valore = "Nessuna issue chiusa"
+                        punteggio = 0
+                elif nome_param == "attivita_pr_ratio":
+                    pr_data = self._fetch_pr_data()
+                    if pr_data["total"] > 0:
+                        ratio = pr_data["merged"] / pr_data["total"]
+                        valore = f"PR merge ratio: {round(ratio*100, 1)}%"
+                        punteggio = round(ratio*10, 2)
+                    else:
+                        valore = "Nessuna PR trovata"
+                        punteggio = 0
+                elif nome_param == "attivita_pr_tempo":
+                    pr_data = self._fetch_pr_data()
+                    times = pr_data["merged_times"]
+                    if times:
+                        avg_close = sum(times)/len(times)
+                        valore = f"Tempo medio chiusura PR: {round(avg_close, 1)} giorni"
+                        punteggio = max(0.0, 10.0 - (avg_close / 10.0))
+                    else:
+                        valore = "Nessuna PR chiusa/mergiata"
+                        punteggio = 0
+                elif nome_param == "release_tag_frequenza":
+                    avg_days = self._fetch_tags_data()
+                    if avg_days > 0:
+                        valore = f"Media giorni tra tag: {round(avg_days, 1)}"
+                        # Meno giorni tra i tag => punteggio più alto
+                        punteggio = max(0.0, 10.0 - (avg_days / 30.0))
+                    else:
+                        valore = "Nessun tag/release trovata"
+                        punteggio = 0
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
@@ -650,73 +820,41 @@ class RepoAnalyzer:
 
             # Documentazione
             elif categoria == "documentazione":
+                doc_data = self._check_documentation_files()
                 if nome_param == "readme":
-                    try:
-                        readme = self.repo.get_readme()
-                        # Il repository ha un README
-                        valore = True
-                        punteggio = 0.05  # Punteggio base per la presenza del file
-                    except Exception:
-                        valore = False
-                        punteggio = 0
-                        self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Non è stato trovato un file README. Creane uno per documentare il tuo progetto."
-                        )
+                    valore = "Presente" if doc_data["has_readme"] else "Assente"
+                    punteggio = 10 if doc_data["has_readme"] else 0
+                elif nome_param == "documentazione_estesa":
+                    valore = "Docs/Wiki rilevati" if doc_data["has_extended_docs"] else "Nessuna doc estesa"
+                    punteggio = 10 if doc_data["has_extended_docs"] else 0
                 elif nome_param == "file_license":
-                    try:
-                        license_content = self.repo.get_license()
-                        valore = True
-                        punteggio = 10
-                    except Exception:
-                        valore = False
-                        punteggio = 0
-                        self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Non è stata trovata una licenza. Considera di aggiungerne una per chiarire i termini di utilizzo."
-                        )
+                    valore = "File LICENSE trovato" if doc_data["has_license"] else "Assente"
+                    punteggio = 10 if doc_data["has_license"] else 0
                 elif nome_param == "file_contrib_coc":
-                    # Verifichiamo la presenza di CONTRIBUTING.md e CODE_OF_CONDUCT.md
-                    valore = {"CONTRIBUTING.md": False, "CODE_OF_CONDUCT.md": False}
-                    punteggio = 0  # Punteggio iniziale
-                    
-                    try:
-                        contents = self.repo.get_contents("")
-                        files = [f.name.upper() for f in contents if f.type == "file"]
-                        
-                        if "CONTRIBUTING.md".upper() in files:
-                            valore["CONTRIBUTING.md"] = True
-                            punteggio += 5
-                        if "CODE_OF_CONDUCT.md".upper() in files:
-                            valore["CODE_OF_CONDUCT.md"] = True
-                            punteggio += 5
-                        
-                        if punteggio == 0:
-                            self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Aggiungi CONTRIBUTING.md e CODE_OF_CONDUCT.md per facilitare la collaborazione"
-                            )
-                        elif punteggio == 5:
-                            self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Aggiungi un file mancante (CONTRIBUTING.md o CODE_OF_CONDUCT.md) per completare la documentazione"
-                            )
-                    except Exception:
-                        pass
-                elif nome_param == "documentazione_estesa" or nome_param == "qualita_esempi":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
-                else:
-                    valore = "Non analizzato"
-                    punteggio = 0
-                
+                    valore = "File CONTRIBUTING/CODE_OF_CONDUCT" if doc_data["has_contrib_coc"] else "Non trovato"
+                    punteggio = 10 if doc_data["has_contrib_coc"] else 0
+                elif nome_param == "qualita_esempi":
+                    valore = "Cartella /examples esistente" if doc_data["has_examples"] else "Nessun esempio"
+                    punteggio = 10 if doc_data["has_examples"] else 0
+
                 return valore, round(punteggio, 2), conta_punteggio
 
             # Community & Collaborazione
             elif categoria == "community_collaborazione":
-                if nome_param in ["issue_pr_templates", "github_discussions", "tono_costruttivita", "uso_label_issues"]:
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
-                else:
-                    valore = "Non analizzato"
-                    punteggio = 0
-                
+                com_data = self._fetch_community_data()
+                if nome_param == "github_discussions":
+                    valore = "Abilitato" if com_data["discussions_enabled"] else "Non disponibile"
+                    punteggio = 10 if com_data["discussions_enabled"] else 5
+                elif nome_param == "issue_pr_templates":
+                    valore = "Presenti" if com_data["templates_enabled"] else "Non disponibili"
+                    punteggio = 10 if com_data["templates_enabled"] else 5
+                elif nome_param == "tono_costruttivita":
+                    valore = "Analisi placeholder"
+                    punteggio = com_data["tono_costruttivita"]  # Esempio: 5
+                elif nome_param == "uso_label_issues":
+                    valore = "Labels in uso" if com_data["label_usage"] else "Nessun label rilevato"
+                    punteggio = 10 if com_data["label_usage"] else 5
+
                 return valore, round(punteggio, 2), conta_punteggio
 
             # Sicurezza
@@ -866,12 +1004,25 @@ class RepoAnalyzer:
             else:
                 history = []
 
-            # Aggiungi l'analisi corrente allo storico
+            # Crea una nuova entry completa per lo storico
             current_analysis = {
                 "data": self.results["data_analisi"],
                 "punteggio_totale": self.results.get("punteggio_totale", 0),
-                "punteggi": self.results["punteggi"]
+                "punteggi": self.results.get("punteggi", {}),
+                # Includi anche i dettagli completi per ogni parametro
+                "dettagli_parametri": {}
             }
+
+            # Aggiungi i dettagli di tutti i parametri per ogni categoria
+            for categoria, parametri in self.results.get("dettagli", {}).items():
+                current_analysis["dettagli_parametri"][categoria] = {}
+                for nome_param, dati in parametri.items():
+                    current_analysis["dettagli_parametri"][categoria][nome_param] = {
+                        "valore": dati.get("valore", "N/A"),
+                        "punteggio": dati.get("punteggio", 0)
+                    }
+
+            # Aggiungi l'analisi corrente allo storico
             history.append(current_analysis)
 
             # Mantieni solo le ultime 10 analisi

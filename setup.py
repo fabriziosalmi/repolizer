@@ -4,11 +4,11 @@
 from setuptools import setup, find_packages
 import os
 
-# Leggi il contenuto del file README.md
+# Read the content of README.md file
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-# Leggi le dipendenze dal file requirements.txt
+# Read dependencies from requirements.txt file
 with open("requirements.txt", "r", encoding="utf-8") as f:
     requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
