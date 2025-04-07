@@ -68,5 +68,61 @@
       "testing_cicd": 2.5,
       "setup_usabilita": 5.0
     }
+  },
+  {
+    "data": "2025-04-07 10:55:20",
+    "punteggio_totale": 4.07,
+    "punteggi": {
+      "popolarita_impatto": 1.51,
+      "attivita_manutenzione": 5.82,
+      "qualita_codice": 5.0,
+      "documentazione": 4.3,
+      "community_collaborazione": 5.0,
+      "sicurezza": 3.46,
+      "testing_cicd": 2.5,
+      "setup_usabilita": 5.0
+    }
+  },
+  {
+    "data": "2025-04-07 10:58:27",
+    "punteggio_totale": 4.76,
+    "punteggi": {
+      "popolarita_impatto": 1.51,
+      "attivita_manutenzione": 6.58,
+      "qualita_codice": 5.0,
+      "documentazione": 5.01,
+      "community_collaborazione": 5.0,
+      "sicurezza": 5.0,
+      "testing_cicd": 5.0,
+      "setup_usabilita": 5.0
+    }
+  },
+  {
+    "data": "2025-04-07 11:01:08",
+    "punteggio_totale": 5.08,
+    "punteggi": {
+      "popolarita_impatto": 1.51,
+      "attivita_manutenzione": 6.58,
+      "qualita_codice": 7.51,
+      "documentazione": 5.01,
+      "community_collaborazione": 5.0,
+      "sicurezza": 5.0,
+      "testing_cicd": 5.0,
+      "setup_usabilita": 5.0
+    }
+  },
+  {
+    "data": "2025-04-07 11:02:27",
+    "punteggio_totale": 4.88,
+    "punteggi": {
+      "popolarita_impatto": 1.51,
+      "attivita_manutenzione": 6.58,
+      "qualita_codice": 5.96,
+      "documentazione": 5.01,
+      "community_collaborazione": 5.0,
+      "sicurezza": 5.0,
+      "testing_cicd": 5.0,
+      "setup_usabilita": 5.0
+    }
   }
 ]

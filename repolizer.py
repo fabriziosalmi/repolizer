@@ -13,6 +13,8 @@ import json
 import argparse
 import datetime
 from typing import Dict, List, Any, Tuple, Optional
+import subprocess
+import re
 
 import requests
 import pandas as pd
@@ -159,6 +161,68 @@ class RepoAnalyzer:
                 return None
         return self._cache[key]
 
+    def _check_complexity(self, path: str = ".") -> float:
+        """Esegue una scansione con Radon per calcolare la complessità media."""
+        try:
+            output = subprocess.check_output(["radon", "cc", path, "-s", "-A"], stderr=subprocess.STDOUT).decode("utf-8")
+            complexities = []
+            for line in output.splitlines():
+                match = re.search(r"\((\d+)\)$", line.strip())
+                if match:
+                    complexities.append(int(match.group(1)))
+            if complexities:
+                return sum(complexities) / len(complexities)
+        except Exception:
+            pass
+        return 0.0
+
+    def _check_style(self, path: str = ".") -> float:
+        """Esegue una scansione con flake8 per valutare l'aderenza allo stile (meno errori => punteggio più alto)."""
+        try:
+            process = subprocess.run(["flake8", path], capture_output=True, text=True)
+            # Se flake8 restituisce un codice di errore > 1, flake8 potrebbe essere fallito del tutto
+            if process.returncode > 1:
+                return 0.0
+            lines = [l for l in process.stdout.splitlines() if l.strip()]
+            errors = len(lines)
+            # Più errori -> punteggio più basso
+            return max(0.0, 10.0 - (errors / 5.0))
+        except Exception:
+            return 0.0
+
+    def _check_code_smells(self, path: str = ".") -> float:
+        """Riutilizza flake8 come indicatore di 'code smells'. Punteggio più alto con meno segnalazioni."""
+        try:
+            process = subprocess.run(["flake8", path], capture_output=True, text=True)
+            # Eventuali errori interni a flake8
+            if process.returncode > 1:
+                return 0.0
+            lines = [l for l in process.stdout.splitlines() if l.strip()]
+            smells = len(lines)
+            # Più segnalazioni -> punteggio più basso
+            return max(0.0, 10.0 - (smells / 10.0))
+        except Exception:
+            return 0.0
+
+    def _check_comment_coverage(self, path: str = ".") -> float:
+        """Esempio elementare: conta righe di commento vs righe totali (solo .py)."""
+        try:
+            total_lines, comment_lines = 0, 0
+            for root, dirs, files in os.walk(path):
+                for fname in files:
+                    if fname.endswith(".py"):
+                        with open(os.path.join(root, fname), "r", encoding="utf-8") as f:
+                            for line in f:
+                                line_stripped = line.strip()
+                                if line_stripped.startswith("#"):
+                                    comment_lines += 1
+                                if line_stripped:
+                                    total_lines += 1
+            ratio = comment_lines / total_lines if total_lines else 0
+            return min(ratio * 20.0, 10.0)  # max 10 points if heavily commented
+        except Exception:
+            return 0.0
+
     def analyze(self) -> Dict:
         """Analizza il repository in base ai parametri configurati.
 
@@ -188,13 +252,14 @@ class RepoAnalyzer:
             
             for nome_param, info_param in track(parametri.items(), description=f"Analisi {categoria}"):
                 try:
-                    valore, punteggio = self._analyze_parameter(categoria, nome_param, info_param)
+                    valore, punteggio, conta_punteggio = self._analyze_parameter(categoria, nome_param, info_param)
                     
                     self.results["dettagli"][categoria][nome_param] = {
                         "valore": valore if valore is not None else "N/A",
                         "punteggio": punteggio if punteggio is not None else 0,
                         "peso": info_param.get("peso", 1),
-                        "descrizione": info_param.get("descrizione", "")
+                        "descrizione": info_param.get("descrizione", ""),
+                        "conta_punteggio": conta_punteggio
                     }
                 except Exception as e:
                     self.console.print(f"[red]Errore nell'analisi del parametro {nome_param}: {e}[/red]")
@@ -202,7 +267,8 @@ class RepoAnalyzer:
                         "valore": "Errore",
                         "punteggio": 0,
                         "peso": info_param.get("peso", 1),
-                        "descrizione": info_param.get("descrizione", "")
+                        "descrizione": info_param.get("descrizione", ""),
+                        "conta_punteggio": False
                     }
 
         # Calcola i punteggi per categoria e il punteggio totale
@@ -277,7 +343,7 @@ class RepoAnalyzer:
         except (TypeError, ValueError):
             return 0.0
 
-    def _analyze_parameter(self, categoria: str, nome_param: str, info_param: Dict) -> Tuple[Any, float]:
+    def _analyze_parameter(self, categoria: str, nome_param: str, info_param: Dict) -> Tuple[Any, float, bool]:
         """Analizza un singolo parametro del repository e genera suggerimenti.
 
         Args:
@@ -286,11 +352,12 @@ class RepoAnalyzer:
             info_param: Informazioni sul parametro
 
         Returns:
-            Tupla con il valore del parametro e il punteggio normalizzato (0-10)
+            Tupla con il valore del parametro, il punteggio normalizzato (0-10) e un flag per il conteggio del punteggio
         """
         # Inizializza le variabili con valori di default
         valore = "Non analizzato"
         punteggio = 0
+        conta_punteggio = True
         
         # Assicurati che il dizionario suggerimenti esista nei risultati
         if "suggerimenti" not in self.results:
@@ -382,7 +449,7 @@ class RepoAnalyzer:
                     valore = "Non analizzato"
                     punteggio = 0
                 
-                return valore, punteggio
+                return valore, round(punteggio, 2), conta_punteggio
 
             # Attività & Manutenzione
             elif categoria == "attivita_manutenzione":
@@ -556,27 +623,30 @@ class RepoAnalyzer:
                     valore = "Non analizzato"
                     punteggio = 0
                 
-                return valore, punteggio
+                return valore, round(punteggio, 2), conta_punteggio
 
             # Qualità del codice
             elif categoria == "qualita_codice":
                 if nome_param == "complessita_media":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
+                    valore = "Media complessità"
+                    complexity = self._check_complexity(".")
+                    # Più bassa la complessità media, più alto il punteggio.
+                    punteggio = max(0.0, 10.0 - (complexity / 2.0))
                 elif nome_param == "aderenza_stile":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
+                    valore = "Controllo stile"
+                    punteggio = self._check_style(".")
                 elif nome_param == "code_smells":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
+                    valore = "Analisi code smells"
+                    punteggio = self._check_code_smells(".")
                 elif nome_param == "commenti_codice":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
+                    valore = "Copertura commenti"
+                    punteggio = self._check_comment_coverage(".")
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
-                
-                return valore, punteggio
+                    conta_punteggio = False
+
+                return valore, round(punteggio, 2), conta_punteggio
 
             # Documentazione
             elif categoria == "documentazione":
@@ -636,7 +706,7 @@ class RepoAnalyzer:
                     valore = "Non analizzato"
                     punteggio = 0
                 
-                return valore, punteggio
+                return valore, round(punteggio, 2), conta_punteggio
 
             # Community & Collaborazione
             elif categoria == "community_collaborazione":
@@ -647,7 +717,7 @@ class RepoAnalyzer:
                     valore = "Non analizzato"
                     punteggio = 0
                 
-                return valore, punteggio
+                return valore, round(punteggio, 2), conta_punteggio
 
             # Sicurezza
             elif categoria == "sicurezza":
@@ -676,7 +746,7 @@ class RepoAnalyzer:
                     valore = "Non analizzato"
                     punteggio = 0
                 
-                return valore, punteggio
+                return valore, round(punteggio, 2), conta_punteggio
 
             # Testing & CI/CD
             elif categoria == "testing_cicd":
@@ -737,7 +807,7 @@ class RepoAnalyzer:
                     valore = "Non analizzato"
                     punteggio = 0
                 
-                return valore, punteggio
+                return valore, round(punteggio, 2), conta_punteggio
 
             # Setup & Usabilità
             elif categoria == "setup_usabilita":
@@ -748,17 +818,17 @@ class RepoAnalyzer:
                     valore = "Non analizzato"
                     punteggio = 0
                 
-                return valore, punteggio
+                return valore, round(punteggio, 2), conta_punteggio
                 
             # Se arriviamo qui, non è stata trovata una corrispondenza
-            return "Non analizzato", 0
+            return "Non analizzato", 0, False
             
         except TimeoutError:
             print(f"Timeout durante l'analisi del parametro {nome_param}")
-            return "Timeout", 0
+            return "Timeout", 0, False
         except Exception as e:
             print(f"Errore nell'analisi del parametro {nome_param}: {e}")
-            return "Errore", 0
+            return "Errore", 0, False
         finally:
             # Disattiva il timeout se abilitato
             if timeout_enabled:
@@ -767,12 +837,16 @@ class RepoAnalyzer:
     def _calculate_scores(self) -> None:
         """Calcola i punteggi per ogni categoria basandosi sui parametri analizzati."""
         for categoria, dettagli in self.results["dettagli"].items():
-            # Calcola la media pesata dei punteggi per questa categoria
-            pesi_totali = sum(param["peso"] for param in dettagli.values())
+            pesi_totali = 0
+            somma_pesata = 0
+            for param in dettagli.values():
+                if param.get("punteggio") is not None and param.get("punteggio") > 0 and not param.get("errore", False):
+                    # Usa "conta_punteggio" per saltare quelli da escludere
+                    if param.get("conta_punteggio", True):
+                        somma_pesata += (param["punteggio"] * param["peso"])
+                        pesi_totali += param["peso"]
             if pesi_totali > 0:
-                punteggio_categoria = sum(param["punteggio"] * param["peso"] 
-                                        for param in dettagli.values()) / pesi_totali
-                self.results["punteggi"][categoria] = round(punteggio_categoria, 2)
+                self.results["punteggi"][categoria] = round(somma_pesata / pesi_totali, 2)
             else:
                 self.results["punteggi"][categoria] = 0.0
         
