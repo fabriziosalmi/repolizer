@@ -37,6 +37,11 @@ from rich.panel import Panel
 from rich import print as rprint
 from html_report import generate_html_report
 
+try:
+    import bandit
+except ImportError:
+    bandit = None
+
 # Decoratore per gestire i timeout
 def timeout_handler(func):
     """Decorator per gestire i timeout delle chiamate API."""
@@ -695,8 +700,9 @@ class RepoAnalyzer:
                 # Verifica presenza directory /examples
                 if "examples" in file_names:
                     data["has_examples"] = True
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Errore nel controllo dei file di documentazione: {e}")
+        
         self._cache["doc_files_data"] = data
         return data
 
@@ -1039,6 +1045,9 @@ class RepoAnalyzer:
         
         # Aggiorna lo storico dei punteggi
         self._update_history()
+        
+        security_score = self._check_security(self.local_repo_path if self.local_repo_path else ".")
+        print(f"Security score (Bandit): {security_score:.2f}")
         
         return self.results
 
@@ -1854,191 +1863,255 @@ class RepoAnalyzer:
             # Setup & Usabilità
             elif categoria == "setup_usabilita":
                 if nome_param == "facilita_setup":
-                    valore = "Analisi non disponibile"
-                    punteggio = 5  # Valore neutro
+                    # Improve the setup analysis with actual checks
+                    valore = "Analisi in corso"
+                    punteggio = 5  # Default neutral value
+                    
+                    setup_files = ["setup.py", "requirements.txt", "package.json", "Makefile", "Dockerfile", "docker-compose.yml"]
+                    found_files = []
+                    
+                    try:
+                        if self.local_repo_path:
+                            # Check local repository
+                            for root, _, files in os.walk(self.local_repo_path):
+                                for file in files:
+                                    if file.lower() in [s.lower() for s in setup_files]:
+                                        found_files.append(file)
+                        else:
+                            # Use GitHub API
+                            contents = self._get_cached_data(
+                                "root_contents",
+                                lambda: list(self.repo.get_contents(""))
+                            )
+                            
+                            for item in contents:
+                                if item.type == "file" and item.name.lower() in [s.lower() for s in setup_files]:
+                                    found_files.append(item.name)
+                        
+                        if found_files:
+                            setup_score = min(len(found_files) * 2.5, 10)  # Each setup file adds 2.5 points, max 10
+                            valore = f"Setup files trovati: {', '.join(found_files)}"
+                            punteggio = setup_score
+                            
+                            if punteggio < 5:
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "Aggiungi file come requirements.txt, setup.py o Dockerfile per facilitare l'installazione e l'esecuzione"
+                                )
+                        else:
+                            valore = "Nessun file di setup rilevato"
+                            punteggio = 0
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Aggiungi file di setup come requirements.txt o setup.py per facilitare l'installazione"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi dei file di setup: {e}")
+                        valore = "Errore nell'analisi"
+                        punteggio = 5
+                
+                elif nome_param == "configurabilita":
+                    # Check for configuration files and options
+                    valore = "Analisi in corso"
+                    config_files = ["config.json", "config.yml", "config.yaml", ".env.example", "settings.py"]
+                    found_configs = []
+                    
+                    try:
+                        if self.local_repo_path:
+                            for root, _, files in os.walk(self.local_repo_path):
+                                for file in files:
+                                    if file.lower() in [c.lower() for c in config_files]:
+                                        found_configs.append(file)
+                                        
+                                    # Check Python files for argparse usage (configurability via command line)
+                                    if file.endswith('.py'):
+                                        try:
+                                            with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
+                                                content = f.read()
+                                                if 'argparse' in content and 'ArgumentParser' in content:
+                                                    found_configs.append('command-line arguments (via argparse)')
+                                                    break
+                                        except Exception:
+                                            pass
+                        else:
+                            # Check via GitHub API
+                            contents = self._get_cached_data(
+                                "root_contents",
+                                lambda: list(self.repo.get_contents(""))
+                            )
+                            
+                            for item in contents:
+                                if item.type == "file" and item.name.lower() in [c.lower() for c in config_files]:
+                                    found_configs.append(item.name)
+                            
+                            # Look for argparse in Python files - limited to reduce API calls
+                            try:
+                                main_py = next((item for item in contents if item.name == 'main.py' or item.name == self.repo_name.split('/')[-1] + '.py'), None)
+                                if main_py:
+                                    content = self.repo.get_contents(main_py.path).decoded_content.decode('utf-8')
+                                    if 'argparse' in content and 'ArgumentParser' in content:
+                                        found_configs.append('command-line arguments (via argparse)')
+                            except Exception:
+                                pass
+                        
+                        if found_configs:
+                            config_score = min(len(found_configs) * 2.5, 10)
+                            valore = f"Opzioni di configurazione trovate: {', '.join(found_configs)}"
+                            punteggio = config_score
+                        else:
+                            valore = "Configurazione limitata o assente"
+                            punteggio = 0
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Aggiungi file di configurazione o supporto per variabili d'ambiente per aumentare la flessibilità"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi della configurabilità: {e}")
+                        valore = "Errore nell'analisi"
+                        punteggio = 5
+                
+                elif nome_param == "documentazione_installazione":
+                    # Check for installation documentation
+                    valore = "Analisi in corso"
+                    installation_sections = ["install", "installation", "getting started", "setup", "usage", "quick start", "installazione", "iniziare"]
+                    
+                    try:
+                        readme_content = None
+                        installation_found = False
+                        
+                        # Try to get README content
+                        if self.local_repo_path:
+                            readme_files = ["README.md", "readme.md", "README.rst", "readme.rst"]
+                            for readme_file in readme_files:
+                                readme_path = os.path.join(self.local_repo_path, readme_file)
+                                if os.path.exists(readme_path):
+                                    with open(readme_path, 'r', encoding='utf-8') as f:
+                                        readme_content = f.read().lower()
+                                    break
+                        else:
+                            # Use GitHub API
+                            try:
+                                readme = self._get_cached_data(
+                                    "readme_content",
+                                    lambda: self.repo.get_readme()
+                                )
+                                if readme:
+                                    readme_content = readme.decoded_content.decode('utf-8').lower()
+                            except Exception:
+                                pass
+                        
+                        if readme_content:
+                            # Check for installation sections using headers (markdown style)
+                            for section in installation_sections:
+                                if f"# {section}" in readme_content or f"## {section}" in readme_content or f"### {section}" in readme_content:
+                                    installation_found = True
+                                    break
+                            
+                            # Check for code blocks that might indicate installation commands
+                            if not installation_found and ("```" in readme_content or "pip install" in readme_content or "npm install" in readme_content):
+                                installation_found = True
+                        
+                        if installation_found:
+                            valore = "Documentazione di installazione trovata"
+                            punteggio = 10
+                        else:
+                            valore = "Documentazione di installazione mancante"
+                            punteggio = 0
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Aggiungi una sezione 'Installation' o 'Getting Started' al README per facilitare l'uso del progetto"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Errore nell'analisi della documentazione di installazione: {e}")
+                        valore = "Errore nell'analisi"
+                        punteggio = 5
+                
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
                 
                 return valore, round(punteggio, 2), conta_punteggio
-                
-            # Se arriviamo qui, non è stata trovata una corrispondenza
-            return "Non analizzato", 0, False
-            
-        except TimeoutError as e:
-            logger.warning(f"Timeout durante l'analisi del parametro {nome_param}: {e}")
-            return "Timeout", 0, False
+
+            else:
+                valore = "Non analizzato"
+                punteggio = 0
+                conta_punteggio = False
+
+            return valore, round(punteggio, 2), conta_punteggio
+
         except Exception as e:
             logger.error(f"Errore nell'analisi del parametro {nome_param}: {e}", exc_info=True)
             return "Errore", 0, False
 
-    def _calculate_scores(self) -> None:
-        """Calcola i punteggi per ogni categoria basandosi sui parametri analizzati."""
-        for categoria, dettagli in self.results["dettagli"].items():
-            pesi_totali = 0
-            somma_pesata = 0
-            for param in dettagli.values():
-                if param.get("punteggio") is not None and param.get("punteggio") > 0 and not param.get("errore", False):
-                    # Usa "conta_punteggio" per saltare quelli da escludere
-                    if param.get("conta_punteggio", True):
-                        somma_pesata += (param["punteggio"] * param["peso"])
-                        pesi_totali += param["peso"]
-            if pesi_totali > 0:
-                self.results["punteggi"][categoria] = round(somma_pesata / pesi_totali, 2)
+    def _calculate_scores(self):
+        """Calcola i punteggi per ogni categoria e il punteggio totale."""
+        for categoria, parametri in self.results["dettagli"].items():
+            punteggio_categoria = 0
+            peso_totale = 0
+            for nome_param, info_param in parametri.items():
+                if info_param["conta_punteggio"]:
+                    punteggio_categoria += info_param["punteggio"] * info_param["peso"]
+                    peso_totale += info_param["peso"]
+            if peso_totale > 0:
+                self.results["punteggi"][categoria] = round(punteggio_categoria / peso_totale, 2)
             else:
-                self.results["punteggi"][categoria] = 0.0
-        
-        # Calcola il punteggio totale
-        punteggi = list(self.results["punteggi"].values())
-        if punteggi:
-            self.results["punteggio_totale"] = round(sum(punteggi) / len(punteggi), 2)
+                self.results["punteggi"][categoria] = 0
 
-    def _update_history(self) -> None:
-        """Aggiorna lo storico dei punteggi."""
+    def _display_scores_terminal(self):
+        """Visualizza i punteggi nel terminale."""
+        table = Table(title="Punteggi delle Categorie")
+        table.add_column("Categoria", justify="left", style="cyan", no_wrap=True)
+        table.add_column("Punteggio", justify="right", style="magenta")
+
+        for categoria, punteggio in self.results["punteggi"].items():
+            table.add_row(categoria, str(punteggio))
+
+        self.console.print(table)
+
+    def _update_history(self):
+        """Aggiorna lo storico dei punteggi nel file di configurazione."""
         try:
-            # Carica lo storico esistente se presente
-            history_file = f"{self.repo_name.replace('/', '_')}_history.json"
-            if os.path.exists(history_file):
-                with open(history_file, 'r', encoding='utf-8') as f:
-                    history = json.load(f)
-            else:
-                history = []
-
-            # Crea una nuova entry completa per lo storico
-            current_analysis = {
-                "data": self.results["data_analisi"],
-                "punteggio_totale": self.results.get("punteggio_totale", 0),
-                "punteggi": self.results.get("punteggi", {}),
-                # Includi anche i dettagli completi per ogni parametro
-                "dettagli_parametri": {}
-            }
-
-            # Aggiungi i dettagli di tutti i parametri per ogni categoria
-            for categoria, parametri in self.results.get("dettagli", {}).items():
-                current_analysis["dettagli_parametri"][categoria] = {}
-                for nome_param, dati in parametri.items():
-                    current_analysis["dettagli_parametri"][categoria][nome_param] = {
-                        "valore": dati.get("valore", "N/A"),
-                        "punteggio": dati.get("punteggio", 0)
-                    }
-
-            # Aggiungi l'analisi corrente allo storico
-            history.append(current_analysis)
-
-            # Mantieni solo le ultime 10 analisi
-            history = history[-10:]
-
-            # Salva lo storico aggiornato
-            with open(history_file, 'w', encoding='utf-8') as f:
-                json.dump(history, f, indent=2, ensure_ascii=False)
-
-            # Aggiorna i risultati con lo storico
-            self.results["storico"] = history
-
+            with open(self.config_file, "r+", encoding="utf-8") as f:
+                config_data = json.load(f)
+                if "storico" not in config_data:
+                    config_data["storico"] = []
+                config_data["storico"].append({
+                    "data_analisi": self.results["data_analisi"],
+                    "punteggio_totale": self.results["punteggio_totale"],
+                    "punteggi": self.results["punteggi"]
+                })
+                f.seek(0)
+                json.dump(config_data, f, indent=4)
+                f.truncate()
         except Exception as e:
-            print(f"Errore nell'aggiornamento dello storico: {e}")
-            self.results["storico"] = []
+            logger.error(f"Errore nell'aggiornamento dello storico: {e}", exc_info=True)
 
-    def _display_scores_terminal(self) -> None:
-        """Visualizza i punteggi nel terminale usando rich per una migliore formattazione."""
-        try:
-            # Crea una tabella per i punteggi
-            table = Table(title=f"Punteggi Analisi Repository: {self.repo_name}", show_header=True)
-            table.add_column("Categoria", style="cyan", no_wrap=True)
-            table.add_column("Punteggio", style="magenta", justify="right")
-            table.add_column("Valutazione", style="green")
-            
-            # Aggiungi righe per ogni categoria
-            for categoria, punteggio in self.results["punteggi"].items():
-                # Determina il colore in base al punteggio
-                if punteggio >= 8:
-                    color = "green"
-                    valutazione = "Eccellente"
-                elif punteggio >= 6:
-                    color = "bright_green"
-                    valutazione = "Buono"
-                elif punteggio >= 4:
-                    color = "yellow"
-                    valutazione = "Mediocre"
-                else:
-                    color = "red"
-                    valutazione = "Scarso"
-                
-                # Formatta il nome della categoria per maggiore leggibilità
-                categoria_formatted = categoria.replace("_", " ").title()
-                
-                # Aggiungi la riga alla tabella
-                table.add_row(categoria_formatted, f"[{color}]{punteggio:.2f}[/{color}]", valutazione)
-            
-            # Riga per il punteggio totale
-            total_score = self.results["punteggio_totale"]
-            if total_score >= 8:
-                total_color = "green"
-                total_valutazione = "Eccellente"
-            elif total_score >= 6:
-                total_color = "bright_green"
-                total_valutazione = "Buono"
-            elif total_score >= 4:
-                total_color = "yellow"
-                total_valutazione = "Mediocre"
-            else:
-                total_color = "red"
-                total_valutazione = "Scarso"
-            
-            table.add_row("", "", "")  # Riga vuota per separazione
-            table.add_row("[bold]TOTALE[/bold]", f"[bold {total_color}]{total_score:.2f}[/bold {total_color}]", f"[bold]{total_valutazione}[/bold]")
-            
-            # Stampa la tabella
-            self.console.print("\n")
-            self.console.print(table)
-            self.console.print("\n")
-        except Exception as e:
-            logger.error(f"Errore nella visualizzazione dei punteggi nel terminale: {e}", exc_info=True)
-            print(f"\nPunteggio totale: {self.results.get('punteggio_totale', 0):.2f}/10")
-
-    def visualize_results(self) -> None:
-        """Visualizza i risultati dell'analisi generando un report HTML interattivo."""
-        if not self.results or not self.results.get("punteggi"):
-            print("Nessun risultato disponibile. Esegui prima l'analisi.")
-            return
+    def _check_security(self, path: str = ".") -> float:
+        """Esegue una scansione di sicurezza con Bandit (se disponibile)."""
+        if not bandit:
+            logger.warning("Bandit non è installato. Salta l'analisi di sicurezza.")
+            return 5.0  # Valore neutro se Bandit non è disponibile
 
         try:
-            # Rimuovo la visualizzazione duplicata dei suggerimenti
-            # poiché sono già mostrati dal metodo analyze()
-
-            # Genera il report HTML utilizzando il modulo html_report
-            output_file = generate_html_report(self.results)
-            print(f"\nReport HTML generato: {output_file}")
-            print("Apri il file nel tuo browser per visualizzare il report interattivo.")
-        except Exception as e:
-            print(f"Errore nella generazione del report HTML: {e}")
-
-
-def main():
-    """Funzione principale."""
-    parser = argparse.ArgumentParser(description="Analizzatore di Repository GitHub")
-    parser.add_argument("--repo", required=True, help="Nome del repository (username/repository)")
-    parser.add_argument("--config", default=CONFIG_FILE, help="File di configurazione")
-    parser.add_argument("--output", help="File di output per il report JSON")
-    parser.add_argument("--no-viz", action="store_true", help="Disabilita la visualizzazione grafica")
-    parser.add_argument("--clone", action="store_true", help="Clona il repository localmente per un'analisi più approfondita.")
-    
-    args = parser.parse_args()
-    
-    # Analizza il repository
-    with RepoAnalyzer(args.repo, args.config, args.clone) as analyzer:
-        results = analyzer.analyze()
-    
-    # Salva i risultati in un file JSON se specificato
-    if args.output:
-        with open(args.output, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
-        print(f"\nReport salvato in: {args.output}")
-    
-    # Visualizza i risultati se non disabilitato
-    if not args.no_viz:
-        analyzer.visualize_results()
-
+            effective_path = self.local_repo_path if self.local_repo_path else path
+            result = subprocess.run(["bandit", "-r", effective_path, "-f", "json"], capture_output=True, text=True, timeout=60)
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                issues = data.get("results", [])
+                if issues:
+                    # Più problemi di sicurezza => punteggio più basso
+                    return max(0.0, 10.0 - (len(issues) / 10.0))
+                return 10.0  # Nessun problema rilevato
+            else:
+                logger.warning(f"Bandit ha restituito un codice di errore: {result.returncode}")
+                return 5.0  # Valore neutro in caso di errore
+        except (subprocess.TimeoutExpired, json.JSONDecodeError) as e:
+            logger.error(f"Errore durante l'esecuzione di Bandit: {e}", exc_info=True)
+            return 5.0  # Valore neutro in caso di errore
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")
+    parser.add_argument("repository", help="Nome del repository nel formato 'username/repository'")
+    parser.add_argument("--clone", action="store_true", help="Clona il repository localmente per analisi più approfondite")
+    args = parser.parse_args()
+
+    with RepoAnalyzer(args.repository, clone_repo=args.clone) as analyzer:
+        results = analyzer.analyze()
+        print(json.dumps(results, indent=4, ensure_ascii=False))
+        generate_html_report(results)
