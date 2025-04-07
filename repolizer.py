@@ -2305,76 +2305,65 @@ class RepoAnalyzer:
             logger.warning("Bandit non è installato. Salta l'analisi di sicurezza statica.")
             return 5.0  # Valore neutro se Bandit non è disponibile
         if not self.local_repo_path:
-             logger.warning("Bandit richiede il clone del repository (--clone). Salta l'analisi.")
-             return 5.0 # Neutral score if not cloned
+            logger.warning("Bandit richiede il clone del repository (--clone). Salta l'analisi.")
+            return 5.0  # Neutral score if not cloned
 
         try:
-            effective_path = self.local_repo_path # Always use cloned path for Bandit
+            effective_path = self.local_repo_path  # Always use cloned path for Bandit
             logger.info(f"Esecuzione di Bandit su: {effective_path}")
-            # Use json output for easier parsing, increase timeout
             result = subprocess.run(
-                ["bandit", "-r", effective_path, "-f", "json", "-q"], # -q for quieter output
-                capture_output=True, text=True, timeout=120, check=False # Don't check=True, parse results
+                ["bandit", "-r", effective_path, "-f", "json", "-q"],
+                capture_output=True, text=True, timeout=120, check=False
             )
-            
-            # Bandit exit codes: 0 = no issues, 1 = issues found, >1 = error
+
             if result.returncode in [0, 1] and result.stdout:
                 try:
                     data = json.loads(result.stdout)
                     issues = data.get("results", [])
                     metrics = data.get("metrics", {})
-                    total_loc = metrics.get("_totals", {}).get("loc", 1) # Avoid division by zero
-                    
-                    # Calculate score based on severity
-                    # Weights: High=3, Medium=2, Low=1
+                    total_loc = metrics.get("_totals", {}).get("loc", 1)  # Avoid division by zero
+
                     severity_scores = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
                     for issue in issues:
                         severity = issue.get("issue_severity", "LOW")
                         if severity in severity_scores:
                             severity_scores[severity] += 1
-                            
-                    # Calculate weighted issue count
+
                     weighted_issues = (severity_scores["HIGH"] * 3) + (severity_scores["MEDIUM"] * 2) + (severity_scores["LOW"] * 1)
-                    
-                    # Normalize score based on weighted issues per 1000 LOC
-                    # Lower density = better score. Target: < 5 weighted issues / 1kloc = 10 points
                     issue_density = (weighted_issues / total_loc) * 1000 if total_loc > 0 else 0
-                    
-                    # Inverse normalization: higher density -> lower score
-                    score = self._normalize_score(issue_density, 20, 0, 0, 10) # 20 issues/kloc -> 0 points, 0 issues/kloc -> 10 points
-                    
+                    score = self._normalize_score(issue_density, 20, 0, 0, 10)
+
                     logger.info(f"Bandit analysis: {len(issues)} issues found ({severity_scores['HIGH']}H, {severity_scores['MEDIUM']}M, {severity_scores['LOW']}L). Density: {issue_density:.2f}/kloc. Score: {score:.2f}")
-                    
-                    # Add suggestions based on severity
+
                     if severity_scores["HIGH"] > 0:
-                         self.results["suggerimenti"].setdefault("sicurezza", []).append(
-                             f"Risolvi le {severity_scores['HIGH']} vulnerabilità ad alta severità identificate da Bandit."
-                         )
+                        self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                            f"Risolvi le {severity_scores['HIGH']} vulnerabilità ad alta severità identificate da Bandit."
+                        )
                     if severity_scores["MEDIUM"] > 5:
-                         self.results["suggerimenti"].setdefault("sicurezza", []).append(
-                             f"Rivedi le {severity_scores['MEDIUM']} vulnerabilità a media severità identificate da Bandit."
-                         )
+                        self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                            f"Rivedi le {severity_scores['MEDIUM']} vulnerabilità a media severità identificate da Bandit."
+                        )
 
                     return score
                 except json.JSONDecodeError as json_e:
-                     logger.error(f"Errore nel parsing dell'output JSON di Bandit: {json_e}\nOutput:\n{result.stdout[:500]}...") # Log beginning of output
-                     return 2.0 # Low score due to parsing error
+                    logger.error(f"Errore nel parsing dell'output JSON di Bandit: {json_e}\nOutput:\n{result.stdout[:500]}...")
+                    return 2.0
             elif result.returncode > 1:
                 logger.warning(f"Bandit ha restituito un codice di errore: {result.returncode}. Stderr: {result.stderr}")
-                return 3.0  # Low score due to execution error
-            else: # No output or unexpected state
-                 logger.warning(f"Bandit non ha prodotto output o ha fallito silenziosamente (return code {result.returncode}).")
-                 return 4.0 # Slightly higher low score for unknown failure
+                return 3.0
+            else:
+                logger.warning(f"Bandit non ha prodotto output o ha fallito silenziosamente (return code {result.returncode}).")
+                return 4.0
 
         except subprocess.TimeoutExpired:
             logger.error("Timeout durante l'esecuzione di Bandit (superati 120s).")
-            return 1.0 # Very low score due to timeout
+            return 1.0
         except FileNotFoundError:
-             logger.error("Comando 'bandit' non trovato. Assicurati che Bandit sia installato e nel PATH.")
-             return 5.0 # Neutral score if tool not found
+            logger.error("Comando 'bandit' non trovato. Assicurati che Bandit sia installato e nel PATH.")
+            return 5.0
         except Exception as e:
             logger.error(f"Errore imprevisto durante l'esecuzione di Bandit: {e}", exc_info=True)
-            return 0.0 # Lowest score for unexpected errors
+            return 0.0
 
     def _check_dependencies_safety(self, path: str) -> Tuple[str, float]:
         """Esegue una scansione delle dipendenze con Safety (se disponibile)."""
@@ -2482,6 +2471,46 @@ class RepoAnalyzer:
         report_data["display_punteggi"] = display_punteggi
         
         return report_data
+
+    def _check_engagement_rate(self) -> float:
+        """Calcola il tasso di engagement (stelle, fork, watchers per mese)."""
+        try:
+            stars = self.repo.stargazers_count
+            forks = self.repo.forks_count
+            watchers = self.repo.subscribers_count
+            created_at = self.repo.created_at
+            months_active = max(1, (datetime.datetime.now() - created_at).days // 30)
+            engagement_rate = (stars + forks + watchers) / months_active
+            return self._normalize_score(engagement_rate, 0, 50, 0, 10)
+        except Exception as e:
+            logger.error(f"Errore nel calcolo del tasso di engagement: {e}")
+            return 0.0
+
+    def _check_dockerfile_presence(self) -> bool:
+        """Verifica la presenza di un Dockerfile nel repository."""
+        try:
+            contents = self.repo.get_contents("")
+            return any(file.name.lower() == "dockerfile" for file in contents)
+        except Exception as e:
+            logger.warning(f"Errore nel controllo del Dockerfile: {e}")
+            return False
+
+    def _check_discussions_activity(self) -> float:
+        """Calcola il livello di attività nelle GitHub Discussions."""
+        try:
+            if not self.repo.has_discussions:
+                return 0.0  # Discussions not enabled
+
+            discussions = self.repo.get_discussions()
+            recent_discussions = [d for d in discussions if (datetime.datetime.now() - d.created_at).days <= 30]
+            total_comments = sum(d.comments_count for d in recent_discussions)
+
+            # Normalize score: more discussions and comments => higher score
+            score = self._normalize_score(len(recent_discussions) + total_comments, 0, 50, 0, 10)
+            return score
+        except Exception as e:
+            logger.error(f"Errore nel calcolo dell'attività delle Discussions: {e}", exc_info=True)
+            return 0.0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")
