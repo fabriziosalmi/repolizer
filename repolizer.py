@@ -106,7 +106,7 @@ CATEGORY_LABELS_MAPPING = {
     "attivita_manutenzione": "Manutenzione",
     "community_collaborazione": "Collaborazione",
     "documentazione": "Documentazione",
-    "popolarita_impatto": "Distribuzione",
+    "distribuzione": "Distribuzione",
     "qualita_codice": "Codice",
     "setup_usabilita": "Adozione",
     "sicurezza": "Sicurezza",
@@ -1274,7 +1274,7 @@ class RepoAnalyzer:
             
         try:
             # Popolarità & Impatto
-            if categoria == "popolarita_impatto":
+            if categoria == "distribuzione":
                 pop_data = self._fetch_popolarita_data()
                 if nome_param == "stelle":
                     valore = f"{pop_data['stars']} stelle"
@@ -1384,7 +1384,7 @@ class RepoAnalyzer:
                 return valore, round(punteggio, 2), conta_punteggio
             
             # Attività & Manutenzione
-            elif categoria == "attivita_manutenzione":
+            elif categoria == "manutenzione":
                 if nome_param == "release_tag_frequenza":
                     try:
                         # Prima verifica le release ufficiali

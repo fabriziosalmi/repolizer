@@ -1,6 +1,6 @@
 {
     "parametri": {
-        "popolarita_impatto": {
+        "distribuzione": {
             "stelle": {
                 "descrizione": "Indicatore diretto di apprezzamento e visibilit\u00e0",
                 "metodo": "API GitHub (Conteggio), Analisi trend (storico stelle)",
@@ -32,56 +32,56 @@
                 "peso": 3
             }
         },
-        "attivita_manutenzione": {
+        "manutenzione": {
             "data_ultimo_commit": {
-                "descrizione": "Recency dello sviluppo; indica se il progetto \u00e8 ancora vivo",
-                "metodo": "API GitHub",
-                "peso": 5
+            "descrizione": "Recency dello sviluppo; indica se il progetto \u00e8 ancora vivo",
+            "metodo": "API GitHub",
+            "peso": 5
             },
             "frequenza_commit": {
-                "descrizione": "Regolarit\u00e0 e intensit\u00e0 dello sviluppo nel tempo",
-                "metodo": "API GitHub (analisi storico commit con script Python), Analisi trend (commit per mese)",
-                "peso": 4
+            "descrizione": "Regolarit\u00e0 e intensit\u00e0 dello sviluppo nel tempo",
+            "metodo": "API GitHub (analisi storico commit con script Python), Analisi trend (commit per mese)",
+            "peso": 4
             },
             "release_tag_frequenza": {
-                "descrizione": "Regolarit\u00e0 nel fornire versioni stabili e ben definite",
-                "metodo": "API GitHub (analisi date tag/release)",
-                "peso": 4
+            "descrizione": "Regolarit\u00e0 nel fornire versioni stabili e ben definite",
+            "metodo": "API GitHub (analisi date tag/release)",
+            "peso": 4
             },
             "attivita_issues_ratio": {
-                "descrizione": "Capacit\u00e0 di gestire e risolvere i problemi segnalati",
-                "metodo": "API GitHub (conteggio e analisi stato issues)",
-                "peso": 4
+            "descrizione": "Capacit\u00e0 di gestire e risolvere i problemi segnalati",
+            "metodo": "API GitHub (conteggio e analisi stato issues)",
+            "peso": 4
             },
             "attivita_issues_tempo": {
-                "descrizione": "Reattivit\u00e0 del team di manutenzione ai problemi",
-                "metodo": "API GitHub (analisi timestamp issue con script Python)",
-                "peso": 4
+            "descrizione": "Reattivit\u00e0 del team di manutenzione ai problemi",
+            "metodo": "API GitHub (analisi timestamp issue con script Python)",
+            "peso": 4
             },
             "attivita_pr_ratio": {
-                "descrizione": "Capacit\u00e0 di integrare contributi esterni",
-                "metodo": "API GitHub (conteggio e analisi stato PR)",
-                "peso": 4
+            "descrizione": "Capacit\u00e0 di integrare contributi esterni",
+            "metodo": "API GitHub (conteggio e analisi stato PR)",
+            "peso": 4
             },
             "attivita_pr_tempo": {
-                "descrizione": "Velocit\u00e0 nell'integrare o dare feedback sulle proposte di modifica",
-                "metodo": "API GitHub (analisi timestamp PR con script Python)",
-                "peso": 4
+            "descrizione": "Velocit\u00e0 nell'integrare o dare feedback sulle proposte di modifica",
+            "metodo": "API GitHub (analisi timestamp PR con script Python)",
+            "peso": 4
             },
             "distribuzione_contributi": {
-                "descrizione": "Indica se il progetto dipende da pochi 'key contributors' (Bus Factor)",
-                "metodo": "API GitHub (analisi numero commit/linee per contributore con script Python)",
-                "peso": 3
+            "descrizione": "Indica se il progetto dipende da pochi 'key contributors' (Bus Factor)",
+            "metodo": "API GitHub (analisi numero commit/linee per contributore con script Python)",
+            "peso": 3
             },
             "stato_archivio": {
-                "descrizione": "Indica se il repository \u00e8 stato ufficialmente archiviato dai maintainer",
-                "metodo": "API GitHub (flag archived)",
-                "peso": 3
+            "descrizione": "Indica se il repository \u00e8 stato ufficialmente archiviato dai maintainer",
+            "metodo": "API GitHub (flag archived)",
+            "peso": 3
             },
             "tempo_risposta_issues": {
-                "descrizione": "Tempo medio di risposta alla prima interazione su un'issue",
-                "metodo": "API GitHub (analisi timestamp primo commento su issue)",
-                "peso": 4
+            "descrizione": "Tempo medio di risposta alla prima interazione su un'issue",
+            "metodo": "API GitHub (analisi timestamp primo commento su issue)",
+            "peso": 4
             }
         },
         "qualita_codice": {
