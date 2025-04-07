@@ -78,6 +78,18 @@ MAX_ITEMS_PER_REQUEST = 100  # Numero massimo di elementi per richiesta API
 # Timeout predefinito per operazioni (in secondi)
 DEFAULT_TIMEOUT = 30
 
+# Mapping per etichette delle categorie nei grafici
+CATEGORY_LABELS_MAPPING = {
+    "attivita_manutenzione": "Manutenzione",
+    "community_collaborazione": "Collaborazione",
+    "documentazione": "Documentazione",
+    "popolarita_impatto": "Distribuzione",
+    "qualita_codice": "Codice",
+    "setup_usabilita": "Adozione",
+    "sicurezza": "Sicurezza",
+    "testing_cicd": "Integrazione"
+}
+
 
 class RepoAnalyzer:
     """Classe per analizzare repository GitHub."""
@@ -2164,7 +2176,9 @@ class RepoAnalyzer:
         table.add_column("Punteggio", justify="right", style="magenta")
 
         for categoria, punteggio in self.results["punteggi"].items():
-            table.add_row(categoria, str(punteggio))
+            # Utilizza il mapping delle etichette se disponibile
+            display_categoria = CATEGORY_LABELS_MAPPING.get(categoria, categoria)
+            table.add_row(display_categoria, str(punteggio))
 
         self.console.print(table)
 
@@ -2208,6 +2222,21 @@ class RepoAnalyzer:
         except (subprocess.TimeoutExpired, json.JSONDecodeError) as e:
             logger.error(f"Errore durante l'esecuzione di Bandit: {e}", exc_info=True)
             return 5.0  # Valore neutro in caso di errore
+            
+    def generate_report(self):
+        """Genera il report con i punteggi utilizzando i nomi delle categorie mappati."""
+        report_data = self.results.copy()
+        
+        # Mappa i nomi delle categorie per la visualizzazione
+        display_punteggi = {}
+        for categoria, punteggio in report_data["punteggi"].items():
+            display_categoria = CATEGORY_LABELS_MAPPING.get(categoria, categoria)
+            display_punteggi[display_categoria] = punteggio
+            
+        # Mantieni i punteggi originali per la compatibilità, ma aggiungi la versione mappata
+        report_data["display_punteggi"] = display_punteggi
+        
+        return report_data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")
@@ -2228,14 +2257,18 @@ if __name__ == "__main__":
     try:
         with RepoAnalyzer(args.repository, clone_repo=args.clone) as analyzer:
             results = analyzer.analyze()
-            json_file = analyzer._save_report_json(results)
+            
+            # Utilizza generate_report per avere report con etichette mappate
+            report_data = analyzer.generate_report()
+            
+            json_file = analyzer._save_report_json(report_data)
             if json_file:
                 print(f"Report JSON salvato in: {json_file}")
                 
             # Generate the HTML report and save it
-            html_content = generate_html_report(results)
+            html_content = generate_html_report(report_data)
             if html_content:
-                html_file = analyzer._save_report_html(html_content, results)
+                html_file = analyzer._save_report_html(html_content, report_data)
                 if html_file:
                     print(f"Report HTML salvato in: {html_file}")
     except Exception as e:
