@@ -145,6 +145,21 @@ class RepoAnalyzer:
         self.repo = self._get_repository()
         self.results = {}
         
+        # Lista delle licenze approvate OSI (Open Source Initiative)
+        self.osi_approved_licenses = [
+            # Popular OSI-approved licenses
+            "mit", "apache-2.0", "gpl-3.0", "gpl-2.0", "bsd-3-clause", "bsd-2-clause", 
+            "lgpl-3.0", "lgpl-2.1", "mpl-2.0", "agpl-3.0", "unlicense", "artistic-2.0",
+            "apache license 2.0", "gnu general public license v3", "gnu gpl v3",
+            "gnu general public license v2", "gnu gpl v2", "gnu lgpl v3", "gnu lgpl v2.1",
+            "mozilla public license 2.0", "gnu affero general public license v3",
+            "bsd 3-clause", "bsd 2-clause", "isc license", "isc", 
+            "boost software license", "boost", "eclipse public license", "epl-2.0",
+            "educational community license", "ecl-2.0", "cecill", "ms-pl", "ms-rl",
+            "postgresql license", "zlib license", "zlib", "wtfpl", "eupl-1.2",
+            "bsl-1.0", "ncsa", "ofl-1.1", "cc0-1.0"
+        ]
+        
         # Cache per ridurre le chiamate API
         self._cache = {}
         
@@ -1714,6 +1729,16 @@ class RepoAnalyzer:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Adotta Semantic Versioning (MAJOR.MINOR.PATCH) nei tag e nelle release per una migliore gestione delle dipendenze"
                         )
+                elif nome_param == "licenza_osi_approvata":
+                    # Implementazione per verificare se la licenza è approvata dall'OSI
+                    is_approved, license_name = self._check_license_osi_approved()
+                    valore = license_name
+                    punteggio = 10 if is_approved else 0
+                    
+                    if not is_approved:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Considera di adottare una licenza approvata dall'OSI (es. MIT, Apache 2.0, GPL) per facilitare l'adozione del progetto"
+                        )
 
                 return valore, round(punteggio, 2), conta_punteggio
             
@@ -2958,6 +2983,98 @@ class RepoAnalyzer:
         except Exception as e:
             logger.warning(f"Errore nella verifica del Semantic Versioning: {e}")
             return 0, "Errore verifica"
+
+    def _check_license_osi_approved(self) -> Tuple[bool, str]:
+        """Verifica se la licenza del repository è una licenza approvata dall'OSI.
+        
+        Returns:
+            Tupla con (approvazione, nome_licenza)
+        """
+        try:
+            license_info = None
+            license_name = "Sconosciuta"
+            
+            # Prima prova ad ottenere la licenza dall'API GitHub (se disponibile)
+            try:
+                license_data = self._get_cached_data(
+                    "license_info", 
+                    lambda: self.repo.get_license()
+                )
+                
+                if license_data:
+                    license_info = license_data
+                    license_name = license_data.license.name if license_data.license else "Licenza non standard"
+                    
+                    # Se GitHub ha già identificato che è OSI-approved, possiamo fidarci
+                    if hasattr(license_data.license, "spdx_id") and license_data.license.spdx_id:
+                        if license_data.license.spdx_id.lower() in self.osi_approved_licenses:
+                            return True, license_name
+            except Exception as e:
+                logger.debug(f"Impossibile ottenere informazioni sulla licenza tramite API: {e}")
+            
+            # Se GitHub API non ha fornito informazioni chiare, proviamo a controllare i file di licenza
+            license_content = None
+            
+            if self.local_repo_path:
+                # Cerca file di licenza comuni nel repository locale
+                license_files = ["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING", 
+                               "COPYING.md", "COPYING.txt"]
+                for license_file in license_files:
+                    full_path = os.path.join(self.local_repo_path, license_file)
+                    if os.path.isfile(full_path):
+                        try:
+                            with open(full_path, 'r', encoding='utf-8') as f:
+                                license_content = f.read().lower()
+                            break
+                        except Exception as e:
+                            logger.debug(f"Errore nella lettura del file di licenza {license_file}: {e}")
+            else:
+                # Cerca attraverso l'API GitHub
+                contents = self._get_cached_data(
+                    "root_contents",
+                    lambda: list(self.repo.get_contents(""))
+                )
+                
+                for item in contents:
+                    if item.type == "file" and item.name.lower() in ["license", "license.md", "license.txt", 
+                                                                   "copying", "copying.md", "copying.txt"]:
+                        try:
+                            content_data = self.repo.get_contents(item.path)
+                            license_content = content_data.decoded_content.decode('utf-8', errors='ignore').lower()
+                            break
+                        except Exception as e:
+                            logger.debug(f"Errore nel recupero del contenuto della licenza {item.path}: {e}")
+            
+            # Se abbiamo un contenuto di licenza, cerchiamo di identificarlo
+            if license_content:
+                # Controlla se una delle licenze OSI approvate viene menzionata esplicitamente
+                for license_key in self.osi_approved_licenses:
+                    license_pattern = re.compile(r'\b' + re.escape(license_key) + r'\b', re.IGNORECASE)
+                    if license_pattern.search(license_content):
+                        # Se troviamo una corrispondenza, controlliamo anche alcuni falsi positivi comuni
+                        if "not licensed under" in license_content and license_key in license_content.split("not licensed under")[1][:50]:
+                            continue
+                        
+                        return True, f"Licenza compatibile con {license_key.upper()}"
+                
+                # Controllo euristico per licenze comuni
+                if "permission is hereby granted, free of charge" in license_content and "copyright" in license_content:
+                    if "the software is provided \"as is\", without warranty" in license_content:
+                        return True, "Licenza MIT o simile (OSI approvata)"
+                
+                # Il file di licenza esiste ma non è stata identificata come OSI-approved
+                return False, "Licenza non riconosciuta come OSI-approvata"
+            
+            # Se abbiamo informazioni dalla API ma non abbiamo potuto determinare se è OSI-approved
+            if license_info:
+                return False, license_name
+                
+            # Non abbiamo trovato alcuna licenza
+            return False, "Nessuna licenza trovata"
+            
+        except Exception as e:
+            logger.error(f"Errore nella verifica della licenza OSI: {e}", exc_info=True)
+            return False, "Errore verifica licenza"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")
