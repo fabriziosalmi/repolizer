@@ -15,6 +15,8 @@ import datetime
 from typing import Dict, List, Any, Tuple, Optional
 import subprocess
 import re
+import tempfile
+import shutil
 
 import requests
 import pandas as pd
@@ -44,18 +46,21 @@ MAX_ITEMS_PER_REQUEST = 100  # Numero massimo di elementi per richiesta API
 class RepoAnalyzer:
     """Classe per analizzare repository GitHub."""
     
-    def __init__(self, repo_name: str, config_file: str = CONFIG_FILE):
+    def __init__(self, repo_name: str, config_file: str = CONFIG_FILE, clone_repo: bool = False):
         """Inizializza l'analizzatore di repository.
 
         Args:
             repo_name: Nome del repository nel formato 'username/repository'
             config_file: Percorso del file di configurazione
+            clone_repo: Clona il repository localmente per analisi più approfondite (default: False)
         """
         self.repo_name = repo_name
         self.config_file = config_file
         self.config = self._load_config()
         self.console = Console()
-        
+        self.clone_repo = clone_repo
+        self.local_repo_path = None  # path al repo clonato
+
         # Inizializza l'oggetto Github con o senza token
         if GITHUB_TOKEN:
             self.github = Github(GITHUB_TOKEN, per_page=100)
@@ -74,6 +79,26 @@ class RepoAnalyzer:
         
         # Verifica i limiti API
         self._check_api_limits()
+
+    def __enter__(self):
+        """Context manager entry: Clona il repository se necessario."""
+        if self.clone_repo and self.repo:
+            try:
+                self.local_repo_path = tempfile.mkdtemp()
+                clone_url = self.repo.clone_url
+                subprocess.run(["git", "clone", "--depth", "1", clone_url, self.local_repo_path], check=True, capture_output=True, text=True)  # clone con depth 1
+            except subprocess.CalledProcessError as e:
+                print(f"Errore durante il clone del repository: {e}")
+                self.local_repo_path = None
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit: Elimina il repository clonato."""
+        if self.local_repo_path:
+            try:
+                shutil.rmtree(self.local_repo_path)
+            except OSError as e:
+                print(f"Errore nella rimozione della directory temporanea: {e}")
 
     def _load_config(self) -> Dict:
         """Carica la configurazione dal file JSON.
@@ -164,7 +189,8 @@ class RepoAnalyzer:
     def _check_complexity(self, path: str = ".") -> float:
         """Esegue una scansione con Radon per calcolare la complessità media."""
         try:
-            output = subprocess.check_output(["radon", "cc", path, "-s", "-A"], stderr=subprocess.STDOUT).decode("utf-8")
+            effective_path = self.local_repo_path if self.local_repo_path else path
+            output = subprocess.check_output(["radon", "cc", effective_path, "-s", "-A"], stderr=subprocess.STDOUT).decode("utf-8")
             complexities = []
             for line in output.splitlines():
                 match = re.search(r"\((\d+)\)$", line.strip())
@@ -172,6 +198,8 @@ class RepoAnalyzer:
                     complexities.append(int(match.group(1)))
             if complexities:
                 return sum(complexities) / len(complexities)
+        except FileNotFoundError:
+            print("Radon non trovato. Assicurati che sia installato.")
         except Exception:
             pass
         return 0.0
@@ -179,7 +207,8 @@ class RepoAnalyzer:
     def _check_style(self, path: str = ".") -> float:
         """Esegue una scansione con flake8 per valutare l'aderenza allo stile (meno errori => punteggio più alto)."""
         try:
-            process = subprocess.run(["flake8", path], capture_output=True, text=True)
+            effective_path = self.local_repo_path if self.local_repo_path else path
+            process = subprocess.run(["flake8", effective_path], capture_output=True, text=True)
             # Se flake8 restituisce un codice di errore > 1, flake8 potrebbe essere fallito del tutto
             if process.returncode > 1:
                 return 0.0
@@ -187,13 +216,16 @@ class RepoAnalyzer:
             errors = len(lines)
             # Più errori -> punteggio più basso
             return max(0.0, 10.0 - (errors / 5.0))
+        except FileNotFoundError:
+            print("Flake8 non trovato. Assicurati che sia installato.")
         except Exception:
             return 0.0
 
     def _check_code_smells(self, path: str = ".") -> float:
         """Riutilizza flake8 come indicatore di 'code smells'. Punteggio più alto con meno segnalazioni."""
         try:
-            process = subprocess.run(["flake8", path], capture_output=True, text=True)
+            effective_path = self.local_repo_path if self.local_repo_path else path
+            process = subprocess.run(["flake8", effective_path], capture_output=True, text=True)
             # Eventuali errori interni a flake8
             if process.returncode > 1:
                 return 0.0
@@ -201,14 +233,17 @@ class RepoAnalyzer:
             smells = len(lines)
             # Più segnalazioni -> punteggio più basso
             return max(0.0, 10.0 - (smells / 10.0))
+        except FileNotFoundError:
+            print("Flake8 non trovato. Assicurati che sia installato.")
         except Exception:
             return 0.0
 
     def _check_comment_coverage(self, path: str = ".") -> float:
         """Esempio elementare: conta righe di commento vs righe totali (solo .py)."""
         try:
+            effective_path = self.local_repo_path if self.local_repo_path else path
             total_lines, comment_lines = 0, 0
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(effective_path):
                 for fname in files:
                     if fname.endswith(".py"):
                         with open(os.path.join(root, fname), "r", encoding="utf-8") as f:
@@ -319,17 +354,34 @@ class RepoAnalyzer:
             "has_examples": False
         }
         try:
-            contents = self.repo.get_contents("")
-            file_names = [c.name.lower() for c in contents]
-            data["has_readme"] = any("readme" in fn for fn in file_names)
-            data["has_license"] = any("license" in fn or "copying" in fn for fn in file_names)
-            data["has_contrib_coc"] = any("contributing" in fn or "code_of_conduct" in fn for fn in file_names)
-            # Verifica se esiste cartella /docs o wiki
-            if "docs" in [c.name.lower() for c in contents] or self.repo.has_wiki:
-                data["has_extended_docs"] = True
-            # Verifica presenza directory /examples
-            if "examples" in file_names:
-                data["has_examples"] = True
+            effective_repo = self.repo
+            if self.local_repo_path:
+                # Se abbiamo clonato, usa la directory locale per il controllo della documentazione
+                effective_repo = self.local_repo_path  # Usa il percorso locale
+                file_names = [f.lower() for f in os.listdir(effective_repo)]
+                data["has_readme"] = any("readme" in fn for fn in file_names)
+                data["has_license"] = any("license" in fn or "copying" in fn for fn in file_names)
+                data["has_contrib_coc"] = any("contributing" in fn or "code_of_conduct" in fn for fn in file_names)
+                
+                # Verifica se esiste cartella /docs o wiki
+                data["has_extended_docs"] = "docs" in [f.lower() for f in os.listdir(effective_repo)]  # Assumiamo ci sia una directory "docs"
+                
+                # Verifica presenza directory /examples
+                data["has_examples"] = "examples" in [f.lower() for f in os.listdir(effective_repo)]  # Assumiamo ci sia una directory "examples"
+                
+            else:
+                # Se non clonato, usa l'API di GitHub
+                contents = self.repo.get_contents("")
+                file_names = [c.name.lower() for c in contents]
+                data["has_readme"] = any("readme" in fn for fn in file_names)
+                data["has_license"] = any("license" in fn or "copying" in fn for fn in file_names)
+                data["has_contrib_coc"] = any("contributing" in fn or "code_of_conduct" in fn for fn in file_names)
+                # Verifica se esiste cartella /docs o wiki
+                if "docs" in [c.name.lower() for c in contents] or self.repo.has_wiki:
+                    data["has_extended_docs"] = True
+                # Verifica presenza directory /examples
+                if "examples" in file_names:
+                    data["has_examples"] = True
         except:
             pass
         self._cache["doc_files_data"] = data
@@ -894,9 +946,16 @@ class RepoAnalyzer:
                     punteggio = 0
                     
                     try:
-                        contents = self.repo.get_contents("")
-                        test_dirs = [f.name for f in contents if f.type == "dir" and "test" in f.name.lower()]
-                        test_files = [f.name for f in contents if f.type == "file" and "test" in f.name.lower()]
+                        if self.local_repo_path:
+                            # Controlla le directory locali
+                            contents = os.listdir(self.local_repo_path)
+                            test_dirs = [d for d in contents if os.path.isdir(os.path.join(self.local_repo_path, d)) and "test" in d.lower()]
+                            test_files = [f for f in contents if os.path.isfile(os.path.join(self.local_repo_path, f)) and "test" in f.lower()]
+                        else:
+                            # Ottieni il contenuto del repository
+                            contents = self.repo.get_contents("")
+                            test_dirs = [f.name for f in contents if f.type == "dir" and "test" in f.name.lower()]
+                            test_files = [f.name for f in contents if f.type == "file" and "test" in f.name.lower()]
                         
                         if test_dirs or test_files:
                             valore = True
@@ -923,8 +982,14 @@ class RepoAnalyzer:
                             ".circleci"           # CircleCI
                         ]
                         
-                        contents = self.repo.get_contents("")
-                        files_and_dirs = [f.path for f in contents]
+                        if self.local_repo_path:
+                            # Usa il filesystem locale
+                            files_and_dirs = [os.path.join(dp, f) for dp, dn, filenames in os.walk(self.local_repo_path) for f in filenames]
+                            files_and_dirs += [os.path.join(self.local_repo_path, d) for d in os.listdir(self.local_repo_path) if os.path.isdir(os.path.join(self.local_repo_path, d))]
+                        else:
+                            # Utilizza l'API di GitHub
+                            contents = self.repo.get_contents("")
+                            files_and_dirs = [f.path for f in contents]
                         
                         for config in ci_configs:
                             if any(config in path for path in files_and_dirs):
@@ -1071,12 +1136,13 @@ def main():
     parser.add_argument("--config", default=CONFIG_FILE, help="File di configurazione")
     parser.add_argument("--output", help="File di output per il report JSON")
     parser.add_argument("--no-viz", action="store_true", help="Disabilita la visualizzazione grafica")
+    parser.add_argument("--clone", action="store_true", help="Clona il repository localmente per un'analisi più approfondita.")
     
     args = parser.parse_args()
     
     # Analizza il repository
-    analyzer = RepoAnalyzer(args.repo, args.config)
-    results = analyzer.analyze()
+    with RepoAnalyzer(args.repo, args.config, args.clone) as analyzer:
+        results = analyzer.analyze()
     
     # Salva i risultati in un file JSON se specificato
     if args.output:
