@@ -1884,6 +1884,179 @@ class RepoAnalyzer:
                         valore = "Errore verifica"
                         punteggio = 0
                 
+                elif nome_param == "analisi_sast":
+                    # Verifichiamo la presenza di analisi di sicurezza statica (SAST) nella pipeline CI
+                    valore = "Non rilevato"
+                    punteggio = 0
+                    sast_tools_found = []
+                    
+                    try:
+                        # Pattern di ricerca per strumenti SAST comuni in file di CI/CD
+                        sast_patterns = {
+                            "CodeQL": ["uses: github/codeql-action", "codeql-analysis", "codeql_queries"],
+                            "SonarQube/SonarCloud": ["sonarqube", "sonarcloud", "sonar-scanner", "sonar:sonar"],
+                            "ESLint": ["eslint --security", "eslint-plugin-security"],
+                            "Bandit": ["bandit -r", "pip install bandit", "safety check"],
+                            "SpotBugs": ["spotbugs", "findsecbugs"],
+                            "Snyk": ["snyk test", "uses: snyk/actions"],
+                            "Semgrep": ["semgrep", "semgrep-action"],
+                            "Checkmarx": ["checkmarx", "cx-flow"],
+                            "OWASP ZAP": ["owasp/zap", "zap-baseline", "zaproxy"],
+                            "Veracode": ["veracode"],
+                            "Fortify": ["fortify", "hpe-security"],
+                            "Gosec": ["gosec", "securego"],
+                            "Brakeman": ["brakeman -q"],
+                            "Trivy": ["trivy scan", "aquasecurity/trivy"]
+                        }
+                        
+                        if self.local_repo_path:
+                            # Cerca nei file di configurazione CI/CD per strumenti SAST
+                            ci_paths = [
+                                ".github/workflows",                   # GitHub Actions
+                                ".gitlab-ci.yml",                      # GitLab CI
+                                ".travis.yml",                         # Travis CI
+                                "azure-pipelines.yml",                 # Azure Pipelines
+                                "Jenkinsfile",                         # Jenkins
+                                ".circleci/config.yml",                # CircleCI
+                                "bitbucket-pipelines.yml",             # Bitbucket Pipelines
+                                ".drone.yml",                          # Drone CI
+                                "appveyor.yml",                        # AppVeyor
+                            ]
+                            
+                            for ci_path in ci_paths:
+                                full_path = os.path.join(self.local_repo_path, ci_path)
+                                
+                                # Controllo speciale per directory GitHub Actions
+                                if ci_path == ".github/workflows" and os.path.isdir(full_path):
+                                    for root, _, files in os.walk(full_path):
+                                        for file in files:
+                                            if file.endswith(('.yml', '.yaml')):
+                                                workflow_path = os.path.join(root, file)
+                                                try:
+                                                    with open(workflow_path, 'r', encoding='utf-8') as f:
+                                                        content = f.read()
+                                                        for tool, patterns in sast_patterns.items():
+                                                            if any(pattern in content for pattern in patterns):
+                                                                sast_tools_found.append(f"{tool} (in {os.path.basename(workflow_path)})")
+                                                except Exception as e:
+                                                    logger.debug(f"Errore nella lettura del file workflow {workflow_path}: {e}")
+                                
+                                # Controllo per file CI singoli
+                                elif os.path.isfile(full_path):
+                                    try:
+                                        with open(full_path, 'r', encoding='utf-8') as f:
+                                            content = f.read()
+                                            for tool, patterns in sast_patterns.items():
+                                                if any(pattern in content for pattern in patterns):
+                                                    sast_tools_found.append(f"{tool} (in {os.path.basename(full_path)})")
+                                    except Exception as e:
+                                        logger.debug(f"Errore nella lettura del file CI {full_path}: {e}")
+                        else:
+                            # Usa API GitHub per controllare i file di CI/CD
+                            # Prima controlla se esiste la directory .github/workflows
+                            try:
+                                root_contents = self._get_cached_data(
+                                    "root_contents", 
+                                    lambda: list(self.repo.get_contents(""))
+                                )
+                                
+                                github_dir_item = next((item for item in root_contents if item.path.lower() == ".github" and item.type == "dir"), None)
+                                
+                                if github_dir_item:
+                                    github_contents = self._get_cached_data(
+                                        "github_dir_contents",
+                                        lambda: list(self.repo.get_contents(".github"))
+                                    )
+                                    
+                                    workflows_dir_item = next((item for item in github_contents if item.path.lower() == ".github/workflows" and item.type == "dir"), None)
+                                    
+                                    if workflows_dir_item:
+                                        workflows_contents = self._get_cached_data(
+                                            "workflows_dir_contents",
+                                            lambda: list(self.repo.get_contents(".github/workflows"))
+                                        )
+                                        
+                                        for workflow in workflows_contents:
+                                            if workflow.type == "file" and workflow.name.lower().endswith(('.yml', '.yaml')):
+                                                try:
+                                                    workflow_content = self.repo.get_contents(workflow.path).decoded_content.decode('utf-8')
+                                                    
+                                                    for tool, patterns in sast_patterns.items():
+                                                        if any(pattern in workflow_content for pattern in patterns):
+                                                            sast_tools_found.append(f"{tool} (in {workflow.name})")
+                                                except Exception as e:
+                                                    logger.debug(f"Errore nel recupero del contenuto del workflow {workflow.path}: {e}")
+                                
+                                # Controlla altri file CI noti
+                                ci_files = [".travis.yml", ".gitlab-ci.yml", "azure-pipelines.yml", "Jenkinsfile", ".circleci/config.yml"]
+                                for ci_file in ci_files:
+                                    if '/' not in ci_file:  # File nella root
+                                        ci_file_item = next((item for item in root_contents if item.name.lower() == ci_file.lower()), None)
+                                        if ci_file_item:
+                                            try:
+                                                ci_content = self.repo.get_contents(ci_file_item.path).decoded_content.decode('utf-8')
+                                                for tool, patterns in sast_patterns.items():
+                                                    if any(pattern in ci_content for pattern in patterns):
+                                                        sast_tools_found.append(f"{tool} (in {ci_file})")
+                                            except Exception as e:
+                                                logger.debug(f"Errore nel recupero del contenuto del file CI {ci_file}: {e}")
+                                    elif ci_file.startswith(".circleci/"):  # File in .circleci
+                                        circleci_dir_item = next((item for item in root_contents if item.path.lower() == ".circleci" and item.type == "dir"), None)
+                                        if circleci_dir_item:
+                                            try:
+                                                circleci_contents = self._get_cached_data(
+                                                    "circleci_dir_contents",
+                                                    lambda: list(self.repo.get_contents(".circleci"))
+                                                )
+                                                config_file = next((item for item in circleci_contents if item.name.lower() == "config.yml"), None)
+                                                if config_file:
+                                                    ci_content = self.repo.get_contents(config_file.path).decoded_content.decode('utf-8')
+                                                    for tool, patterns in sast_patterns.items():
+                                                        if any(pattern in ci_content for pattern in patterns):
+                                                            sast_tools_found.append(f"{tool} (in {ci_file})")
+                                            except Exception as e:
+                                                logger.debug(f"Errore nel recupero dei contenuti di .circleci: {e}")
+                                
+                            except Exception as e:
+                                logger.warning(f"Errore nel controllo degli strumenti SAST via API GitHub: {e}")
+
+                        # Verifica anche per altri file che potrebbero contenere configurazioni di sicurezza
+                        # come sonar-project.properties o .eslintrc
+                        if self.local_repo_path:
+                            sast_config_files = [
+                                "sonar-project.properties", 
+                                ".eslintrc", 
+                                ".eslintrc.js", 
+                                ".eslintrc.json",
+                                ".bandit",
+                                ".snyk"
+                            ]
+                            for root, _, files in os.walk(self.local_repo_path):
+                                for file in files:
+                                    if file in sast_config_files:
+                                        tool_name = "SonarQube" if file == "sonar-project.properties" else \
+                                                  "ESLint" if file.startswith(".eslintrc") else \
+                                                  "Bandit" if file == ".bandit" else \
+                                                  "Snyk" if file == ".snyk" else "SAST Tool"
+                                        sast_tools_found.append(f"{tool_name} (config: {file})")
+                        
+                        # Valuta i risultati
+                        unique_tools = list(set([tool.split(' (')[0] for tool in sast_tools_found]))  # Estrai solo il nome dello strumento
+                        if unique_tools:
+                            valore = f"Trovati: {', '.join(unique_tools)}"
+                            # Più strumenti SAST = punteggio più alto, max 10
+                            punteggio = min(10, len(unique_tools) * 3.3)
+                        else:
+                            valore = "Non rilevato"
+                            punteggio = 0
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Integra strumenti di analisi di sicurezza statica (SAST) come CodeQL, SonarQube o Snyk nella pipeline CI/CD"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Errore nel controllo degli strumenti SAST: {e}", exc_info=True)
+                        valore = "Errore verifica"
+                        punteggio = 0
+                
                 return valore, round(punteggio, 2), conta_punteggio
 
             # Testing & CI/CD
