@@ -758,14 +758,18 @@ class RepoAnalyzer:
             repo_data["dipendenti_url"] = used_by_url
             
             # Semplice approssimazione usando search API (può essere imprecisa)
-            # Note: GitHub search API might not be perfectly accurate for dependents
-            query = f'"{self.repo_name}" in:readme,description' # Broader search might yield more results
+            # Use a simpler query to avoid parsing errors
+            query = f'"{self.repo_name}"' # Search for the repo name string literal in code
             dependents = self.github.search_code(query)
             repo_data["dipendenti"] = dependents.totalCount if dependents else 0
         except GithubException as e:
              if e.status == 403: # Often rate limit or access issue
                  logger.warning(f"Errore API GitHub (403) nel recupero dei dipendenti: {e.data.get('message', '')}")
                  print(f"Avviso: Impossibile cercare i dipendenti a causa di limiti API o permessi.")
+             elif e.status == 422: # Query parsing error
+                 logger.error(f"Errore API GitHub (422) nel recupero dei dipendenti - Query non valida: {query}. Dettagli: {e.data.get('message', '')}", exc_info=True)
+                 print(f"Errore: La query di ricerca per i dipendenti ('{query}') non è valida o non è stata compresa da GitHub.")
+                 repo_data["dipendenti"] = 0 # Set to 0 as we couldn't get the data
              else:
                  logger.error(f"Errore nel recupero dei dipendenti: {e}", exc_info=True)
                  print(f"Errore nel recupero dei dipendenti: {e}")
