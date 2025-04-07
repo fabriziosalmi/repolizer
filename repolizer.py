@@ -1496,21 +1496,53 @@ class RepoAnalyzer:
                                 # Assicuriamoci che il valore sia positivo
                                 days_since_last_commit = max(0, days_since_last_commit)
                                 valore = f"{days_since_last_commit} giorni fa"
-                                # Inverse scoring: more recent = higher score. Normalize based on 1 year.
-                                punteggio = self._normalize_score(days_since_last_commit, 365, 0, 0, 10) 
+                                
+                                # Stepped scoring based on recency
+                                if days_since_last_commit <= 30:
+                                    punteggio = 10.0
+                                    # Suggestion: Keep up the good work (optional, maybe too verbose)
+                                elif days_since_last_commit <= 90:
+                                    punteggio = 8.0
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "L'attività di commit è buona, ma cerca di mantenerla più frequente (idealmente entro 30 giorni)."
+                                    )
+                                elif days_since_last_commit <= 180:
+                                    punteggio = 6.0
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "Il repository non riceve commit da diversi mesi. Considera di riprendere lo sviluppo attivo."
+                                    )
+                                elif days_since_last_commit <= 365:
+                                    punteggio = 3.0
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "Il repository sembra poco manutenuto (ultimo commit tra 6 e 12 mesi fa). Pianifica aggiornamenti o valuta l'archiviazione."
+                                    )
+                                else: # More than a year
+                                    punteggio = 0.0
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "Il repository è inattivo da oltre un anno. Considera di archiviarlo se non è più mantenuto."
+                                    )
                             else:
                                 valore = "Data non disponibile"
                                 punteggio = 5 # Neutral score if date is missing
                                 logger.warning("Data autore non trovata per l'ultimo commit.")
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "Impossibile determinare la data dell'ultimo commit."
+                                )
                         except Exception as e:
                             logger.error(f"Errore nel calcolo della data dell'ultimo commit: {e}", exc_info=True)
                             print(f"Errore nel calcolo della data dell'ultimo commit: {e}")
                             valore = "Errore data"
                             punteggio = 5  # Valore neutro in caso di errore
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Si è verificato un errore nel recupero della data dell'ultimo commit."
+                            )
                     else:
                         valore = "Nessun commit trovato"
                         punteggio = 0
                         logger.warning("Nessun commit trovato nel repository.")
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Non sono stati trovati commit. Il repository potrebbe essere vuoto o inaccessibile."
+                        )
                 elif nome_param == "frequenza_commit":
                     # Usa la cache per ottenere i commit
                     commits = self._get_cached_data(
