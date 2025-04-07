@@ -433,18 +433,52 @@ class RepoAnalyzer:
             return 0.0
 
     def _fetch_issues_data(self):
-        """Ottiene dati su issues aperte/chiuse e calcola i tempi medi di chiusura."""
+        """Ottiene dati su issues aperte/chiuse e calcola i tempi medi di chiusura e risposta."""
         if "issues_data" in self._cache:
             return self._cache["issues_data"]
-        issues = self.repo.get_issues(state="all")
-        closed_times = []
-        for issue in issues:
-            if issue.closed_at and issue.created_at:
-                delta = (issue.closed_at - issue.created_at).days
-                if delta >= 0:
-                    closed_times.append(delta)
-        self._cache["issues_data"] = closed_times
-        return closed_times
+        
+        try:
+            issues = self.repo.get_issues(state="all")
+            closed_times = []
+            response_times = []
+            total_issues = 0
+            closed_issues = 0
+            
+            for issue in issues:
+                total_issues += 1
+                if issue.state == 'closed':
+                    closed_issues += 1
+                    if issue.closed_at and issue.created_at:
+                        delta = (issue.closed_at - issue.created_at).days
+                        if delta >= 0:
+                            closed_times.append(delta)
+                
+                # Calcola il tempo di prima risposta se ci sono commenti
+                try:
+                    comments = list(issue.get_comments())
+                    if comments and issue.user and comments[0].user:
+                        # Verifica che la prima risposta non sia dell'autore dell'issue
+                        if issue.user.id != comments[0].user.id:
+                            first_response_time = (comments[0].created_at - issue.created_at).days
+                            if first_response_time >= 0:
+                                response_times.append(first_response_time)
+                except Exception as e:
+                    logger.debug(f"Errore nel calcolo del tempo di risposta per issue #{issue.number}: {e}")
+            
+            result = {
+                "closed_times": closed_times,
+                "response_times": response_times,
+                "total_issues": total_issues,
+                "closed_issues": closed_issues,
+                "avg_close_time": sum(closed_times) / len(closed_times) if closed_times else None,
+                "avg_response_time": sum(response_times) / len(response_times) if response_times else None
+            }
+            
+            self._cache["issues_data"] = result
+            return result
+        except Exception as e:
+            logger.error(f"Errore nel recupero dei dati delle issues: {e}", exc_info=True)
+            return {"closed_times": [], "response_times": [], "total_issues": 0, "closed_issues": 0, "avg_close_time": None, "avg_response_time": None}
 
     def _fetch_pr_data(self):
         """Ottiene dati su PR aperte/chiuse e calcola ratio e tempi chiusura."""
@@ -1235,12 +1269,16 @@ class RepoAnalyzer:
                     valore = "Analisi non disponibile"
                     punteggio = 5  # Valore neutro
                 elif nome_param == "attivita_issues_tempo":
-                    closed_times = self._fetch_issues_data()
-                    if closed_times:
-                        valore = f"Tempo medio chiusura issues: {round(sum(closed_times)/len(closed_times), 1)} giorni"
-                        punteggio = max(0.0, 10.0 - ((sum(closed_times)/len(closed_times)) / 10.0))
+                    issues_data = self._fetch_issues_data()
+                    closed_times = issues_data.get("closed_times", [])
+                    
+                    # Make sure we have numeric values and the list is not empty
+                    if closed_times and all(isinstance(x, (int, float)) for x in closed_times):
+                        avg_time = sum(closed_times) / len(closed_times)
+                        valore = f"Tempo medio chiusura issues: {round(avg_time, 1)} giorni"
+                        punteggio = max(0.0, 10.0 - (avg_time / 10.0))
                     else:
-                        valore = "Nessuna issue chiusa"
+                        valore = "Nessuna issue chiusa o dati non validi"
                         punteggio = 0
                 elif nome_param == "attivita_pr_ratio":
                     pr_data = self._fetch_pr_data()
@@ -1396,14 +1434,17 @@ class RepoAnalyzer:
                                         break
                                         
                                 if github_dir:
-                                    github_contents = self._get_cached_data(
-                                        "github_dir_contents",
-                                        lambda: list(self.repo.get_contents(".github"))
-                                    )
-                                    
-                                    for item in github_contents:
-                                        if item.type == "file" and any(item.name.lower() == pattern.lower() for pattern in security_file_patterns):
-                                            security_files_found.append(item.name)
+                                    try:
+                                        github_contents = self._get_cached_data(
+                                            "github_dir_contents",
+                                            lambda: list(self.repo.get_contents(".github"))
+                                        )
+                                        
+                                        for item in github_contents:
+                                            if item.type == "file" and any(item.name.lower() == pattern.lower() for pattern in security_file_patterns):
+                                                security_files_found.append(item.name)
+                                    except Exception:
+                                        pass
                             except Exception:
                                 pass
                         
@@ -1441,7 +1482,7 @@ class RepoAnalyzer:
                                 
                                 # Navigate through the directory structure
                                 valid_path = True
-                                for i, part in enumerate(path_parts[:-1]):
+                                for i, part in path_parts[:-1]:
                                     curr_path = os.path.join(curr_path, part)
                                     if not os.path.exists(curr_path) or not os.path.isdir(curr_path):
                                         valid_path = False
@@ -1893,14 +1934,8 @@ class RepoAnalyzer:
             return
 
         try:
-            # Visualizza i suggerimenti nel terminale
-            if self.results.get("suggerimenti"):
-                print("\nSuggerimenti per il miglioramento:")
-                for categoria, suggerimenti in self.results["suggerimenti"].items():
-                    if suggerimenti:
-                        print(f"\n{categoria.replace('_', ' ').title()}:")
-                        for suggerimento in suggerimenti:
-                            print(f"- {suggerimento}")
+            # Rimuovo la visualizzazione duplicata dei suggerimenti
+            # poiché sono già mostrati dal metodo analyze()
 
             # Genera il report HTML utilizzando il modulo html_report
             output_file = generate_html_report(self.results)
@@ -1908,7 +1943,6 @@ class RepoAnalyzer:
             print("Apri il file nel tuo browser per visualizzare il report interattivo.")
         except Exception as e:
             print(f"Errore nella generazione del report HTML: {e}")
-
 
 
 def main():
