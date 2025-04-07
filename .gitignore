@@ -1,0 +1,33 @@
+# File di ambiente
+.env
+
+# File Python compilati
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribuzione / packaging
+dist/
+build/
+*.egg-info/
+
+# File di test e coverage
+.coverage
+htmlcov/
+.pytest_cache/
+report_esempio.json
+
+# Ambienti virtuali
+venv/
+env/
+ENV/
+
+# IDE e editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# File di sistema
+.DS_Store
+Thumbs.db

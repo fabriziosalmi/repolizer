@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repolizer Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #f8f9fa; }
+        .metric-card {
+            transition: transform 0.2s;
+            margin-bottom: 1rem;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 300px;
+            width: 100%;
+        }
+        .score-badge {
+            font-size: 1.2em;
+            padding: 0.5em 1em;
+        }
+        .suggestion-item {
+            border-left: 4px solid #007bff;
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <!-- Header -->
+        <header class="text-center mb-5">
+            <h1 class="display-4">{{repo_name}}</h1>
+            <p class="lead text-muted">Report generato il {{data_analisi}}</p>
+            <a href="{{repo_url}}" class="btn btn-primary" target="_blank">
+                <i class="fa fa-github"></i> Visualizza su GitHub
+            </a>
+        </header>
+
+        <!-- Punteggio Totale -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-6 text-center">
+                <div class="card">
+                    <div class="card-body">
+                        <h3>Punteggio Totale</h3>
+                        <div class="display-1 mb-3">{{punteggio_totale}}/10</div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar" role="progressbar" style="width: {{punteggio_totale_percentuale}}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grafici Principali -->
+        <div class="row mb-5">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Punteggi per Categoria</h4>
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Andamento Storico</h4>
+                        <div class="chart-container">
+                            <canvas id="historyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dettagli per Categoria -->
+        <div id="categoryDetails">
+            <!-- Template per ogni categoria -->
+            <div class="category-section mb-5">
+                <h3 class="mb-4">{{categoria_nome}}</h3>
+                <div class="row">
+                    <!-- Template per ogni metrica -->
+                    <div class="col-md-4">
+                        <div class="card metric-card">
+                            <div class="card-body">
+                                <h5 class="card-title">{{metrica_nome}}</h5>
+                                <p class="card-text">{{metrica_valore}}</p>
+                                <span class="badge bg-primary score-badge">{{metrica_punteggio}}/10</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggerimenti -->
+        <div class="card mb-5">
+            <div class="card-body">
+                <h3 class="card-title mb-4">Suggerimenti per il Miglioramento</h3>
+                <div id="suggestions">
+                    <!-- Template per ogni suggerimento -->
+                    <div class="suggestion-item">
+                        <p class="mb-2">{{suggerimento_testo}}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Dati del report
+        const reportData = {{report_data|tojson}};
+
+        // Inizializza i grafici
+        function initCharts() {
+            // Grafico delle categorie
+            const ctxCategory = document.getElementById('categoryChart').getContext('2d');
+            new Chart(ctxCategory, {
+                type: 'radar',
+                data: {
+                    labels: Object.keys(reportData.punteggi),
+                    datasets: [{
+                        label: 'Punteggi per Categoria',
+                        data: Object.values(reportData.punteggi),
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 10
+                        }
+                    }
+                }
+            });
+
+            // Grafico storico
+            if (reportData.storico && reportData.storico.length > 0) {
+                const ctxHistory = document.getElementById('historyChart').getContext('2d');
+                new Chart(ctxHistory, {
+                    type: 'line',
+                    data: {
+                        labels: reportData.storico.map(entry => entry.data),
+                        datasets: [{
+                            label: 'Punteggio Totale nel Tempo',
+                            data: reportData.storico.map(entry => entry.punteggio_totale),
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 10
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Popola i dettagli delle categorie
+        function populateCategoryDetails() {
+            const container = document.getElementById('categoryDetails');
+            container.innerHTML = '';
+
+            for (const [categoria, dettagli] of Object.entries(reportData.dettagli)) {
+                const categorySection = document.createElement('div');
+                categorySection.className = 'category-section mb-5';
+                categorySection.innerHTML = `
+                    <h3 class="mb-4">${categoria.replace('_', ' ').toUpperCase()}</h3>
+                    <div class="row">
+                        ${Object.entries(dettagli).map(([nome, info]) => `
+                            <div class="col-md-4">
+                                <div class="card metric-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${nome.replace('_', ' ').toUpperCase()}</h5>
+                                        <p class="card-text">${info.valore}</p>
+                                        <span class="badge bg-primary score-badge">${info.punteggio}/10</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(categorySection);
+            }
+        }
+
+        // Popola i suggerimenti
+        function populateSuggestions() {
+            const container = document.getElementById('suggestions');
+            container.innerHTML = '';
+
+            for (const [categoria, suggerimenti] of Object.entries(reportData.suggerimenti)) {
+                suggerimenti.forEach(suggerimento => {
+                    const suggestionItem = document.createElement('div');
+                    suggestionItem.className = 'suggestion-item';
+                    suggestionItem.innerHTML = `<p class="mb-2">${suggerimento}</p>`;
+                    container.appendChild(suggestionItem);
+                });
+            }
+        }
+
+        // Inizializza la pagina
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            populateCategoryDetails();
+            populateSuggestions();
+        });
+    </script>
+</body>
+</html>

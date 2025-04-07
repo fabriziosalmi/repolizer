@@ -1,0 +1,14 @@
+# Dipendenze principali
+requests==2.31.0
+pygithub==1.59.0
+pandas==2.0.3
+tqdm==4.65.0
+python-dotenv==1.0.0
+jinja2==3.1.2
+
+# Analisi statica del codice
+pylint==2.17.5
+radon==6.0.1
+
+# Testing
+pytest==7.4.0
