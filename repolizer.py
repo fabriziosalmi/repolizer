@@ -103,8 +103,8 @@ DEFAULT_TIMEOUT = 30
 
 # Mapping per etichette delle categorie nei grafici
 CATEGORY_LABELS_MAPPING = {
-    "attivita_manutenzione": "Manutenzione",
-    "community_collaborazione": "Collaborazione",
+    "manutenzione": "Manutenzione",
+    "collaborazione": "Collaborazione",
     "documentazione": "Documentazione",
     "distribuzione": "Distribuzione",
     "codice": "Codice",
@@ -1698,7 +1698,7 @@ class RepoAnalyzer:
                 return valore, round(punteggio, 2), conta_punteggio
 
             # Community & Collaborazione
-            elif categoria == "community_collaborazione":
+            elif categoria == "collaborazione":
                 com_data = self._fetch_community_data()
                 if nome_param == "github_discussions":
                     valore = "Abilitato" if com_data["discussions_enabled"] else "Non disponibile"

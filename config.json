@@ -84,7 +84,7 @@
             "peso": 4
             }
         },
-        "qualita_codice": {
+        "codice": {
             "complessita_media": {
                 "descrizione": "Misura oggettiva della difficolt\u00e0 di comprensione/manutenzione del codice",
                 "metodo": "Tool Analisi Statica (es. Radon, Lizard per Python; SonarQube, PMD per Java, etc.)",
@@ -143,7 +143,7 @@
                 "peso": 3
             }
         },
-        "community_collaborazione": {
+        "collaborazione": {
             "issue_pr_templates": {
                 "descrizione": "Facilitano contributi e segnalazioni strutturate",
                 "metodo": "API GitHub (controllo file in .github/)",
@@ -192,7 +192,7 @@
                 "peso": 4
             }
         },
-        "testing_cicd": {
+        "integrazione": {
             "presenza_test_suite": {
                 "descrizione": "Esistenza di test automatici per verificare la correttezza",
                 "metodo": "Analisi struttura repo (presenza cartelle /tests, /spec, etc.)",
@@ -219,7 +219,7 @@
                 "peso": 3
             }
         },
-        "setup_usabilita": {
+        "adozione": {
             "facilita_setup": {
                 "descrizione": "Presenza di istruzioni chiare e complete per l'installazione e configurazione",
                 "metodo": "LLM (valutazione chiarezza istruzioni), Analisi README e docs",

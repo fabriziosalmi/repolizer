@@ -16,7 +16,7 @@ except ImportError:
     # Fallback mapping if the import fails
     CATEGORY_LABELS_MAPPING = {
         "manutenzione": "Manutenzione",
-        "community_collaborazione": "Collaborazione",
+        "collaborazione": "Collaborazione",
         "documentazione": "Documentazione",
         "distribuzione": "Distribuzione",
         "codice": "Codice",
