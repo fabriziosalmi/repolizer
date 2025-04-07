@@ -845,11 +845,6 @@ class RepoAnalyzer:
         return data
 
     def analyze(self) -> Dict:
-        """Analizza il repository in base ai parametri configurati.
-
-        Returns:
-            Dizionario con i risultati dell'analisi
-        """
         if not self.repo:
             return {"error": "Repository non trovato o non accessibile"}
 
@@ -908,6 +903,9 @@ class RepoAnalyzer:
         punteggi = list(self.results["punteggi"].values())
         if punteggi:
             self.results["punteggio_totale"] = round(sum(punteggi) / len(punteggi), 2)
+            
+            # Display scores in terminal
+            self._display_scores_terminal()
             
             # Aggiungi una valutazione qualitativa
             valutazione = "VALUTAZIONE QUALITATIVA: "
@@ -1414,37 +1412,113 @@ class RepoAnalyzer:
                     punteggio = 0
                     
                     try:
-                        # Controlla le common CI configurations
+                        # Lista estesa di pattern per configurazioni CI comuni
                         ci_configs = [
-                            ".github/workflows",  # GitHub Actions
-                            ".travis.yml",        # Travis CI
-                            ".gitlab-ci.yml",     # GitLab CI
-                            "azure-pipelines.yml", # Azure Pipelines
-                            "Jenkinsfile",        # Jenkins
-                            ".circleci"           # CircleCI
+                            ".github/workflows",      # GitHub Actions
+                            "workflows",              # GitHub Actions in another location
+                            ".travis.yml",            # Travis CI
+                            ".gitlab-ci.yml",         # GitLab CI
+                            "azure-pipelines.yml",    # Azure Pipelines
+                            "Jenkinsfile",            # Jenkins
+                            ".circleci/config.yml",   # CircleCI
+                            ".circleci",              # CircleCI directory
+                            "bitbucket-pipelines.yml",# Bitbucket Pipelines
+                            ".drone.yml",             # Drone CI
+                            "appveyor.yml",           # AppVeyor
+                            ".github/actions",        # Custom GitHub Actions
+                            "buildspec.yml",          # AWS CodeBuild
+                            ".teamcity/"              # TeamCity
                         ]
                         
                         if self.local_repo_path:
-                            # Usa il filesystem locale
-                            files_and_dirs = [os.path.join(dp, f) for dp, dn, filenames in os.walk(self.local_repo_path) for f in filenames]
-                            files_and_dirs += [os.path.join(self.local_repo_path, d) for d in os.listdir(self.local_repo_path) if os.path.isdir(os.path.join(self.local_repo_path, d))]
+                            # Usa il filesystem locale con ricerca più approfondita
+                            found = False
+                            
+                            # Check root directory for CI files
+                            for item in os.listdir(self.local_repo_path):
+                                item_path = os.path.join(self.local_repo_path, item)
+                                item_lower = item.lower()
+                                
+                                # Direct match for CI files in root
+                                if any(ci_file.lower() == item_lower for ci_file in ci_configs):
+                                    found = True
+                                    break
+                                
+                                # Check .github directory special case
+                                if item_lower == '.github' and os.path.isdir(item_path):
+                                    github_dir = item_path
+                                    for gh_item in os.listdir(github_dir):
+                                        if gh_item.lower() == 'workflows' or gh_item.lower() == 'actions':
+                                            workflows_path = os.path.join(github_dir, gh_item)
+                                            if os.path.isdir(workflows_path) and os.listdir(workflows_path):
+                                                found = True
+                                                break
+                            
+                            # Deep search for nested CI configurations
+                            if not found:
+                                for root, dirs, files in os.walk(self.local_repo_path):
+                                    for file in files:
+                                        file_lower = file.lower()
+                                        if any(ci_file.lower().split('/')[-1] == file_lower for ci_file in ci_configs):
+                                            found = True
+                                            break
+                                    if found:
+                                        break
+                            
+                            valore = found
+                            punteggio = 10 if found else 0
                         else:
-                            # Utilizza l'API di GitHub
-                            contents = self.repo.get_contents("")
-                            files_and_dirs = [f.path for f in contents]
-                        
-                        for config in ci_configs:
-                            if any(config in path for path in files_and_dirs):
-                                valore = True
-                                punteggio = 10
-                                break
+                            # Utilizza l'API di GitHub con controlli più approfonditi
+                            found = False
+                            
+                            # First check root contents
+                            contents = self._get_cached_data(
+                                "root_contents", 
+                                lambda: list(self.repo.get_contents(""))
+                            )
+                            
+                            files_and_dirs = [f.path.lower() for f in contents]
+                            
+                            # Look for direct CI config matches
+                            for ci_config in ci_configs:
+                                if ci_config.lower() in files_and_dirs:
+                                    found = True
+                                    break
+                            
+                            # Check .github directory separately
+                            if not found:
+                                github_dir = None
+                                for item in contents:
+                                    if item.path.lower() == ".github" and item.type == "dir":
+                                        github_dir = item
+                                        break
+                                
+                                if github_dir:
+                                    try:
+                                        github_contents = self._get_cached_data(
+                                            "github_dir_contents",
+                                            lambda: list(self.repo.get_contents(".github"))
+                                        )
+                                        
+                                        # Check for workflows directory
+                                        for item in github_contents:
+                                            if item.path.lower() == ".github/workflows" and item.type == "dir":
+                                                found = True
+                                                break
+                                    except Exception:
+                                        pass
+                            
+                            valore = found
+                            punteggio = 10 if found else 0
                                 
                         if not valore:
                             self.results["suggerimenti"].setdefault(categoria, []).append(
                                 "Configura un sistema di CI/CD per automatizzare i test e il deployment"
                             )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"Errore nel controllo CI/CD: {e}")
+                        valore = "Errore verifica CI/CD"
+                        punteggio = 5  # Valore neutro in caso di errore
                 elif nome_param in ["test_coverage", "sicurezza_ci"]:
                     valore = "Analisi non disponibile"
                     punteggio = 5  # Valore neutro
@@ -1541,6 +1615,63 @@ class RepoAnalyzer:
         except Exception as e:
             print(f"Errore nell'aggiornamento dello storico: {e}")
             self.results["storico"] = []
+
+    def _display_scores_terminal(self) -> None:
+        """Visualizza i punteggi nel terminale usando rich per una migliore formattazione."""
+        try:
+            # Crea una tabella per i punteggi
+            table = Table(title=f"Punteggi Analisi Repository: {self.repo_name}", show_header=True)
+            table.add_column("Categoria", style="cyan", no_wrap=True)
+            table.add_column("Punteggio", style="magenta", justify="right")
+            table.add_column("Valutazione", style="green")
+            
+            # Aggiungi righe per ogni categoria
+            for categoria, punteggio in self.results["punteggi"].items():
+                # Determina il colore in base al punteggio
+                if punteggio >= 8:
+                    color = "green"
+                    valutazione = "Eccellente"
+                elif punteggio >= 6:
+                    color = "bright_green"
+                    valutazione = "Buono"
+                elif punteggio >= 4:
+                    color = "yellow"
+                    valutazione = "Mediocre"
+                else:
+                    color = "red"
+                    valutazione = "Scarso"
+                
+                # Formatta il nome della categoria per maggiore leggibilità
+                categoria_formatted = categoria.replace("_", " ").title()
+                
+                # Aggiungi la riga alla tabella
+                table.add_row(categoria_formatted, f"[{color}]{punteggio:.2f}[/{color}]", valutazione)
+            
+            # Riga per il punteggio totale
+            total_score = self.results["punteggio_totale"]
+            if total_score >= 8:
+                total_color = "green"
+                total_valutazione = "Eccellente"
+            elif total_score >= 6:
+                total_color = "bright_green"
+                total_valutazione = "Buono"
+            elif total_score >= 4:
+                total_color = "yellow"
+                total_valutazione = "Mediocre"
+            else:
+                total_color = "red"
+                total_valutazione = "Scarso"
+            
+            table.add_row("", "", "")  # Riga vuota per separazione
+            table.add_row("[bold]TOTALE[/bold]", f"[bold {total_color}]{total_score:.2f}[/bold {total_color}]", f"[bold]{total_valutazione}[/bold]")
+            
+            # Stampa la tabella
+            self.console.print("\n")
+            self.console.print(table)
+            self.console.print("\n")
+        except Exception as e:
+            logger.error(f"Errore nella visualizzazione dei punteggi nel terminale: {e}", exc_info=True)
+            print(f"\nPunteggio totale: {self.results.get('punteggio_totale', 0):.2f}/10")
 
     def visualize_results(self) -> None:
         """Visualizza i risultati dell'analisi generando un report HTML interattivo."""
