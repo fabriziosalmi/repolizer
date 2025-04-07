@@ -230,8 +230,10 @@ class RepoAnalyzer:
                 return sum(complexities) / len(complexities)
         except FileNotFoundError:
             print("Radon non trovato. Assicurati che sia installato.")
-        except Exception:
-            pass
+        except subprocess.SubprocessError as e:
+            print(f"Errore nell'esecuzione di radon: {e}")
+        except Exception as e:
+            print(f"Errore imprevisto durante l'analisi della complessità: {e}")
         return 0.0
 
     def _check_style(self, path: str = ".") -> float:
@@ -449,7 +451,10 @@ class RepoAnalyzer:
                 if issue.state == 'closed':
                     closed_issues += 1
                     if issue.closed_at and issue.created_at:
-                        delta = (issue.closed_at - issue.created_at).days
+                        # Bug fix: Ensure dates have timezone info for comparison
+                        closed_at = issue.closed_at if issue.closed_at.tzinfo else issue.closed_at.replace(tzinfo=datetime.timezone.utc)
+                        created_at = issue.created_at if issue.created_at.tzinfo else issue.created_at.replace(tzinfo=datetime.timezone.utc)
+                        delta = (closed_at - created_at).days
                         if delta >= 0:
                             closed_times.append(delta)
                 
@@ -459,7 +464,10 @@ class RepoAnalyzer:
                     if comments and issue.user and comments[0].user:
                         # Verifica che la prima risposta non sia dell'autore dell'issue
                         if issue.user.id != comments[0].user.id:
-                            first_response_time = (comments[0].created_at - issue.created_at).days
+                            # Bug fix: Ensure dates have timezone info
+                            comment_date = comments[0].created_at if comments[0].created_at.tzinfo else comments[0].created_at.replace(tzinfo=datetime.timezone.utc)
+                            issue_date = issue.created_at if issue.created_at.tzinfo else issue.created_at.replace(tzinfo=datetime.timezone.utc)
+                            first_response_time = (comment_date - issue_date).days
                             if first_response_time >= 0:
                                 response_times.append(first_response_time)
                 except Exception as e:
@@ -491,7 +499,10 @@ class RepoAnalyzer:
         for pr in pulls:
             if pr.merged and pr.created_at and pr.closed_at:
                 merged_pr += 1
-                closed_times.append((pr.closed_at - pr.created_at).days)
+                # Bug fix: Ensure dates have timezone info
+                closed_at = pr.closed_at if pr.closed_at.tzinfo else pr.closed_at.replace(tzinfo=datetime.timezone.utc)
+                created_at = pr.created_at if pr.created_at.tzinfo else pr.created_at.replace(tzinfo=datetime.timezone.utc)
+                closed_times.append((closed_at - created_at).days)
         self._cache["pr_data"] = {
             "total": total_pr,
             "merged": merged_pr,
@@ -519,8 +530,13 @@ class RepoAnalyzer:
             tag_dates = []
             for tag in tags:
                 try:
-                    tag_date = tag.commit.commit.author.date
-                    tag_dates.append((tag.name, tag_date))
+                    if tag.commit and tag.commit.commit and tag.commit.commit.author:
+                        tag_date = tag.commit.commit.author.date
+                        if tag_date:
+                            # Bug fix: Ensure date has timezone info
+                            if not tag_date.tzinfo:
+                                tag_date = tag_date.replace(tzinfo=datetime.timezone.utc)
+                            tag_dates.append((tag.name, tag_date))
                 except Exception as e:
                     logger.warning(f"Impossibile ottenere la data per il tag {tag.name}: {e}")
                     continue
@@ -1185,17 +1201,21 @@ class RepoAnalyzer:
                     
                     if last_commit:
                         try:
-                            last_commit_date = last_commit.commit.author.date
-                            # Assicuriamoci che la data abbia timezone
-                            if not last_commit_date.tzinfo:
-                                last_commit_date = last_commit_date.replace(tzinfo=datetime.timezone.utc)
-                                
-                            now = datetime.datetime.now(datetime.timezone.utc)
-                            days_since_last_commit = (now - last_commit_date).days
-                            # Assicuriamoci che il valore sia positivo
-                            days_since_last_commit = max(0, days_since_last_commit)
-                            valore = days_since_last_commit
-                            punteggio = self._normalize_score(days_since_last_commit, 365, 0, 0, 10, inverse=True)  # Più recente è meglio
+                            last_commit_date = last_commit.commit.author.date if last_commit.commit and last_commit.commit.author else None
+                            if last_commit_date:
+                                # Assicuriamoci che la data abbia timezone
+                                if not last_commit_date.tzinfo:
+                                    last_commit_date = last_commit_date.replace(tzinfo=datetime.timezone.utc)
+                                    
+                                now = datetime.datetime.now(datetime.timezone.utc)
+                                days_since_last_commit = (now - last_commit_date).days
+                                # Assicuriamoci che il valore sia positivo
+                                days_since_last_commit = max(0, days_since_last_commit)
+                                valore = days_since_last_commit
+                                punteggio = self._normalize_score(days_since_last_commit, 365, 0, 0, 10, inverse=True)  # Più recente è meglio
+                            else:
+                                valore = "Data non disponibile"
+                                punteggio = 5
                         except Exception as e:
                             print(f"Errore nel calcolo della data dell'ultimo commit: {e}")
                             valore = "Errore data"
@@ -1482,7 +1502,8 @@ class RepoAnalyzer:
                                 
                                 # Navigate through the directory structure
                                 valid_path = True
-                                for i, part in path_parts[:-1]:
+                                # Bug fix: Correctly iterate through path parts
+                                for part in path_parts[:-1]:
                                     curr_path = os.path.join(curr_path, part)
                                     if not os.path.exists(curr_path) or not os.path.isdir(curr_path):
                                         valid_path = False
@@ -1666,7 +1687,9 @@ class RepoAnalyzer:
                                     
                                     # Navigate through the directory structure
                                     valid_path = True
-                                    for i, part in enumerate(path_parts[:-1]):
+                                    # Bug fix: Correctly iterate through path parts without unpacking
+                                    for i in range(len(path_parts) - 1):
+                                        part = path_parts[i]
                                         curr_path = os.path.join(curr_path, part)
                                         if not os.path.exists(curr_path) or not os.path.isdir(curr_path):
                                             valid_path = False
@@ -1686,27 +1709,6 @@ class RepoAnalyzer:
                                                 if os.listdir(final_path):
                                                     ci_configs_found.append(ci_type)
                                                     break
-                                
-                                # Se abbiamo già trovato una config per questo CI, passa al prossimo
-                                if ci_type in ci_configs_found:
-                                    continue
-                                    
-                            # Se ancora niente, controlla file YAML per keyword comuni di CI
-                            if not ci_configs_found:
-                                for root, _, files in os.walk(self.local_repo_path):
-                                    for file_name in files:
-                                        if file_name.endswith(('.yml', '.yaml')) and "vendor" not in root and "node_modules" not in root:
-                                            try:
-                                                file_path = os.path.join(root, file_name)
-                                                with open(file_path, 'r', encoding='utf-8') as f:
-                                                    content = f.read().lower()
-                                                    if any(keyword in content for keyword in yaml_ci_keywords):
-                                                        ci_configs_found.append("custom_yaml_ci")
-                                                        break
-                                            except Exception:
-                                                pass
-                                    if ci_configs_found:
-                                        break
                         else:
                             # Usa API GitHub per il controllo
                             # Verifica configurazioni nella root
