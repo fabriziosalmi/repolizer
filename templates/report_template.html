@@ -47,7 +47,9 @@
         <div class="mb-16 fade-in">
             <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
                 <h3 class="text-2xl font-semibold mb-6">Punteggio Totale</h3>
-                <div class="text-6xl font-bold text-indigo-600 mb-6">{{punteggio_totale}}<span class="text-3xl text-gray-400">/10</span></div>
+                <div class="text-6xl font-bold {% if punteggio_totale >= 7 %}text-green-600{% elif punteggio_totale >= 4 %}text-yellow-600{% else %}text-red-600{% endif %} mb-6">
+                    {{punteggio_totale}}<span class="text-3xl text-gray-400">/10</span>
+                </div>
                 <div class="w-full bg-gray-200 rounded-full h-3">
                     <div class="bg-indigo-600 h-3 rounded-full transition-all duration-1000 ease-out" style="width: {{report_data.punteggio_totale_percentuale}}%"></div>
                 </div>
