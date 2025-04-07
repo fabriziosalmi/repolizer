@@ -82,6 +82,16 @@
             "descrizione": "Tempo medio di risposta alla prima interazione su un'issue",
             "metodo": "API GitHub (analisi timestamp primo commento su issue)",
             "peso": 4
+            },
+            "changelog_presenza": {
+                "descrizione": "Presenza di un file CHANGELOG per tracciare le modifiche tra le versioni",
+                "metodo": "API GitHub (controllo esistenza file CHANGELOG.md o simili)",
+                "peso": 3
+            },
+            "semantic_versioning": {
+                "descrizione": "Adozione del Semantic Versioning per tag e release",
+                "metodo": "API GitHub (analisi formato tag/release)",
+                "peso": 3
             }
         },
         "codice": {
@@ -141,6 +151,11 @@
                 "descrizione": "Presenza di badge informativi nel README (es. build status, coverage)",
                 "metodo": "Analisi contenuto README",
                 "peso": 3
+            },
+            "licenza_osi_approvata": {
+                "descrizione": "Verifica se la licenza specificata è approvata dall'OSI",
+                "metodo": "API GitHub (analisi contenuto file licenza), Database licenze OSI",
+                "peso": 4
             }
         },
         "collaborazione": {
@@ -216,6 +231,11 @@
             "test_flake8": {
                 "descrizione": "Esecuzione di flake8 per verificare errori di stile e bug potenziali",
                 "metodo": "Analisi file Python con flake8",
+                "peso": 3
+            },
+            "build_tool_standard": {
+                "descrizione": "Utilizzo di strumenti di build standard e riconosciuti per il linguaggio",
+                "metodo": "Analisi struttura repo (presenza file come pom.xml, build.gradle, package.json, Makefile)",
                 "peso": 3
             }
         },

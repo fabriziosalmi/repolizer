@@ -1694,9 +1694,29 @@ class RepoAnalyzer:
                 elif nome_param == "badge_readme":
                     valore = "Presente" if self._check_badges_in_readme() else "Assente"
                     punteggio = 10 if self._check_badges_in_readme() else 0
+                elif nome_param == "changelog_presenza":
+                    # Implementazione del nuovo parametro changelog_presenza
+                    has_changelog = self._check_changelog_presence()
+                    valore = "Presente" if has_changelog else "Assente"
+                    punteggio = 10 if has_changelog else 0
+                    
+                    if not has_changelog:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Aggiungi un file CHANGELOG.md per tracciare le modifiche e migliorare la trasparenza delle release"
+                        )
+                elif nome_param == "semantic_versioning":
+                    # Implementazione del nuovo parametro semantic_versioning
+                    semver_score, semver_status = self._check_semantic_versioning()
+                    valore = semver_status
+                    punteggio = semver_score
+                    
+                    if semver_score < 5:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Adotta Semantic Versioning (MAJOR.MINOR.PATCH) nei tag e nelle release per una migliore gestione delle dipendenze"
+                        )
 
                 return valore, round(punteggio, 2), conta_punteggio
-
+            
             # Community & Collaborazione
             elif categoria == "collaborazione":
                 com_data = self._fetch_community_data()
@@ -2810,6 +2830,134 @@ class RepoAnalyzer:
         except Exception as e:
             logger.error(f"Errore nella verifica dei badge nel README: {e}", exc_info=True)
             return False
+
+    def _check_changelog_presence(self) -> bool:
+        """Verifica la presenza di un file CHANGELOG nel repository."""
+        try:
+            changelog_patterns = [
+                "CHANGELOG.md", "changelog.md",
+                "CHANGELOG.txt", "changelog.txt",
+                "CHANGES.md", "changes.md",
+                "HISTORY.md", "history.md",
+                "NEWS.md", "news.md",
+                "RELEASES.md", "releases.md"
+            ]
+            
+            if self.local_repo_path:
+                # Check in local repository
+                for pattern in changelog_patterns:
+                    if os.path.exists(os.path.join(self.local_repo_path, pattern)):
+                        logger.debug(f"Trovato file changelog: {pattern}")
+                        return True
+            else:
+                # Check using GitHub API
+                contents = self._get_cached_data(
+                    "root_contents",
+                    lambda: list(self.repo.get_contents(""))
+                )
+                
+                for item in contents:
+                    if item.type == "file" and item.name.lower() in [p.lower() for p in changelog_patterns]:
+                        logger.debug(f"Trovato file changelog: {item.name}")
+                        return True
+            
+            return False
+        except Exception as e:
+            logger.warning(f"Errore nella verifica del file changelog: {e}")
+            return False
+
+    def _check_semantic_versioning(self) -> Tuple[float, str]:
+        """Verifica se il repository utilizza Semantic Versioning per tag e release.
+        
+        Returns:
+            Tupla con (punteggio, descrizione)
+        """
+        try:
+            # Get tags and releases
+            tags = self._get_cached_data(
+                "tags",
+                lambda: list(self.repo.get_tags()[:30])  # Limit to 30 most recent tags
+            )
+            
+            releases = self._get_cached_data(
+                "releases",
+                lambda: list(self.repo.get_releases()[:30])  # Limit to 30 most recent releases
+            )
+            
+            # Patterns for semantic versioning (MAJOR.MINOR.PATCH)
+            semver_pattern = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$')
+            partial_semver_pattern = re.compile(r'^v?(\d+)\.(\d+)(?:\.(\d+))?')
+            
+            # Check tags first
+            if tags:
+                semver_tags = 0
+                partial_semver_tags = 0
+                total_tags = min(len(tags), 10)  # Only check up to 10 tags
+                
+                for tag in tags[:total_tags]:
+                    tag_name = tag.name
+                    
+                    # Check for strict SemVer compliance
+                    if semver_pattern.match(tag_name):
+                        semver_tags += 1
+                    # Check for partial SemVer (at least MAJOR.MINOR)
+                    elif partial_semver_pattern.match(tag_name):
+                        partial_semver_tags += 1
+                
+                # Calculate compliance percentage
+                strict_percent = (semver_tags / total_tags) * 100 if total_tags > 0 else 0
+                partial_percent = ((semver_tags + partial_semver_tags) / total_tags) * 100 if total_tags > 0 else 0
+                
+                # Determine result based on compliance
+                if strict_percent >= 80:
+                    return 10, "SemVer completo adottato"
+                elif partial_percent >= 80:
+                    return 7, "SemVer parziale (MAJOR.MINOR)"
+                elif partial_percent >= 50:
+                    return 5, "SemVer parzialmente adottato"
+                elif partial_percent > 0:
+                    return 3, "SemVer usato occasionalmente"
+                else:
+                    return 0, "SemVer non utilizzato"
+            
+            # If no tags, check releases
+            elif releases:
+                semver_releases = 0
+                partial_semver_releases = 0
+                total_releases = min(len(releases), 10)  # Only check up to 10 releases
+                
+                for release in releases[:total_releases]:
+                    release_name = release.title or release.tag_name or ""
+                    
+                    # Check for strict SemVer compliance
+                    if semver_pattern.match(release_name):
+                        semver_releases += 1
+                    # Check for partial SemVer (at least MAJOR.MINOR)
+                    elif partial_semver_pattern.match(release_name):
+                        partial_semver_releases += 1
+                
+                # Calculate compliance percentage
+                strict_percent = (semver_releases / total_releases) * 100 if total_releases > 0 else 0
+                partial_percent = ((semver_releases + partial_semver_releases) / total_releases) * 100 if total_releases > 0 else 0
+                
+                # Determine result based on compliance
+                if strict_percent >= 80:
+                    return 10, "SemVer completo nelle release"
+                elif partial_percent >= 80:
+                    return 7, "SemVer parziale nelle release"
+                elif partial_percent >= 50:
+                    return 5, "SemVer parzialmente adottato"
+                elif partial_percent > 0:
+                    return 3, "SemVer usato occasionalmente"
+                else:
+                    return 0, "SemVer non utilizzato"
+            
+            # No tags or releases found
+            return 0, "Nessun tag o release trovato"
+            
+        except Exception as e:
+            logger.warning(f"Errore nella verifica del Semantic Versioning: {e}")
+            return 0, "Errore verifica"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")
