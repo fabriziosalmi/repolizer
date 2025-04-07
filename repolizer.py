@@ -12,11 +12,15 @@ import os
 import json
 import argparse
 import datetime
+import functools
+import concurrent.futures
 from typing import Dict, List, Any, Tuple, Optional
 import subprocess
 import re
 import tempfile
 import shutil
+import logging
+import signal
 
 import requests
 import pandas as pd
@@ -32,6 +36,29 @@ from rich.panel import Panel
 from rich import print as rprint
 from html_report import generate_html_report
 
+# Decoratore per gestire i timeout
+def timeout_handler(func):
+    """Decorator per gestire i timeout delle chiamate API."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except TimeoutError as e:
+            print(f"Timeout durante l'esecuzione di {func.__name__}: {e}")
+            return None, 0, False
+        except Exception as e:
+            print(f"Errore durante l'esecuzione di {func.__name__}: {e}")
+            return None, 0, False
+    return wrapper
+
+# Configurazione del logger
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger('repolizer')
+
 # Carica le variabili d'ambiente dal file .env
 load_dotenv()
 
@@ -41,6 +68,9 @@ CONFIG_FILE = "config.json"
 
 # Costanti per la gestione delle API
 MAX_ITEMS_PER_REQUEST = 100  # Numero massimo di elementi per richiesta API
+
+# Timeout predefinito per operazioni (in secondi)
+DEFAULT_TIMEOUT = 30
 
 
 class RepoAnalyzer:
@@ -205,37 +235,181 @@ class RepoAnalyzer:
         return 0.0
 
     def _check_style(self, path: str = ".") -> float:
-        """Esegue una scansione con flake8 per valutare l'aderenza allo stile (meno errori => punteggio più alto)."""
+        """Esegue una scansione per valutare l'aderenza allo stile (meno errori => punteggio più alto).
+        
+        Utilizza flake8 e pylint se disponibili per una valutazione più completa.
+        """
         try:
+            # Assicurati di avere una copia locale del repo
             effective_path = self.local_repo_path if self.local_repo_path else path
-            process = subprocess.run(["flake8", effective_path], capture_output=True, text=True)
-            # Se flake8 restituisce un codice di errore > 1, flake8 potrebbe essere fallito del tutto
-            if process.returncode > 1:
-                return 0.0
-            lines = [l for l in process.stdout.splitlines() if l.strip()]
-            errors = len(lines)
-            # Più errori -> punteggio più basso
-            return max(0.0, 10.0 - (errors / 5.0))
-        except FileNotFoundError:
-            print("Flake8 non trovato. Assicurati che sia installato.")
-        except Exception:
+            
+            # Prepara per score aggregato
+            style_score = 0.0
+            tools_used = 0
+            
+            # Prova con flake8 (PEP8)
+            try:
+                process = subprocess.run(["flake8", effective_path], capture_output=True, text=True, timeout=30)
+                # Se flake8 restituisce un codice di errore > 1, flake8 potrebbe essere fallito del tutto
+                if process.returncode <= 1:  # 0=success, 1=violations found
+                    lines = [l for l in process.stdout.splitlines() if l.strip()]
+                    errors = len(lines)
+                    # Più errori -> punteggio più basso, max 10.0
+                    flake8_score = max(0.0, 10.0 - (errors / 10.0))
+                    style_score += flake8_score
+                    tools_used += 1
+                    logger.debug(f"Flake8 analysis complete: {errors} issues found, score: {flake8_score:.2f}/10")
+            except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+                logger.debug(f"Flake8 analysis skipped: {e}")
+                pass
+                
+            # Prova con pylint
+            try:
+                # Trova tutti i file Python nel repository
+                py_files = []
+                if self.local_repo_path:
+                    for root, _, files in os.walk(effective_path):
+                        py_files.extend([os.path.join(root, f) for f in files if f.endswith('.py')])
+                
+                # Se ci sono file Python, esegui pylint
+                if py_files:
+                    # Limita a massimo 30 file per evitare timeout
+                    pylint_files = py_files[:30]
+                    process = subprocess.run(["pylint", "--output-format=text"] + pylint_files,
+                                           capture_output=True, text=True, timeout=45)
+                    output = process.stdout
+                    
+                    # Cerca il punteggio di pylint nel formato "Your code has been rated at X.XX/10"
+                    match = re.search(r"rated at (\d+\.\d+)/10", output)
+                    if match:
+                        pylint_score = float(match.group(1))
+                        style_score += pylint_score
+                        tools_used += 1
+                        logger.debug(f"Pylint analysis complete: score {pylint_score}/10")
+                    else:
+                        # Se non troviamo il rating esplicito, calcoliamo in base agli errori
+                        error_count = len([l for l in output.splitlines() if " E:" in l])
+                        pylint_fallback_score = max(0.0, 10.0 - (error_count / 5.0))
+                        style_score += pylint_fallback_score
+                        tools_used += 1
+                        logger.debug(f"Pylint analysis complete: {error_count} errors found, estimated score: {pylint_fallback_score:.2f}/10")
+            except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+                logger.debug(f"Pylint analysis skipped: {e}")
+                pass
+                
+            # Calcola punteggio medio se almeno uno strumento è stato usato
+            if tools_used > 0:
+                return style_score / tools_used
+            else:
+                logger.warning("No style analysis tools available.")
+                return 5.0  # Valore neutro se nessuno strumento è disponibile
+        except Exception as e:
+            logger.error(f"Style analysis error: {e}", exc_info=True)
             return 0.0
 
     def _check_code_smells(self, path: str = ".") -> float:
-        """Riutilizza flake8 come indicatore di 'code smells'. Punteggio più alto con meno segnalazioni."""
+        """Esegue un'analisi per rilevare 'code smells'. Punteggio più alto con meno segnalazioni.
+        
+        Utilizza una combinazione di strumenti: flake8, pycodestyle, pytest e radon se disponibili.
+        """
         try:
+            # Assicurati di avere una copia locale del repo
             effective_path = self.local_repo_path if self.local_repo_path else path
-            process = subprocess.run(["flake8", effective_path], capture_output=True, text=True)
-            # Eventuali errori interni a flake8
-            if process.returncode > 1:
-                return 0.0
-            lines = [l for l in process.stdout.splitlines() if l.strip()]
-            smells = len(lines)
-            # Più segnalazioni -> punteggio più basso
-            return max(0.0, 10.0 - (smells / 10.0))
-        except FileNotFoundError:
-            print("Flake8 non trovato. Assicurati che sia installato.")
-        except Exception:
+            
+            # Prepara per score aggregato
+            smell_score = 0.0
+            tools_used = 0
+            
+            # 1. Flake8 per errori di formattazione e bug potenziali
+            try:
+                process = subprocess.run(["flake8", "--select=E,F", effective_path], 
+                                        capture_output=True, text=True, timeout=30)
+                if process.returncode <= 1:  # 0=success, 1=violations found
+                    lines = [l for l in process.stdout.splitlines() if l.strip()]
+                    smells = len(lines)
+                    # Più segnalazioni -> punteggio più basso
+                    flake8_smell_score = max(0.0, 10.0 - (smells / 15.0))
+                    smell_score += flake8_smell_score
+                    tools_used += 1
+                    logger.debug(f"Flake8 smell analysis: {smells} issues found, score: {flake8_smell_score:.2f}/10")
+            except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+                logger.debug(f"Flake8 smell analysis skipped: {e}")
+                pass
+            
+            # 2. Radon per complessità ciclomatica
+            try:
+                process = subprocess.run(["radon", "cc", effective_path, "--min", "C"], 
+                                       capture_output=True, text=True, timeout=30)
+                output = process.stdout
+                # Conta il numero di funzioni con complessità elevata
+                complex_funcs = len([l for l in output.splitlines() if any(grade in l for grade in ["C:", "D:", "E:", "F:"])])
+                radon_smell_score = max(0.0, 10.0 - (complex_funcs / 5.0))
+                smell_score += radon_smell_score
+                tools_used += 1
+                logger.debug(f"Radon analysis: {complex_funcs} complex functions found, score: {radon_smell_score:.2f}/10")
+            except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+                logger.debug(f"Radon analysis skipped: {e}")
+                pass
+
+            # 3. Pycodestyle per errori di stile ulteriori
+            try:
+                process = subprocess.run(["pycodestyle", effective_path], 
+                                       capture_output=True, text=True, timeout=30)
+                lines = [l for l in process.stdout.splitlines() if l.strip()]
+                style_issues = len(lines)
+                pycodestyle_score = max(0.0, 10.0 - (style_issues / 20.0))
+                smell_score += pycodestyle_score
+                tools_used += 1
+                logger.debug(f"Pycodestyle analysis: {style_issues} issues found, score: {pycodestyle_score:.2f}/10")
+            except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+                logger.debug(f"Pycodestyle analysis skipped: {e}")
+                pass
+            
+            # 4. Verifica presenza di code smell comunemente riconoscibili nei file
+            try:
+                custom_smells = 0
+                py_files = []
+                if self.local_repo_path:
+                    for root, _, files in os.walk(effective_path):
+                        for f in files:
+                            if f.endswith('.py'):
+                                py_path = os.path.join(root, f)
+                                try:
+                                    with open(py_path, 'r', encoding='utf-8') as pyfile:
+                                        content = pyfile.read()
+                                        # Cerca pattern problematici
+                                        smells_patterns = [
+                                            r"except\s*:",  # Bare except
+                                            r"except\s+Exception:",  # Too broad exception handling
+                                            r"\bprint\s*\(",  # print() calls in production code
+                                            r"#\s*TODO",  # TODO comments
+                                            r"\bglobal\s+",  # global statements
+                                            r"exec\s*\(",  # exec calls
+                                            r"eval\s*\(",  # eval calls
+                                            r"if\s+__name__\s*==\s*['\"]__main__['\"]\s*:\s*$"  # missing main block content
+                                        ]
+                                        for pattern in smells_patterns:
+                                            custom_smells += len(re.findall(pattern, content))
+                                except Exception:
+                                    pass  # Skip problematic files
+                                    
+                    custom_smell_score = max(0.0, 10.0 - (custom_smells / 10.0))
+                    smell_score += custom_smell_score
+                    tools_used += 1
+                    logger.debug(f"Custom smell analysis: {custom_smells} issues found, score: {custom_smell_score:.2f}/10")
+            except Exception as e:
+                logger.debug(f"Custom smell analysis error: {e}")
+                pass
+                                
+            # Calcola il punteggio medio se almeno uno strumento è stato usato
+            if tools_used > 0:
+                return smell_score / tools_used
+            else:
+                logger.warning("No code smell analysis tools available.")
+                return 5.0  # Valore neutro se nessuno strumento è disponibile
+                
+        except Exception as e:
+            logger.error(f"Code smell analysis error: {e}", exc_info=True)
             return 0.0
 
     def _check_comment_coverage(self, path: str = ".") -> float:
@@ -292,21 +466,49 @@ class RepoAnalyzer:
         return self._cache["pr_data"]
 
     def _fetch_tags_data(self):
-        """Ottiene la frequenza approssimativa tra i tag (in giorni), se presenti."""
+        """Ottiene la frequenza media tra i tag (in giorni), gestendo tag non cronologici.
+        
+        Returns:
+            La media dei giorni tra i tag consecutivi, o 0 se non ci sono abbastanza tag
+        """
         if "tags_data" in self._cache:
             return self._cache["tags_data"]
-        tags = list(self.repo.get_tags())
-        if len(tags) < 2:
+        
+        try:
+            tags = list(self.repo.get_tags())
+            
+            if len(tags) < 2:
+                self._cache["tags_data"] = 0.0
+                return 0.0
+            
+            # Estrai le date dai tag e ordinale cronologicamente
+            tag_dates = []
+            for tag in tags:
+                try:
+                    tag_date = tag.commit.commit.author.date
+                    tag_dates.append((tag.name, tag_date))
+                except Exception as e:
+                    logger.warning(f"Impossibile ottenere la data per il tag {tag.name}: {e}")
+                    continue
+            
+            # Ordina le date cronologicamente (dalla più vecchia alla più recente)
+            tag_dates.sort(key=lambda x: x[1])
+            
+            # Calcola le differenze di giorni tra tag consecutivi
+            date_diffs = []
+            for i in range(len(tag_dates) - 1):
+                date_diff = abs((tag_dates[i+1][1] - tag_dates[i][1]).days)
+                date_diffs.append(date_diff)
+            
+            # Calcola la media
+            avg_days = sum(date_diffs) / len(date_diffs) if date_diffs else 0.0
+            self._cache["tags_data"] = avg_days
+            return avg_days
+            
+        except Exception as e:
+            logger.error(f"Errore durante il recupero dei dati dei tag: {e}", exc_info=True)
             self._cache["tags_data"] = 0.0
             return 0.0
-        date_diffs = []
-        for i in range(len(tags) - 1):
-            t1 = tags[i].commit.commit.author.date
-            t2 = tags[i+1].commit.commit.author.date
-            date_diffs.append(abs((t2 - t1).days))
-        avg_days = sum(date_diffs)/len(date_diffs) if date_diffs else 0.0
-        self._cache["tags_data"] = avg_days
-        return avg_days
 
     def _fetch_popolarita_data(self):
         """Ottiene dati relativi a stelle, fork, watchers, contributori e dipendenti."""
@@ -388,44 +590,257 @@ class RepoAnalyzer:
         return data
 
     def _fetch_community_data(self):
+        """Ottiene dati relativi alla community e alle collaborazioni nel repository.
+        
+        Returns:
+            Un dizionario contenente informazioni sulla community del repository
+        """
         if "community_data" in self._cache:
+            logger.debug("Returning cached community data")
             return self._cache["community_data"]
+            
         data = {
             "discussions_enabled": False,
             "templates_enabled": False,
-            "tono_costruttivita": 5,  # Placeholder
+            "tono_costruttivita": 5,  # Default value
             "label_usage": False
         }
+        
         try:
             # Verifica se Discussions è abilitato
-            # Nota: Alcune versioni di PyGithub potrebbero non supportare `has_discussions`
-            # Qui assumiamo bozza, come fallback: controlliamo se esiste almeno una Discussion
-            discussions = self.repo.get_discussions()
-            if discussions.totalCount > 0:
-                data["discussions_enabled"] = True
-        except:
-            pass
+            try:
+                data["discussions_enabled"] = getattr(self.repo, "has_discussions", False)
+            except Exception as e:
+                logger.warning(f"Errore nella verifica delle discussioni: {e}")
+                # Mantiene il valore predefinito False
+            
+            # Controllo più accurato per i template di issue e PR
+            try:
+                templates_found = False
+                
+                # Lista di percorsi da controllare per i template
+                template_paths = [
+                    # Root directory templates
+                    "ISSUE_TEMPLATE.md", "issue_template.md", 
+                    "PULL_REQUEST_TEMPLATE.md", "pull_request_template.md",
+                    
+                    # .github directory templates
+                    ".github/ISSUE_TEMPLATE.md", ".github/issue_template.md",
+                    ".github/PULL_REQUEST_TEMPLATE.md", ".github/pull_request_template.md",
+                    
+                    # Template directories
+                    ".github/ISSUE_TEMPLATE", ".github/issue_template",
+                    ".github/PULL_REQUEST_TEMPLATE", ".github/pull_request_template"
+                ]
+                
+                # Controlla i file nella root
+                root_contents = self._get_cached_data(
+                    "root_contents", 
+                    lambda: list(self.repo.get_contents(""))
+                )
+                
+                if root_contents:
+                    root_paths = [item.path.lower() for item in root_contents]
+                    if any(path.lower() in root_paths for path in ["ISSUE_TEMPLATE.md", "issue_template.md", "PULL_REQUEST_TEMPLATE.md", "pull_request_template.md"]):
+                        templates_found = True
+                
+                # Se non trovati nella root, controlla nella directory .github
+                if not templates_found:
+                    github_dir_exists = any(item.path == ".github" and item.type == "dir" for item in root_contents)
+                    
+                    if github_dir_exists:
+                        try:
+                            github_contents = self._get_cached_data(
+                                "github_dir_contents",
+                                lambda: list(self.repo.get_contents(".github"))
+                            )
+                            
+                            github_paths = [item.path.lower() for item in github_contents]
+                            
+                            # Controlla file di template diretti
+                            if any(path.lower().endswith(("issue_template.md", "pull_request_template.md")) for path in github_paths):
+                                templates_found = True
+                                
+                            # Controlla directory di template
+                            if not templates_found:
+                                template_dirs = [".github/ISSUE_TEMPLATE", ".github/issue_template", 
+                                                ".github/PULL_REQUEST_TEMPLATE", ".github/pull_request_template"]
+                                
+                                for template_dir in template_dirs:
+                                    try:
+                                        template_contents = self.repo.get_contents(template_dir)
+                                        if template_contents:
+                                            templates_found = True
+                                            break
+                                    except Exception:
+                                        continue
+                        except Exception as e:
+                            logger.warning(f"Errore nel controllo dei template in .github: {e}")
+                
+                data["templates_enabled"] = templates_found
+            except Exception as e:
+                logger.warning(f"Errore nel controllo dei template: {e}")
+                # Mantiene il valore predefinito False
+            
+            # Analisi del tono costruttivo nelle issues e PR
+            try:
+                tone_score = 0
+                tone_samples = 0
+                
+                # Analizza il tono nelle issue recenti
+                try:
+                    issues = self._get_cached_data(
+                        "recent_issues", 
+                        lambda: list(self.repo.get_issues(state='all')[:5])
+                    )
+                    
+                    for issue in issues:
+                        # Controlla costruttività dal titolo (euristiche semplici)
+                        title = issue.title.lower()
+                        body = issue.body.lower() if issue.body else ""
+                        
+                        # Parole positive e costruttive
+                        positive_words = [
+                            # English
+                            "thanks", "please", "suggestion", "help", "appreciate", "improve", 
+                            "enhancement", "feature", "good", "great", "excellent", "awesome",
+                            "wonderful", "brilliant", "helpful", "valuable", "useful", "nice", 
+                            "kudos", "support", "clear", "solved", "fix", "fixed", "resolved",
+                            "solution", "progress", "improvement", "enhanced", 
+                            # Italian
+                            "grazie", "per favore", "miglioramento", "ottimo", "buono", "eccellente",
+                            "fantastico", "meraviglioso", "utile", "aiuto", "chiaro", "supporto",
+                            "risolto", "soluzione", "risolvere", "sistemato", "suggerimento",
+                            "prego", "ben fatto", "complimenti", "apprezzato"
+                        ]
+                        # Parole negative o non costruttive
+                        negative_words = [
+                            # English
+                            "broken", "terrible", "awful", "hate", "stupid", "useless", "worst",
+                            "ridiculous", "wtf", "crap", "bad", "horrible", "sucks", "suck",
+                            "garbage", "trash", "junk", "poor", "disappointing", "waste", 
+                            "rubbish", "nonsense", "lousy", "pathetic", "dumb", "mess",
+                            # Italian
+                            "rotto", "terribile", "odio", "inutile", "stupido", "pessimo",
+                            "ridicolo", "spazzatura", "orribile", "schifoso", "deludente",
+                            "assurdo", "insensato", "disastro", "pessimo", "scadente", "brutto",
+                            "fastidioso", "inadeguato", "fallimentare", "scarso"
+                        ]
+                        
+                        # Analisi semplice
+                        pos_count = sum(1 for word in positive_words if word in title or word in body)
+                        neg_count = sum(1 for word in negative_words if word in title or word in body)
+                        
+                        # Punteggio: maggiore è positivo, meno è negativo
+                        sample_score = 5 + min(pos_count, 5) - min(neg_count, 5)
+                        sample_score = max(0, min(10, sample_score))  # Limita tra 0 e 10
+                        
+                        tone_score += sample_score
+                        tone_samples += 1
+                        
+                        # Controlla anche alcuni commenti
+                        try:
+                            comments = self._get_cached_data(
+                                f"issue_{issue.number}_comments",
+                                lambda: list(issue.get_comments())
+                            )
+                            
+                            # Verifica se ci sono commenti prima di analizzarli
+                            if comments and len(comments) > 0:
+                                # Analizza fino a 3 commenti
+                                for comment in comments[:3]:
+                                    comment_text = comment.body.lower() if comment.body else ""
+                                    pos_count = sum(1 for word in positive_words if word in comment_text)
+                                    neg_count = sum(1 for word in negative_words if word in comment_text)
+                                    
+                                    sample_score = 5 + min(pos_count, 5) - min(neg_count, 5)
+                                    sample_score = max(0, min(10, sample_score))
+                                    
+                                    tone_score += sample_score
+                                    tone_samples += 1
+                        except Exception as e:
+                            logger.warning(f"Errore nell'analisi dei commenti dell'issue {issue.number}: {e}")
+                except Exception as e:
+                    logger.warning(f"Errore nell'analisi delle issues: {e}")
+                
+                # Analizza il tono nelle PR recenti
+                try:
+                    pull_requests = self._get_cached_data(
+                        "recent_prs",
+                        lambda: list(self.repo.get_pulls(state='all')[:5])
+                    )
+                    
+                    for pr in pull_requests:
+                        # Analisi simile alle issue
+                        title = pr.title.lower()
+                        body = pr.body.lower() if pr.body else ""
+                        
+                        positive_words = ["fix", "improve", "update", "enhance", "optimize", "thanks", "please", 
+                                         "feature", "support", "refactor", "clean", "sistemato", "migliorato"]
+                        negative_words = ["hack", "workaround", "terrible", "awful", "hate", "wtf", "crap", 
+                                         "broken", "stupid", "rotto", "odio"]
+                        
+                        pos_count = sum(1 for word in positive_words if word in title or word in body)
+                        neg_count = sum(1 for word in negative_words if word in title or word in body)
+                        
+                        sample_score = 5 + min(pos_count, 5) - min(neg_count, 5)
+                        sample_score = max(0, min(10, sample_score))
+                        
+                        tone_score += sample_score
+                        tone_samples += 1
+                        
+                        # Controlla anche i commenti della PR
+                        try:
+                            review_comments = self._get_cached_data(
+                                f"pr_{pr.number}_comments",
+                                lambda: list(pr.get_review_comments())
+                            )
+                            
+                            # Verifica se ci sono commenti di revisione prima di analizzarli
+                            if review_comments and len(review_comments) > 0:
+                                # Analizza fino a 3 commenti
+                                for comment in review_comments[:3]:
+                                    comment_text = comment.body.lower() if comment.body else ""
+                                    pos_count = sum(1 for word in positive_words if word in comment_text)
+                                    neg_count = sum(1 for word in negative_words if word in comment_text)
+                                    
+                                    sample_score = 5 + min(pos_count, 5) - min(neg_count, 5)
+                                    sample_score = max(0, min(10, sample_score))
+                                    
+                                    tone_score += sample_score
+                                    tone_samples += 1
+                        except Exception as e:
+                            logger.warning(f"Errore nell'analisi dei commenti della PR {pr.number}: {e}")
+                except Exception as e:
+                    logger.warning(f"Errore nell'analisi delle PR: {e}")
+                
+                # Calcola il punteggio medio del tono
+                if tone_samples > 0:
+                    data["tono_costruttivita"] = round(tone_score / tone_samples, 1)
+                else:
+                    data["tono_costruttivita"] = 5  # Default neutro se non ci sono campioni
+            except Exception as e:
+                logger.error(f"Errore nell'analisi del tono: {e}", exc_info=True)
+                data["tono_costruttivita"] = 5
+                
+            # Controlla se ci sono label usati nelle issue
+            try:
+                issues = self._get_cached_data(
+                    "sample_issues_for_labels",
+                    lambda: list(self.repo.get_issues(state="all")[:10])
+                )
+                
+                for issue in issues:
+                    if issue.labels:
+                        data["label_usage"] = True
+                        break
+            except Exception as e:
+                logger.warning(f"Errore nel controllo dell'uso dei label: {e}")
 
-        try:
-            # Controllo file in .github/ISSUE_TEMPLATE e PULL_REQUEST_TEMPLATE
-            contents = self.repo.get_contents(".github")
-            template_files = [c.name.lower() for c in contents]
-            if any("template" in fn for fn in template_files):
-                data["templates_enabled"] = True
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"Errore generale nel recupero dei dati della community: {e}", exc_info=True)
 
-        try:
-            # Controlla se c'è almeno un label usato in qualche issue
-            issues = self.repo.get_issues(state="all")
-            for issue in issues:
-                if issue.labels:
-                    data["label_usage"] = True
-                    break
-        except:
-            pass
-
-        # "tono_costruttivita" rimane un placeholder
+        # Salva nella cache
         self._cache["community_data"] = data
         return data
 
@@ -549,6 +964,7 @@ class RepoAnalyzer:
         except (TypeError, ValueError):
             return 0.0
 
+    @timeout_handler
     def _analyze_parameter(self, categoria: str, nome_param: str, info_param: Dict) -> Tuple[Any, float, bool]:
         """Analizza un singolo parametro del repository e genera suggerimenti.
 
@@ -574,20 +990,6 @@ class RepoAnalyzer:
             self.results["suggerimenti"][categoria] = []
             
         try:
-            # Utilizziamo un approccio più compatibile per il timeout
-            import signal
-            import platform
-            
-            # Imposta un timeout solo su sistemi che supportano SIGALRM (non Windows)
-            timeout_enabled = platform.system() != "Windows"
-            if timeout_enabled:
-                def timeout_handler(signum, frame):
-                    raise TimeoutError(f"L'analisi del parametro {nome_param} ha impiegato troppo tempo")
-                
-                # Imposta un timeout di 30 secondi per l'analisi di ogni parametro
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(30)
-                
             # Popolarità & Impatto
             if categoria == "popolarita_impatto":
                 pop_data = self._fetch_popolarita_data()
@@ -647,37 +1049,66 @@ class RepoAnalyzer:
             elif categoria == "attivita_manutenzione":
                 if nome_param == "release_tag_frequenza":
                     try:
+                        # Prima verifica le release ufficiali
                         releases = self._get_cached_data(
                             "releases",
                             lambda: list(self.repo.get_releases()[:MAX_ITEMS_PER_REQUEST])
                         )
+                        # Poi cerca i tag
+                        tags_data = self._fetch_tags_data()
+                        
+                        # Determina quale metrica usare
                         if releases:
                             now = datetime.datetime.now(datetime.timezone.utc)
                             year_ago = now - datetime.timedelta(days=365)
-                            recent_releases = [r for r in releases if r.created_at > year_ago]
-                            valore = len(recent_releases)
-                            punteggio = self._normalize_score(valore, 0, 12, 0, 10)  # Idealmente una release al mese
                             
-                            if valore == 0:
+                            # Ensure that all datetimes have timezone information
+                            recent_releases = []
+                            for r in releases:
+                                if r.created_at:
+                                    # Add timezone info if missing
+                                    if not r.created_at.tzinfo:
+                                        release_date = r.created_at.replace(tzinfo=datetime.timezone.utc)
+                                    else:
+                                        release_date = r.created_at
+                                        
+                                    if release_date > year_ago:
+                                        recent_releases.append(r)
+                            
+                            release_count = len(recent_releases)
+                            valore = f"{release_count} release negli ultimi 12 mesi"
+                            punteggio = self._normalize_score(release_count, 0, 12, 0, 10)  # Idealmente una release al mese
+                            
+                            if release_count == 0:
                                 self.results["suggerimenti"].setdefault(categoria, []).append(
                                     "Non ci sono release negli ultimi 12 mesi. Considera di creare release regolari"
                                 )
-                            elif valore < 4:
+                            elif release_count < 4:
                                 self.results["suggerimenti"].setdefault(categoria, []).append(
                                     "Aumenta la frequenza delle release per fornire aggiornamenti più regolari"
                                 )
+                        elif tags_data > 0:
+                            # Usa informazioni dai tag se non ci sono release
+                            valore = f"Media giorni tra tag: {round(tags_data, 1)}"
+                            # Meno giorni tra i tag => punteggio più alto (max 10 points per aggiornamenti mensili o più frequenti)
+                            punteggio = max(0.0, 10.0 - (tags_data / 30.0))
+                            
+                            if tags_data > 90:  # Più di 3 mesi tra i tag in media
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "La frequenza di tagging è bassa. Considera di taggare versioni più regolarmente"
+                                )
                         else:
-                            valore = 0
+                            valore = "Nessuna release o tag trovato"
                             punteggio = 0
                             self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Non sono state trovate release. Considera di utilizzare il sistema di release di GitHub"
+                                "Non sono state trovate release o tag. Considera di utilizzare il sistema di release di GitHub"
                             )
                     except Exception as e:
-                        print(f"Errore nell'analisi delle release: {e}")
+                        logger.error(f"Errore nell'analisi delle release e tag: {e}", exc_info=True)
                         valore = "Errore analisi"
                         punteggio = 0
                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Si è verificato un errore nell'analisi delle release"
+                            "Si è verificato un errore nell'analisi delle release e tag"
                         )
                 elif nome_param == "attivita_issues_ratio":
                     try:
@@ -832,15 +1263,6 @@ class RepoAnalyzer:
                     else:
                         valore = "Nessuna PR chiusa/mergiata"
                         punteggio = 0
-                elif nome_param == "release_tag_frequenza":
-                    avg_days = self._fetch_tags_data()
-                    if avg_days > 0:
-                        valore = f"Media giorni tra tag: {round(avg_days, 1)}"
-                        # Meno giorni tra i tag => punteggio più alto
-                        punteggio = max(0.0, 10.0 - (avg_days / 30.0))
-                    else:
-                        valore = "Nessun tag/release trovata"
-                        punteggio = 0
                 else:
                     valore = "Non analizzato"
                     punteggio = 0
@@ -897,15 +1319,35 @@ class RepoAnalyzer:
                 if nome_param == "github_discussions":
                     valore = "Abilitato" if com_data["discussions_enabled"] else "Non disponibile"
                     punteggio = 10 if com_data["discussions_enabled"] else 5
+                    
+                    if not com_data["discussions_enabled"]:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Abilita GitHub Discussions per facilitare conversazioni più ampie sulla community e sul progetto"
+                        )
                 elif nome_param == "issue_pr_templates":
                     valore = "Presenti" if com_data["templates_enabled"] else "Non disponibili"
                     punteggio = 10 if com_data["templates_enabled"] else 5
+                    
+                    if not com_data["templates_enabled"]:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Crea template per issue e PR per standardizzare le richieste e facilitare i contributi"
+                        )
                 elif nome_param == "tono_costruttivita":
-                    valore = "Analisi placeholder"
-                    punteggio = com_data["tono_costruttivita"]  # Esempio: 5
+                    valore = f"Indice di costruttività: {com_data['tono_costruttivita']}/10"
+                    punteggio = com_data["tono_costruttivita"]
+                    
+                    if com_data["tono_costruttivita"] < 5:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Migliora il tono delle comunicazioni nelle issue e PR. Più cortesia e chiarezza favoriscono una community più sana"
+                        )
                 elif nome_param == "uso_label_issues":
                     valore = "Labels in uso" if com_data["label_usage"] else "Nessun label rilevato"
                     punteggio = 10 if com_data["label_usage"] else 5
+                    
+                    if not com_data["label_usage"]:
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "Utilizza i label nelle issue per organizzare meglio le richieste e facilitarne la gestione"
+                        )
 
                 return valore, round(punteggio, 2), conta_punteggio
 
@@ -1026,16 +1468,12 @@ class RepoAnalyzer:
             # Se arriviamo qui, non è stata trovata una corrispondenza
             return "Non analizzato", 0, False
             
-        except TimeoutError:
-            print(f"Timeout durante l'analisi del parametro {nome_param}")
+        except TimeoutError as e:
+            logger.warning(f"Timeout durante l'analisi del parametro {nome_param}: {e}")
             return "Timeout", 0, False
         except Exception as e:
-            print(f"Errore nell'analisi del parametro {nome_param}: {e}")
+            logger.error(f"Errore nell'analisi del parametro {nome_param}: {e}", exc_info=True)
             return "Errore", 0, False
-        finally:
-            # Disattiva il timeout se abilitato
-            if timeout_enabled:
-                signal.alarm(0)
 
     def _calculate_scores(self) -> None:
         """Calcola i punteggi per ogni categoria basandosi sui parametri analizzati."""
