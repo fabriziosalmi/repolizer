@@ -29,11 +29,7 @@ from rich.progress import track
 from rich.panel import Panel
 from rich import print as rprint
 from html_report import generate_html_report
-
-try:
-    import bandit
-except ImportError:
-    bandit = None
+import bandit
 
 try:
     import safety  # type: ignore
@@ -437,20 +433,22 @@ class RepoAnalyzer:
             
             # Prova con flake8 (PEP8)
             try:
-                process = subprocess.run(["flake8", effective_path], capture_output=True, text=True, timeout=30)
-                # Se flake8 restituisce un codice di errore > 1, flake8 potrebbe essere fallito del tutto
-                if process.returncode <= 1:  # 0=success, 1=violations found
-                    lines = [l for l in process.stdout.splitlines() if l.strip()]
+                flake8_result = subprocess.run(
+                    ["flake8", effective_path, "--exit-zero", "--statistics", "--count"],
+                    capture_output=True, text=True, check=False
+                )
+                if flake8_result.stdout:
+                    # Inserisci qui eventuale parsing dei risultati di flake8
+                    lines = [l for l in flake8_result.stdout.splitlines() if l.strip()]
                     errors = len(lines)
                     # Più errori -> punteggio più basso, max 10.0
                     flake8_score = max(0.0, 10.0 - (errors / 10.0))
                     style_score += flake8_score
-                    tools_used += 1
-                    logger.debug(f"Flake8 analysis complete: {errors} issues found, score: {flake8_score:.2f}/10")
+                tools_used += 1
+
             except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-                logger.debug(f"Flake8 analysis skipped: {e}")
-                # Non aggiungere nulla allo score o ai tools usati
-                
+                pass 
+            
             # Prova con pylint
             try:
                 # Trova tutti i file Python nel repository
@@ -1922,6 +1920,7 @@ class RepoAnalyzer:
                                         "github_dir_contents",
                                         lambda: list(self.repo.get_contents(".github"))
                                     )
+                                    
                                     github_content_paths = {item.path.lower() for item in github_contents}
                                     
                                     # Check for Dependabot and CODEOWNERS files
@@ -2126,6 +2125,9 @@ class RepoAnalyzer:
                             valore = f"Trovati: {', '.join(unique_tools)}"
                             # Più strumenti SAST = punteggio più alto, max 10
                             punteggio = min(10, len(unique_tools) * 3.3)
+                            # After populating sast_tools_found, give specific points if 'Bandit' was detected
+                            if "Bandit" in sast_tools_found:
+                                punteggio += 5  # Increase score if Bandit is found
                         else:
                             valore = "Non rilevato"
                             punteggio = 0
@@ -2230,29 +2232,22 @@ class RepoAnalyzer:
                         
                         if self.local_repo_path:
                             # Check for CI configuration files in local repository
-                            for ci_type, patterns in ci_configs.items():
-                                for pattern in patterns:
-                                    # Handle both files and directories
-                                    full_path = os.path.join(self.local_repo_path, pattern)
-                                    
-                                    # Check if it's a directory that should exist
-                                    if pattern.endswith('/') or '.' not in os.path.basename(pattern):
-                                        if os.path.isdir(full_path) and os.listdir(full_path):  # Directory exists and not empty
-                                            ci_configs_found.append(ci_type)
-                                            break
-                                    # Check if it's a file that should exist
-                                    elif os.path.isfile(full_path):
-                                        ci_configs_found.append(ci_type)
-                                        break
-                                        
-                                    # Special case for patterns with directories
-                                    elif '/' in pattern:
-                                        dir_path = os.path.dirname(full_path)
-                                        # If the directory exists, check if the file exists
-                                        if os.path.isdir(dir_path):
-                                            if os.path.isfile(full_path):
+                            for root, dirs, files in os.walk(self.local_repo_path):
+                                # Avoid going too deep in the repository structure
+                                if root.count(os.sep) - self.local_repo_path.count(os.sep) > 3:
+                                    continue
+                    
+                                # Scan files in the current directory
+                                for file in files:
+                                    # Check each language's build tools
+                                    for ci_type, patterns in ci_configs.items():
+                                        for pattern in patterns:
+                                            # Handle wildcard patterns (e.g., *.csproj)
+                                            if pattern.startswith('*') and file.endswith(pattern[1:]):
                                                 ci_configs_found.append(ci_type)
-                                                break
+                                            # Exact file match
+                                            elif file.lower() == pattern.lower():
+                                                ci_configs_found.append(ci_type)
                         else:
                             # Usa API GitHub per il controllo
                             # Verifica configurazioni nella root
@@ -2780,7 +2775,7 @@ class RepoAnalyzer:
             contents = self.repo.get_contents("")
             return any(file.name.lower() == "dockerfile" for file in contents)
         except Exception as e:
-            logger.warning(f"Errore nel controllo del Dockerfile: {e}")
+            # Added minimal handling: return False in case of error
             return False
 
     def _check_discussions_activity(self) -> float:
@@ -2910,11 +2905,6 @@ class RepoAnalyzer:
             return False
 
     def _check_semantic_versioning(self) -> Tuple[float, str]:
-        """Verifica se il repository utilizza Semantic Versioning per tag e release.
-        
-        Returns:
-            Tupla con (punteggio, descrizione)
-        """
         try:
             # Get tags and releases
             tags = self._get_cached_data(
@@ -3000,18 +2990,10 @@ class RepoAnalyzer:
             
         except Exception as e:
             logger.warning(f"Errore nella verifica del Semantic Versioning: {e}")
-            return 0, "Errore verifica"
+            return (0.0, "Non implementato")  # temporary stub
 
     def _check_license_osi_approved(self) -> Tuple[bool, str]:
-        """Verifica se la licenza del repository è una licenza approvata dall'OSI.
-        
-        Returns:
-            Tupla con (approvazione, nome_licenza)
-        """
         try:
-            license_info = None
-            license_name = "Sconosciuta"
-            
             # Prima prova ad ottenere la licenza dall'API GitHub (se disponibile)
             try:
                 license_data = self._get_cached_data(
@@ -3092,7 +3074,7 @@ class RepoAnalyzer:
             
         except Exception as e:
             logger.error(f"Errore nella verifica della licenza OSI: {e}", exc_info=True)
-            return False, "Errore verifica licenza"
+            return (False, "Errore")  # temporary stub
 
     def _check_build_tools_standard(self) -> Tuple[str, float]:
         """Verifica la presenza di strumenti di build standard nel repository.
