@@ -51,8 +51,9 @@
             </div>
         </header>
 
-        <!-- Punteggio Totale -->
-        <div class="mb-16 fade-in">
+        <!-- Combined Score and Category Chart Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 fade-in">
+            <!-- Punteggio Totale -->
             <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
                 <h3 class="text-2xl font-semibold mb-6">Punteggio Totale</h3>
                 <div class="text-6xl font-bold {% if punteggio_totale >= 7 %}text-green-600{% elif punteggio_totale >= 4 %}text-yellow-500{% else %}text-red-600{% endif %} mb-6">
@@ -64,20 +65,12 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Grafici Principali -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-            <div class="bg-white rounded-2xl shadow-lg p-6 fade-in">
+            
+            <!-- Category Chart -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
                 <h4 class="text-xl font-semibold mb-6">Punteggi per Categoria</h4>
                 <div class="chart-container">
                     <canvas id="categoryChart"></canvas>
-                </div>
-            </div>
-            <div class="bg-white rounded-2xl shadow-lg p-6 fade-in">
-                <h4 class="text-xl font-semibold mb-6">Andamento Storico</h4>
-                <div class="chart-container">
-                    <canvas id="historyChart"></canvas>
                 </div>
             </div>
         </div>
@@ -148,96 +141,83 @@
             const scores = Object.values(reportData.punteggi);
             const barColors = scores.map(getBarColor);
             
-            // Create vertical bar chart
-            new Chart(ctxCategory, {
-                type: 'bar',
-                data: {
-                    labels: categoryLabels,
-                    datasets: [{
-                        label: 'Punteggio',
-                        data: scores,
-                        backgroundColor: barColors,
-                        borderColor: barColors.map(color => color.replace('0.8', '1')),
-                        borderWidth: 1,
-                        borderRadius: 6,
-                        maxBarThickness: 60
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',  // Makes bars horizontal
-                    scales: { 
-                        x: { 
-                            beginAtZero: true, 
-                            max: 10,
-                            grid: {
-                                display: true,
-                                drawBorder: false,
-                                color: 'rgba(226, 232, 240, 0.7)'
-                            },
-                            ticks: {
-                                stepSize: 2
-                            }
-                        },
-                        y: {
-                            grid: {
-                                display: false,
-                                drawBorder: false
-                            }
-                        }
-                    },
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            titleColor: '#1F2937',
-                            bodyColor: '#1F2937',
-                            borderColor: '#E5E7EB',
-                            borderWidth: 1,
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return `Punteggio: ${context.raw.toFixed(2)}/10`;
-                                }
-                            }
-                        }
-                    },
-                    layout: {
-                        padding: {
-                            left: 10,
-                            right: 20,
-                            top: 0,
-                            bottom: 0
-                        }
-                    },
-                    animation: {
-                        duration: 2000,
-                        easing: 'easeOutQuart'
-                    }
-                }
-            });
-
-            if (reportData.storico?.length > 0) {
-                const ctxHistory = document.getElementById('historyChart').getContext('2d');
-                new Chart(ctxHistory, {
-                    type: 'line',
+            // Check if we have data to display
+            if (categoryLabels.length > 0) {
+                // Create vertical bar chart
+                new Chart(ctxCategory, {
+                    type: 'bar',
                     data: {
-                        labels: reportData.storico.map(entry => entry.data),
+                        labels: categoryLabels,
                         datasets: [{
-                            label: 'Punteggio Totale',
-                            data: reportData.storico.map(entry => entry.punteggio_totale),
-                            borderColor: 'rgba(79, 70, 229, 1)',
-                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                            tension: 0.4,
-                            fill: true
+                            label: 'Punteggio',
+                            data: scores,
+                            backgroundColor: barColors,
+                            borderColor: barColors.map(color => color.replace('0.8', '1')),
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            maxBarThickness: 60
                         }]
                     },
                     options: {
-                        scales: { y: { beginAtZero: true, max: 10 } },
-                        plugins: { legend: { display: false } }
+                        indexAxis: 'y',  // Makes bars horizontal
+                        scales: { 
+                            x: { 
+                                beginAtZero: true, 
+                                max: 10,
+                                grid: {
+                                    display: true,
+                                    drawBorder: false,
+                                    color: 'rgba(226, 232, 240, 0.7)'
+                                },
+                                ticks: {
+                                    stepSize: 2
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    display: false,
+                                    drawBorder: false
+                                }
+                            }
+                        },
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                titleColor: '#1F2937',
+                                bodyColor: '#1F2937',
+                                borderColor: '#E5E7EB',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Punteggio: ${context.raw.toFixed(2)}/10`;
+                                    }
+                                }
+                            }
+                        },
+                        layout: {
+                            padding: {
+                                left: 10,
+                                right: 20,
+                                top: 0,
+                                bottom: 0
+                            }
+                        },
+                        animation: {
+                            duration: 2000,
+                            easing: 'easeOutQuart'
+                        }
                     }
                 });
+            } else {
+                console.warn('No category data available for chart');
+                document.getElementById('categoryChart').parentNode.innerHTML = 
+                    '<div class="text-center text-gray-500">Nessun dato disponibile per il grafico</div>';
             }
+
+            // Remove the history chart initialization code
         }
 
         function populateCategoryDetails() {

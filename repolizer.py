@@ -148,6 +148,120 @@ class RepoAnalyzer:
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(f"Errore nel caricamento del file di configurazione: {e}")
             return {"parametri": {}}
+            
+    def _save_report_json(self, report_data: Dict, report_dir: str = "reports") -> str:
+        """Salva il report JSON in un file con nome basato sul repository e data/ora.
+        
+        Args:
+            report_data: Dati del report da salvare
+            report_dir: Directory dove salvare i report (default: "reports")
+            
+        Returns:
+            Percorso del file JSON creato
+        """
+        try:
+            # Crea la directory se non esiste
+            os.makedirs(report_dir, exist_ok=True)
+            
+            # Genera nome file con nome repo e timestamp
+            repo_name = report_data.get("repo_name", "report").replace("/", "_")
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            json_file = os.path.join(report_dir, f"{repo_name}_{timestamp}.json")
+            
+            # Salva il report
+            with open(json_file, "w", encoding="utf-8") as f:
+                json.dump(report_data, f, indent=2)
+                
+            return json_file
+        except Exception as e:
+            logger.error(f"Errore nel salvataggio del report JSON: {e}")
+            return ""
+            
+    def _save_report_html(self, html_content: str, report_data: Dict, report_dir: str = "reports") -> str:
+        """Salva il report HTML in un file con nome basato sul repository e data/ora.
+        
+        Args:
+            html_content: Contenuto HTML del report
+            report_data: Dati del report per generare il nome
+            report_dir: Directory dove salvare i report (default: "reports")
+            
+        Returns:
+            Percorso del file HTML creato
+        """
+        try:
+            # Crea la directory se non esiste
+            os.makedirs(report_dir, exist_ok=True)
+            
+            # Genera nome file con nome repo e timestamp
+            repo_name = report_data.get("repo_name", "report").replace("/", "_")
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            html_file = os.path.join(report_dir, f"{repo_name}_{timestamp}.html")
+            
+            # Salva il report
+            with open(html_file, "w", encoding="utf-8") as f:
+                f.write(html_content)
+                
+            return html_file
+        except Exception as e:
+            logger.error(f"Errore nel salvataggio del report HTML: {e}")
+            return ""
+            
+    def _save_report_json(self, report_data: Dict, report_dir: str = "reports") -> str:
+        """Salva il report JSON in un file con nome basato sul repository e data/ora.
+        
+        Args:
+            report_data: Dati del report da salvare
+            report_dir: Directory dove salvare i report (default: "reports")
+            
+        Returns:
+            Percorso del file JSON creato
+        """
+        try:
+            # Crea la directory se non esiste
+            os.makedirs(report_dir, exist_ok=True)
+            
+            # Genera nome file con nome repo e timestamp
+            repo_name = report_data.get("repo_name", "report").replace("/", "_")
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            json_file = os.path.join(report_dir, f"{repo_name}_{timestamp}.json")
+            
+            # Salva il report
+            with open(json_file, "w", encoding="utf-8") as f:
+                json.dump(report_data, f, indent=2)
+                
+            return json_file
+        except Exception as e:
+            logger.error(f"Errore nel salvataggio del report JSON: {e}")
+            return ""
+            
+    def _save_report_html(self, html_content: str, report_data: Dict, report_dir: str = "reports") -> str:
+        """Salva il report HTML in un file con nome basato sul repository e data/ora.
+        
+        Args:
+            html_content: Contenuto HTML del report
+            report_data: Dati del report per generare il nome
+            report_dir: Directory dove salvare i report (default: "reports")
+            
+        Returns:
+            Percorso del file HTML creato
+        """
+        try:
+            # Crea la directory se non esiste
+            os.makedirs(report_dir, exist_ok=True)
+            
+            # Genera nome file con nome repo e timestamp
+            repo_name = report_data.get("repo_name", "report").replace("/", "_")
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            html_file = os.path.join(report_dir, f"{repo_name}_{timestamp}.html")
+            
+            # Salva il report
+            with open(html_file, "w", encoding="utf-8") as f:
+                f.write(html_content)
+                
+            return html_file
+        except Exception as e:
+            logger.error(f"Errore nel salvataggio del report HTML: {e}")
+            return ""
 
     def _check_api_limits(self) -> None:
         """Verifica i limiti delle API GitHub e mostra informazioni utili."""
@@ -1590,7 +1704,7 @@ class RepoAnalyzer:
                                     if os.path.exists(final_path) and os.path.isfile(final_path):
                                         security_features.append(os.path.basename(special_file))
                         else:
-                            # Cerca tramite API GitHub
+                            # Usa API GitHub per il controllo
                             # Controlla se esiste .github directory
                             contents = self._get_cached_data(
                                 "root_contents", 
@@ -1680,14 +1794,16 @@ class RepoAnalyzer:
                                 # Cerca directory di test
                                 for dir_name in dirs:
                                     if any(pattern in dir_name.lower() for pattern in test_dir_patterns):
-                                        test_files_found.append(os.path.join(os.path.relpath(root, self.local_repo_path), dir_name))
+                                        rel_path = os.path.relpath(os.path.join(root, dir_name), self.local_repo_path)
+                                        test_files_found.append(rel_path)
                                 
                                 # Cerca file di test
                                 for file_name in files:
                                     if (any(pattern in file_name.lower() for pattern in test_file_patterns) or 
                                         file_name.lower().startswith(("test", "spec"))):
                                         if file_name.endswith((".py", ".js", ".ts", ".java", ".cpp", ".c", ".go", ".rs", ".rb", ".php")):
-                                            test_files_found.append(os.path.join(os.path.relpath(root, self.local_repo_path), file_name))
+                                            rel_path = os.path.relpath(os.path.join(root, file_name), self.local_repo_path)
+                                            test_files_found.append(rel_path)
                         else:
                             # Ricerca attraverso API GitHub
                             # Prima controllo cartelle di test nella root
@@ -1748,43 +1864,31 @@ class RepoAnalyzer:
                             "teamcity": [".teamcity"]
                         }
                         
-                        # File YAML comuni che potrebbero contenere configurazioni CI/CD
-                        yaml_ci_keywords = [
-                            "ci:", "cd:", "pipeline:", "build:", "test:", "deploy:",
-                            "stages:", "jobs:", "matrix:", "runner", "workflow"
-                        ]
-                        
                         if self.local_repo_path:
-                            # Controlla ogni possibile configurazione CI
+                            # Check for CI configuration files in local repository
                             for ci_type, patterns in ci_configs.items():
                                 for pattern in patterns:
-                                    path_parts = pattern.split('/')
-                                    curr_path = self.local_repo_path
+                                    # Handle both files and directories
+                                    full_path = os.path.join(self.local_repo_path, pattern)
                                     
-                                    # Navigate through the directory structure
-                                    valid_path = True
-                                    # Bug fix: Correctly iterate through path parts without unpacking
-                                    for i in range(len(path_parts) - 1):
-                                        part = path_parts[i]
-                                        curr_path = os.path.join(curr_path, part)
-                                        if not os.path.exists(curr_path) or not os.path.isdir(curr_path):
-                                            valid_path = False
+                                    # Check if it's a directory that should exist
+                                    if pattern.endswith('/') or '.' not in os.path.basename(pattern):
+                                        if os.path.isdir(full_path) and os.listdir(full_path):  # Directory exists and not empty
+                                            ci_configs_found.append(ci_type)
                                             break
-                                    
-                                    # Check if it's a file or directory we're looking for
-                                    if valid_path:
-                                        if '.' in path_parts[-1]:  # Probably a file
-                                            final_path = os.path.join(curr_path, path_parts[-1])
-                                            if os.path.exists(final_path) and os.path.isfile(final_path):
+                                    # Check if it's a file that should exist
+                                    elif os.path.isfile(full_path):
+                                        ci_configs_found.append(ci_type)
+                                        break
+                                        
+                                    # Special case for patterns with directories
+                                    elif '/' in pattern:
+                                        dir_path = os.path.dirname(full_path)
+                                        # If the directory exists, check if the file exists
+                                        if os.path.isdir(dir_path):
+                                            if os.path.isfile(full_path):
                                                 ci_configs_found.append(ci_type)
                                                 break
-                                        else:  # Directory
-                                            final_path = os.path.join(curr_path, path_parts[-1])
-                                            if os.path.exists(final_path) and os.path.isdir(final_path):
-                                                # For directories like .github/workflows, check if they contain any files
-                                                if os.listdir(final_path):
-                                                    ci_configs_found.append(ci_type)
-                                                    break
                         else:
                             # Usa API GitHub per il controllo
                             # Verifica configurazioni nella root
@@ -1847,7 +1951,7 @@ class RepoAnalyzer:
                                 "Configura un sistema di CI/CD come GitHub Actions per automatizzare test e deployment"
                             )
                     except Exception as e:
-                        logger.warning(f"Errore nel controllo CI/CD: {e}")
+                        logger.warning(f"Errore nel controllo CI/CD: {e}", exc_info=True)
                         valore = "Errore verifica CI/CD"
                         punteggio = 0
                 
@@ -2107,11 +2211,34 @@ class RepoAnalyzer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analizzatore di repository GitHub")
-    parser.add_argument("repository", help="Nome del repository nel formato 'username/repository'")
+    repo_group = parser.add_mutually_exclusive_group(required=True)
+    repo_group.add_argument("repository", nargs="?", help="Nome del repository nel formato 'username/repository'")
+    repo_group.add_argument("-r", "--repo", dest="repository", help="Nome del repository nel formato 'username/repository'")
     parser.add_argument("--clone", action="store_true", help="Clona il repository localmente per analisi più approfondite")
     args = parser.parse_args()
 
-    with RepoAnalyzer(args.repository, clone_repo=args.clone) as analyzer:
-        results = analyzer.analyze()
-        print(json.dumps(results, indent=4, ensure_ascii=False))
-        generate_html_report(results)
+    # Validate repository name
+    if not args.repository:
+        print("Errore: È necessario specificare un repository nel formato 'username/repository'")
+        print("Esempio: python repolizer.py username/repository")
+        print("      o: python repolizer.py -r username/repository")
+        parser.print_help()
+        exit(1)
+
+    try:
+        with RepoAnalyzer(args.repository, clone_repo=args.clone) as analyzer:
+            results = analyzer.analyze()
+            json_file = analyzer._save_report_json(results)
+            if json_file:
+                print(f"Report JSON salvato in: {json_file}")
+                
+            # Generate the HTML report and save it
+            html_content = generate_html_report(results)
+            if html_content:
+                html_file = analyzer._save_report_html(html_content, results)
+                if html_file:
+                    print(f"Report HTML salvato in: {html_file}")
+    except Exception as e:
+        print(f"\nSi è verificato un errore durante l'analisi: {e}")
+        logger.error(f"Errore durante l'analisi: {e}", exc_info=True)
+        exit(1)
