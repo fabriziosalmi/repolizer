@@ -1352,24 +1352,169 @@ class RepoAnalyzer:
             # Sicurezza
             elif categoria == "sicurezza":
                 if nome_param == "file_security":
-                    # Verifichiamo la presenza di SECURITY.md
+                    # Miglioriamo la verifica della presenza di SECURITY.md e altri file di sicurezza
                     valore = False
                     punteggio = 0
+                    security_files_found = []
                     
                     try:
-                        contents = self.repo.get_contents("")
-                        files = [f.name.upper() for f in contents if f.type == "file"]
+                        # Lista di possibili file di sicurezza da cercare
+                        security_file_patterns = [
+                            "SECURITY.md", 
+                            "security.md", 
+                            "SECURITY.rst", 
+                            "SECURITY.txt",
+                            "security.txt",
+                            "SECURITY_POLICY.md",
+                            ".github/SECURITY.md"
+                        ]
                         
-                        if "SECURITY.md".upper() in files:
+                        if self.local_repo_path:
+                            # Controlla nel filesystem locale
+                            for root, _, files in os.walk(self.local_repo_path):
+                                for filename in files:
+                                    if any(filename.lower() == pattern.lower() for pattern in security_file_patterns):
+                                        security_files_found.append(filename)
+                                        break
+                        else:
+                            # Controlla prima la root tramite API
+                            contents = self._get_cached_data(
+                                "root_contents", 
+                                lambda: list(self.repo.get_contents(""))
+                            )
+                            
+                            for item in contents:
+                                if item.type == "file" and any(item.name.lower() == pattern.lower() for pattern in security_file_patterns):
+                                    security_files_found.append(item.name)
+                            
+                            # Controlla anche nella directory .github
+                            try:
+                                github_dir = None
+                                for item in contents:
+                                    if item.path.lower() == ".github" and item.type == "dir":
+                                        github_dir = item
+                                        break
+                                        
+                                if github_dir:
+                                    github_contents = self._get_cached_data(
+                                        "github_dir_contents",
+                                        lambda: list(self.repo.get_contents(".github"))
+                                    )
+                                    
+                                    for item in github_contents:
+                                        if item.type == "file" and any(item.name.lower() == pattern.lower() for pattern in security_file_patterns):
+                                            security_files_found.append(item.name)
+                            except Exception:
+                                pass
+                        
+                        if security_files_found:
                             valore = True
                             punteggio = 10
                         else:
                             self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Aggiungi un file SECURITY.md per descrivere la policy di sicurezza"
+                                "Aggiungi un file SECURITY.md per descrivere la policy di sicurezza del progetto"
                             )
-                    except Exception:
-                        pass
-                elif nome_param in ["github_security_features", "dipendenze_aggiornate"]:
+                    except Exception as e:
+                        logger.warning(f"Errore nella verifica dei file di sicurezza: {e}")
+                        valore = "Errore verifica"
+                        punteggio = 0
+                
+                elif nome_param == "github_security_features":
+                    # Verifichiamo l'uso delle funzioni di sicurezza GitHub come dependabot e CODEOWNERS
+                    valore = "Non rilevato"
+                    punteggio = 0
+                    security_features = []
+                    
+                    try:
+                        special_files = [
+                            ".github/dependabot.yml",
+                            ".github/dependabot.yaml",
+                            ".github/workflows/codeql-analysis.yml",  # GitHub code scanning
+                            ".github/CODEOWNERS",                      # CODEOWNERS file
+                        ]
+                        
+                        if self.local_repo_path:
+                            # Cerca i file nel filesystem
+                            for special_file in special_files:
+                                path_parts = special_file.split('/')
+                                curr_path = self.local_repo_path
+                                
+                                # Navigate through the directory structure
+                                valid_path = True
+                                for i, part in enumerate(path_parts[:-1]):
+                                    curr_path = os.path.join(curr_path, part)
+                                    if not os.path.exists(curr_path) or not os.path.isdir(curr_path):
+                                        valid_path = False
+                                        break
+                                
+                                if valid_path:
+                                    final_path = os.path.join(curr_path, path_parts[-1])
+                                    if os.path.exists(final_path) and os.path.isfile(final_path):
+                                        security_features.append(os.path.basename(special_file))
+                        else:
+                            # Cerca tramite API GitHub
+                            # Controlla se esiste .github directory
+                            contents = self._get_cached_data(
+                                "root_contents", 
+                                lambda: list(self.repo.get_contents(""))
+                            )
+                            
+                            github_dir = None
+                            for item in contents:
+                                if item.path.lower() == ".github" and item.type == "dir":
+                                    github_dir = item
+                                    break
+                            
+                            if github_dir:
+                                try:
+                                    github_contents = self._get_cached_data(
+                                        "github_dir_contents",
+                                        lambda: list(self.repo.get_contents(".github"))
+                                    )
+                                    
+                                    # Cerca Dependabot e CODEOWNERS
+                                    for item in github_contents:
+                                        if item.type == "file" and (
+                                            item.name.lower() in ["dependabot.yml", "dependabot.yaml", "codeowners"]):
+                                            security_features.append(item.name)
+                                    
+                                    # Cerca cartella workflows per azioni di sicurezza
+                                    workflows_dir = None
+                                    for item in github_contents:
+                                        if item.path.lower() == ".github/workflows" and item.type == "dir":
+                                            workflows_dir = item
+                                            break
+                                            
+                                    if workflows_dir:
+                                        try:
+                                            workflows_contents = self._get_cached_data(
+                                                "workflows_dir_contents",
+                                                lambda: list(self.repo.get_contents(".github/workflows"))
+                                            )
+                                            
+                                            for item in workflows_contents:
+                                                if item.type == "file" and "codeql" in item.name.lower():
+                                                    security_features.append("CodeQL scan")
+                                        except Exception:
+                                            pass
+                                except Exception:
+                                    pass
+                        
+                        # Valuta i risultati
+                        if security_features:
+                            valore = ", ".join(security_features)
+                            punteggio = min(len(security_features) * 3, 10)  # Più funzionalità, punteggio più alto (max 10)
+                            
+                        if punteggio < 5:
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Attiva le funzioni di sicurezza di GitHub come Dependabot, CodeQL scanning e CODEOWNERS"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Errore nella verifica delle funzionalità di sicurezza: {e}")
+                        valore = "Errore verifica"
+                        punteggio = 0
+                
+                elif nome_param == "dipendenze_aggiornate":
                     valore = "Analisi non disponibile"
                     punteggio = 5  # Valore neutro
                 else:
@@ -1381,144 +1526,212 @@ class RepoAnalyzer:
             # Testing & CI/CD
             elif categoria == "testing_cicd":
                 if nome_param == "presenza_test_suite":
-                    # Verifichiamo la presenza di directory o file di test
+                    # Verifichiamo la presenza di directory o file di test con modalità più approfondita
                     valore = False
                     punteggio = 0
+                    test_files_found = []
                     
                     try:
-                        if self.local_repo_path:
-                            # Controlla le directory locali
-                            contents = os.listdir(self.local_repo_path)
-                            test_dirs = [d for d in contents if os.path.isdir(os.path.join(self.local_repo_path, d)) and "test" in d.lower()]
-                            test_files = [f for f in contents if os.path.isfile(os.path.join(self.local_repo_path, f)) and "test" in f.lower()]
-                        else:
-                            # Ottieni il contenuto del repository
-                            contents = self.repo.get_contents("")
-                            test_dirs = [f.name for f in contents if f.type == "dir" and "test" in f.name.lower()]
-                            test_files = [f.name for f in contents if f.type == "file" and "test" in f.name.lower()]
-                        
-                        if test_dirs or test_files:
-                            valore = True
-                            punteggio = 10
-                        else:
-                            self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Aggiungi test automatizzati per migliorare la qualità del codice"
-                            )
-                    except Exception:
-                        pass
-                elif nome_param == "integrazione_continua":
-                    # Verifichiamo la presenza di configurazione CI
-                    valore = False
-                    punteggio = 0
-                    
-                    try:
-                        # Lista estesa di pattern per configurazioni CI comuni
-                        ci_configs = [
-                            ".github/workflows",      # GitHub Actions
-                            "workflows",              # GitHub Actions in another location
-                            ".travis.yml",            # Travis CI
-                            ".gitlab-ci.yml",         # GitLab CI
-                            "azure-pipelines.yml",    # Azure Pipelines
-                            "Jenkinsfile",            # Jenkins
-                            ".circleci/config.yml",   # CircleCI
-                            ".circleci",              # CircleCI directory
-                            "bitbucket-pipelines.yml",# Bitbucket Pipelines
-                            ".drone.yml",             # Drone CI
-                            "appveyor.yml",           # AppVeyor
-                            ".github/actions",        # Custom GitHub Actions
-                            "buildspec.yml",          # AWS CodeBuild
-                            ".teamcity/"              # TeamCity
-                        ]
+                        # Pattern di ricerca per test più completi
+                        test_dir_patterns = ["test", "tests", "spec", "unittest", "pytest"]
+                        test_file_patterns = ["test_", "_test", "spec_", "_spec", "suite"]
                         
                         if self.local_repo_path:
-                            # Usa il filesystem locale con ricerca più approfondita
-                            found = False
-                            
-                            # Check root directory for CI files
-                            for item in os.listdir(self.local_repo_path):
-                                item_path = os.path.join(self.local_repo_path, item)
-                                item_lower = item.lower()
+                            # Controlla le directory locali in modo ricorsivo
+                            for root, dirs, files in os.walk(self.local_repo_path):
+                                # Cerca directory di test
+                                for dir_name in dirs:
+                                    if any(pattern in dir_name.lower() for pattern in test_dir_patterns):
+                                        test_files_found.append(os.path.join(os.path.relpath(root, self.local_repo_path), dir_name))
                                 
-                                # Direct match for CI files in root
-                                if any(ci_file.lower() == item_lower for ci_file in ci_configs):
-                                    found = True
-                                    break
-                                
-                                # Check .github directory special case
-                                if item_lower == '.github' and os.path.isdir(item_path):
-                                    github_dir = item_path
-                                    for gh_item in os.listdir(github_dir):
-                                        if gh_item.lower() == 'workflows' or gh_item.lower() == 'actions':
-                                            workflows_path = os.path.join(github_dir, gh_item)
-                                            if os.path.isdir(workflows_path) and os.listdir(workflows_path):
-                                                found = True
-                                                break
-                            
-                            # Deep search for nested CI configurations
-                            if not found:
-                                for root, dirs, files in os.walk(self.local_repo_path):
-                                    for file in files:
-                                        file_lower = file.lower()
-                                        if any(ci_file.lower().split('/')[-1] == file_lower for ci_file in ci_configs):
-                                            found = True
-                                            break
-                                    if found:
-                                        break
-                            
-                            valore = found
-                            punteggio = 10 if found else 0
+                                # Cerca file di test
+                                for file_name in files:
+                                    if (any(pattern in file_name.lower() for pattern in test_file_patterns) or 
+                                        file_name.lower().startswith(("test", "spec"))):
+                                        if file_name.endswith((".py", ".js", ".ts", ".java", ".cpp", ".c", ".go", ".rs", ".rb", ".php")):
+                                            test_files_found.append(os.path.join(os.path.relpath(root, self.local_repo_path), file_name))
                         else:
-                            # Utilizza l'API di GitHub con controlli più approfonditi
-                            found = False
-                            
-                            # First check root contents
-                            contents = self._get_cached_data(
-                                "root_contents", 
+                            # Ricerca attraverso API GitHub
+                            # Prima controllo cartelle di test nella root
+                            root_contents = self._get_cached_data(
+                                "root_contents",
                                 lambda: list(self.repo.get_contents(""))
                             )
                             
-                            files_and_dirs = [f.path.lower() for f in contents]
+                            for item in root_contents:
+                                if item.type == "dir" and any(pattern in item.name.lower() for pattern in test_dir_patterns):
+                                    test_files_found.append(item.name)
+                                elif item.type == "file" and any(pattern in item.name.lower() for pattern in test_file_patterns):
+                                    if item.name.endswith((".py", ".js", ".ts", ".java", ".cpp", ".c", ".go", ".rs", ".rb", ".php")):
+                                        test_files_found.append(item.name)
                             
-                            # Look for direct CI config matches
-                            for ci_config in ci_configs:
-                                if ci_config.lower() in files_and_dirs:
-                                    found = True
-                                    break
-                            
-                            # Check .github directory separately
-                            if not found:
-                                github_dir = None
-                                for item in contents:
-                                    if item.path.lower() == ".github" and item.type == "dir":
-                                        github_dir = item
-                                        break
-                                
-                                if github_dir:
-                                    try:
-                                        github_contents = self._get_cached_data(
-                                            "github_dir_contents",
-                                            lambda: list(self.repo.get_contents(".github"))
-                                        )
-                                        
-                                        # Check for workflows directory
-                                        for item in github_contents:
-                                            if item.path.lower() == ".github/workflows" and item.type == "dir":
-                                                found = True
-                                                break
-                                    except Exception:
-                                        pass
-                            
-                            valore = found
-                            punteggio = 10 if found else 0
-                                
-                        if not valore:
+                            # Se non troviamo niente, facciamo una ricerca di termini chiave nei file del repo
+                            # Questo è limitato per ridurre l'utilizzo dell'API
+                            if not test_files_found:
+                                try:
+                                    repo_search = self.github.search_code(f"repo:{self.repo_name} filename:test_*.py OR filename:*_test.py")
+                                    if repo_search.totalCount > 0:
+                                        test_files_found.append(f"~{repo_search.totalCount} file di test trovati via ricerca")
+                                except Exception:
+                                    pass  # Ignora errori nella ricerca
+                        
+                        # Valuta i risultati
+                        if test_files_found:
+                            valore = f"{len(test_files_found)} test trovati"
+                            punteggio = 10  # Se troviamo test, diamo punteggio massimo
+                        else:
                             self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Configura un sistema di CI/CD per automatizzare i test e il deployment"
+                                "Aggiungi test automatizzati per migliorare la qualità e affidabilità del codice"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Errore nella ricerca di test: {e}")
+                        valore = "Errore verifica"
+                        punteggio = 0
+                
+                elif nome_param == "integrazione_continua":
+                    # Verifichiamo la presenza di configurazione CI/CD con rilevamento migliorato
+                    valore = False
+                    punteggio = 0
+                    ci_configs_found = []
+                    
+                    try:
+                        # Lista estesa di pattern per configurazioni CI/CD comuni
+                        ci_configs = {
+                            "github_actions": [".github/workflows", ".github/actions"],
+                            "travis_ci": [".travis.yml"],
+                            "gitlab_ci": [".gitlab-ci.yml"],
+                            "azure_pipelines": ["azure-pipelines.yml"],
+                            "jenkins": ["Jenkinsfile"],
+                            "circle_ci": [".circleci", ".circleci/config.yml"],
+                            "bitbucket": ["bitbucket-pipelines.yml"],
+                            "drone": [".drone.yml"],
+                            "appveyor": ["appveyor.yml"],
+                            "aws_codebuild": ["buildspec.yml"],
+                            "teamcity": [".teamcity"]
+                        }
+                        
+                        # File YAML comuni che potrebbero contenere configurazioni CI/CD
+                        yaml_ci_keywords = [
+                            "ci:", "cd:", "pipeline:", "build:", "test:", "deploy:",
+                            "stages:", "jobs:", "matrix:", "runner", "workflow"
+                        ]
+                        
+                        if self.local_repo_path:
+                            # Controlla ogni possibile configurazione CI
+                            for ci_type, patterns in ci_configs.items():
+                                for pattern in patterns:
+                                    path_parts = pattern.split('/')
+                                    curr_path = self.local_repo_path
+                                    
+                                    # Navigate through the directory structure
+                                    valid_path = True
+                                    for i, part in enumerate(path_parts[:-1]):
+                                        curr_path = os.path.join(curr_path, part)
+                                        if not os.path.exists(curr_path) or not os.path.isdir(curr_path):
+                                            valid_path = False
+                                            break
+                                    
+                                    # Check if it's a file or directory we're looking for
+                                    if valid_path:
+                                        if '.' in path_parts[-1]:  # Probably a file
+                                            final_path = os.path.join(curr_path, path_parts[-1])
+                                            if os.path.exists(final_path) and os.path.isfile(final_path):
+                                                ci_configs_found.append(ci_type)
+                                                break
+                                        else:  # Directory
+                                            final_path = os.path.join(curr_path, path_parts[-1])
+                                            if os.path.exists(final_path) and os.path.isdir(final_path):
+                                                # For directories like .github/workflows, check if they contain any files
+                                                if os.listdir(final_path):
+                                                    ci_configs_found.append(ci_type)
+                                                    break
+                                
+                                # Se abbiamo già trovato una config per questo CI, passa al prossimo
+                                if ci_type in ci_configs_found:
+                                    continue
+                                    
+                            # Se ancora niente, controlla file YAML per keyword comuni di CI
+                            if not ci_configs_found:
+                                for root, _, files in os.walk(self.local_repo_path):
+                                    for file_name in files:
+                                        if file_name.endswith(('.yml', '.yaml')) and "vendor" not in root and "node_modules" not in root:
+                                            try:
+                                                file_path = os.path.join(root, file_name)
+                                                with open(file_path, 'r', encoding='utf-8') as f:
+                                                    content = f.read().lower()
+                                                    if any(keyword in content for keyword in yaml_ci_keywords):
+                                                        ci_configs_found.append("custom_yaml_ci")
+                                                        break
+                                            except Exception:
+                                                pass
+                                    if ci_configs_found:
+                                        break
+                        else:
+                            # Usa API GitHub per il controllo
+                            # Verifica configurazioni nella root
+                            root_contents = self._get_cached_data(
+                                "root_contents",
+                                lambda: list(self.repo.get_contents(""))
+                            )
+                            
+                            # Cerca file CI nella root
+                            for ci_type, patterns in ci_configs.items():
+                                for pattern in patterns:
+                                    if '/' not in pattern:  # Solo root files
+                                        for item in root_contents:
+                                            if item.type == "file" and item.name.lower() == pattern.lower():
+                                                ci_configs_found.append(ci_type)
+                                                break
+                            
+                            # Cerca directory speciali come .circleci o .github nella root
+                            github_dir = None
+                            circleci_dir = None
+                            for item in root_contents:
+                                if item.type == "dir":
+                                    if item.name.lower() == ".github":
+                                        github_dir = item
+                                    elif item.name.lower() == ".circleci":
+                                        circleci_dir = item
+                                        ci_configs_found.append("circle_ci")
+                            
+                            # Se c'è .github, controlla se ha workflows
+                            if github_dir:
+                                try:
+                                    github_contents = self._get_cached_data(
+                                        "github_dir_contents",
+                                        lambda: list(self.repo.get_contents(".github"))
+                                    )
+                                    
+                                    for item in github_contents:
+                                        if item.type == "dir" and item.name.lower() == "workflows":
+                                            # Verifica che ci siano file nella directory workflows
+                                            try:
+                                                workflows_contents = self._get_cached_data(
+                                                    "workflows_contents",
+                                                    lambda: list(self.repo.get_contents(".github/workflows"))
+                                                )
+                                                if workflows_contents:
+                                                    ci_configs_found.append("github_actions")
+                                            except Exception:
+                                                pass
+                                            break
+                                except Exception:
+                                    pass
+                        
+                        # Valuta i risultati
+                        if ci_configs_found:
+                            unique_ci = list(set(ci_configs_found))  # Remove duplicates
+                            valore = ", ".join(unique_ci)
+                            punteggio = 10  # Se troviamo CI/CD, diamo punteggio massimo
+                        else:
+                            self.results["suggerimenti"].setdefault(categoria, []).append(
+                                "Configura un sistema di CI/CD come GitHub Actions per automatizzare test e deployment"
                             )
                     except Exception as e:
                         logger.warning(f"Errore nel controllo CI/CD: {e}")
                         valore = "Errore verifica CI/CD"
-                        punteggio = 5  # Valore neutro in caso di errore
+                        punteggio = 0
+                
                 elif nome_param in ["test_coverage", "sicurezza_ci"]:
                     valore = "Analisi non disponibile"
                     punteggio = 5  # Valore neutro
