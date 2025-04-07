@@ -93,6 +93,14 @@
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200 parameters-list"></tbody>
                             </table>
+                            
+                            <!-- Suggestions section for each category -->
+                            <div class="mt-6 category-suggestions">
+                                <h4 class="text-lg font-medium text-gray-800 mb-3">Suggerimenti</h4>
+                                <ul class="space-y-2 suggestions-list">
+                                    <!-- Suggestions will be populated here -->
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -101,7 +109,7 @@
         <br>
         <!-- Suggerimenti -->
         <div class="bg-white rounded-2xl shadow-lg p-8 mb-16 fade-in">
-            <h3 class="text-2xl font-semibold mb-8">Suggerimenti per il Miglioramento</h3>
+            <h3 class="text-2xl font-semibold mb-8">Tutti i Suggerimenti</h3>
             <div id="suggestions" class="space-y-4"></div>
         </div>
     </div>
@@ -233,6 +241,25 @@
                     parametersList.appendChild(row);
                 });
                 
+                // Aggiungi suggerimenti specifici per questa categoria
+                const suggestionsList = section.querySelector('.suggestions-list');
+                const categorySuggestions = reportData.suggerimenti[categoria] || [];
+                
+                if (categorySuggestions.length > 0) {
+                    categorySuggestions.forEach(suggestion => {
+                        const li = document.createElement('li');
+                        li.className = 'p-3 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg';
+                        li.innerHTML = `<p class="text-gray-700">${suggestion}</p>`;
+                        suggestionsList.appendChild(li);
+                    });
+                } else {
+                    // Se non ci sono suggerimenti
+                    const li = document.createElement('li');
+                    li.className = 'p-3 bg-gray-50 rounded-lg text-gray-500 italic';
+                    li.textContent = 'Nessun suggerimento per questa categoria';
+                    suggestionsList.appendChild(li);
+                }
+                
                 // Aggiungi la funzionalità di collasso
                 const toggleButton = section.querySelector('button');
                 const content = section.querySelector('.category-content');
@@ -252,23 +279,33 @@
             const container = document.getElementById('suggestions');
             container.innerHTML = '';
 
+            // Verifica se ci sono suggerimenti
+            const hasSuggestions = Object.values(reportData.suggerimenti).some(arr => arr.length > 0);
+            
+            if (!hasSuggestions) {
+                container.innerHTML = '<p class="text-gray-500 italic">Non ci sono suggerimenti per questo repository.</p>';
+                return;
+            }
+
             Object.entries(reportData.suggerimenti).forEach(([categoria, suggerimenti]) => {
-                const categorySection = document.createElement('div');
-                categorySection.className = 'mb-6';
-                categorySection.innerHTML = `<h4 class="text-lg font-semibold mb-4">${categoria.replace('_', ' ').toUpperCase()}</h4>`;
-                
-                const suggestionsContainer = document.createElement('div');
-                suggestionsContainer.className = 'space-y-3';
-                
-                suggerimenti.forEach(suggerimento => {
-                    const item = document.createElement('div');
-                    item.className = 'p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg';
-                    item.innerHTML = `<p class="text-gray-700">${suggerimento}</p>`;
-                    suggestionsContainer.appendChild(item);
-                });
-                
-                categorySection.appendChild(suggestionsContainer);
-                container.appendChild(categorySection);
+                if (suggerimenti.length > 0) {
+                    const categorySection = document.createElement('div');
+                    categorySection.className = 'mb-6';
+                    categorySection.innerHTML = `<h4 class="text-lg font-semibold mb-4">${categoria.replace('_', ' ').toUpperCase()}</h4>`;
+                    
+                    const suggestionsContainer = document.createElement('div');
+                    suggestionsContainer.className = 'space-y-3';
+                    
+                    suggerimenti.forEach(suggerimento => {
+                        const item = document.createElement('div');
+                        item.className = 'p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg';
+                        item.innerHTML = `<p class="text-gray-700">${suggerimento}</p>`;
+                        suggestionsContainer.appendChild(item);
+                    });
+                    
+                    categorySection.appendChild(suggestionsContainer);
+                    container.appendChild(categorySection);
+                }
             });
         }
 
