@@ -40,33 +40,54 @@
         .progress-high { background-color: #16a34a; } /* bg-green-600 */
         .progress-medium { background-color: #eab308; } /* bg-yellow-500 */
         .progress-low { background-color: #dc2626; } /* bg-red-600 */
+        
+        /* Mobile-specific adjustments */
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 250px; /* Smaller height on mobile */
+            }
+            
+            /* Make tables more responsive on mobile */
+            .responsive-table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Adjust spacing for mobile */
+            .mobile-p-adjust {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
         <!-- Header -->
-        <header class="text-center mb-16 fade-in">
-            <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl mb-4">{{repo_name}}</h1>
-            <p class="text-lg text-gray-600 mb-8">Report generato il {{data_analisi}}</p>
-            <div class="flex justify-center gap-4">
-                <a href="{{repo_url}}" aria-label="Visualizza il repository su GitHub" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 ease-in-out gap-2">
+        <header class="text-center mb-8 sm:mb-16 fade-in">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-4">{{repo_name}}</h1>
+            <p class="text-base sm:text-lg text-gray-600 mb-6 sm:mb-8">Report generato il {{data_analisi}}</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                <a href="{{repo_url}}" aria-label="Visualizza il repository su GitHub" class="inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 ease-in-out gap-2">
                     <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                    Vai su GitHub
+                    <span class="whitespace-nowrap">Vai su GitHub</span>
                 </a>
-                <button onclick="downloadJSON()" aria-label="Scarica il report in formato JSON" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 ease-in-out gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="#FFFFFF" aria-hidden="true">
+                <button onclick="downloadJSON()" aria-label="Scarica il report in formato JSON" class="inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 ease-in-out gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="#FFFFFF" aria-hidden="true">
                         <path d="M0 0h24v24H0V0z" fill="none"/> <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
                         </svg>
-                    Scarica report JSON
+                    <span class="whitespace-nowrap">Scarica JSON</span>
                 </button>
             </div>
         </header>
 
         <!-- Punteggio Totale (Full Row) -->
-        <div class="bg-white rounded-2xl shadow-lg p-8 text-center mb-8 fade-in">
-            <h3 class="text-2xl font-semibold mb-6">Punteggio Totale</h3>
-            <div id="total-score" class="text-6xl font-bold mb-6">
-                {{punteggio_totale}}<span class="text-3xl text-gray-400">/10</span>
+        <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-8 text-center mb-6 sm:mb-8 fade-in">
+            <h3 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Punteggio Totale</h3>
+            <div id="total-score" class="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6">
+                {{punteggio_totale}}<span class="text-2xl sm:text-3xl text-gray-400">/10</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-3">
                 <div id="score-progress-bar" class="h-3 rounded-full transition-all duration-1000 ease-out" 
@@ -75,19 +96,19 @@
             </div>
         </div>
         
-        <!-- Charts Row (Half and Half) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16 fade-in">
+        <!-- Charts Row (Stack on mobile, side by side on tablet+) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-16 fade-in">
             <!-- Radar Chart -->
-            <div class="bg-white rounded-2xl shadow-lg p-6">
-                <h4 class="text-xl font-semibold mb-4">Profilo di Valutazione</h4>
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Profilo di Valutazione</h4>
                 <div class="chart-container">
                     <canvas id="radarChart"></canvas>
                 </div>
             </div>
             
             <!-- Category Bar Chart -->
-            <div class="bg-white rounded-2xl shadow-lg p-6">
-                <h4 class="text-xl font-semibold mb-4">Punteggi per Categoria</h4>
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Punteggi per Categoria</h4>
                 <div class="chart-container">
                     <canvas id="categoryChart"></canvas>
                 </div>
@@ -95,32 +116,34 @@
         </div>
 
         <!-- Dettagli per Categoria -->
-        <div id="categoryDetails" class="space-y-8">
+        <div id="categoryDetails" class="space-y-6 sm:space-y-8">
             <template id="categoryTemplate">
                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden fade-in">
-                    <button class="w-full px-8 py-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors duration-200 flex justify-between items-center cursor-pointer category-toggle-button" aria-expanded="true">
-                        <h3 class="text-2xl font-semibold category-name categories-title-fixed"></h3>
-                        <svg class="w-6 h-6 transform transition-transform duration-200 category-arrow rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <button class="w-full px-4 sm:px-8 py-3 sm:py-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors duration-200 flex justify-between items-center cursor-pointer category-toggle-button" aria-expanded="true">
+                        <h3 class="text-xl sm:text-2xl font-semibold category-name categories-title-fixed"></h3>
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 transform transition-transform duration-200 category-arrow rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </button>
                     <div class="category-content"> <!-- Start visible -->
-                        <div class="p-8">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead>
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parametro</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valore</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrizione</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200 parameters-list"></tbody>
-                            </table>
+                        <div class="p-4 sm:p-8">
+                            <div class="overflow-x-auto responsive-table">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parametro</th>
+                                            <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valore</th>
+                                            <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
+                                            <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Descrizione</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200 parameters-list"></tbody>
+                                </table>
+                            </div>
                             
                             <!-- Suggestions section for each category -->
-                            <div class="mt-6 category-suggestions">
-                                <h4 class="text-lg font-medium text-gray-800 mb-3">Suggerimenti</h4>
+                            <div class="mt-5 sm:mt-6 category-suggestions">
+                                <h4 class="text-base sm:text-lg font-medium text-gray-800 mb-2 sm:mb-3">Suggerimenti</h4>
                                 <ul class="space-y-2 suggestions-list">
                                     <!-- Suggestions will be populated here -->
                                 </ul>
@@ -183,6 +206,9 @@
             
             const barColors = scores.map(getBarColor);
             
+            // Adjust chart responsiveness
+            const isSmallScreen = window.innerWidth < 640;
+            
             // Init Radar Chart
             const ctxRadar = document.getElementById('radarChart').getContext('2d');
             new Chart(ctxRadar, {
@@ -202,17 +228,22 @@
                     }]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         r: {
                             beginAtZero: true,
                             max: 10,
                             ticks: {
                                 stepSize: 2,
-                                backdropColor: 'transparent'
+                                backdropColor: 'transparent',
+                                font: {
+                                    size: isSmallScreen ? 9 : 11 // Smaller font on mobile
+                                }
                             },
                             pointLabels: {
                                 font: {
-                                    size: 11
+                                    size: isSmallScreen ? 9 : 11 // Smaller font on mobile
                                 }
                             },
                             grid: {
@@ -233,7 +264,7 @@
                             bodyColor: '#1F2937',
                             borderColor: '#E5E7EB',
                             borderWidth: 1,
-                            padding: 12,
+                            padding: isSmallScreen ? 8 : 12, // Less padding on mobile
                             displayColors: true,
                             callbacks: {
                                 label: function(context) {
@@ -300,7 +331,7 @@
                                 bodyColor: '#1F2937',
                                 borderColor: '#E5E7EB',
                                 borderWidth: 1,
-                                padding: 12,
+                                padding: isSmallScreen ? 8 : 12, // Less padding on mobile
                                 displayColors: false,
                                 callbacks: {
                                     label: function(context) {
@@ -364,31 +395,31 @@
                     if (info.punteggio === null || info.punteggio === undefined || info.score_is_na) {
                         scoreDisplay = 'N/A';
                     } else {
-                        // Format the score to have a maximum of 2 decimal places
                         const formattedScore = Number.isInteger(info.punteggio) ? 
                             info.punteggio : 
                             parseFloat(info.punteggio).toFixed(2);
                         scoreDisplay = `${formattedScore}/10`;
                     }
                     
+                    // Add mobile-optimized row content
                     row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            <div class="flex items-center gap-2" data-tippy-content="${description}">
+                        <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-normal text-xs sm:text-sm font-medium text-gray-900">
+                            <div class="flex items-center gap-1 sm:gap-2" data-tippy-content="${description}">
                                 ${parameterIcon}
                                 <span>${parameterName}</span>
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <svg class="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <span class="font-mono bg-gray-100 px-2 py-1 rounded">${info.valore !== null && info.valore !== undefined ? info.valore : 'N/A'}</span>
+                        <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-normal text-xs sm:text-sm text-gray-500">
+                            <span class="font-mono bg-gray-100 px-1 sm:px-2 py-0.5 sm:py-1 rounded break-all">${info.valore !== null && info.valore !== undefined ? info.valore : 'N/A'}</span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getScoreClass(info.punteggio)}">
+                        <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm">
+                            <span class="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium ${getScoreClass(info.punteggio)}">
                                 ${scoreDisplay}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">${description}</td>
+                        <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 hidden md:table-cell">${description}</td>
                     `;
                     parametersList.appendChild(row);
                 });
@@ -427,7 +458,8 @@
             tippy('[data-tippy-content]', {
                 theme: 'light',
                 placement: 'top',
-                arrow: true
+                arrow: true,
+                maxWidth: 300 // Control max width for better mobile display
             });
         }
 

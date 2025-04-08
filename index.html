@@ -63,22 +63,24 @@
                 </div>
 
                 <!-- Overall Score Ranking -->
-                <div class="bg-white rounded-2xl shadow-lg p-8 fade-in">
-                    <h3 class="text-2xl font-semibold mb-4">Top 100</h3>
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posizione</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
-                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Report</th>
-                            </tr>
-                        </thead>
-                        <tbody id="overallRanking" class="bg-white divide-y divide-gray-200">
-                            <!-- Overall ranking data will be populated here by JS -->
-                            <tr><td colspan="4" class="text-center py-8 text-gray-500">Caricamento classifiche...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-8 fade-in">
+                    <h3 class="text-xl sm:text-2xl font-semibold mb-4">Top 100</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posizione</th>
+                                    <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
+                                    <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
+                                    <th scope="col" class="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Report</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overallRanking" class="bg-white divide-y divide-gray-200">
+                                <!-- Overall ranking data will be populated here by JS -->
+                                <tr><td colspan="4" class="text-center py-8 text-gray-500">Caricamento classifiche...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Category Rankings -->
