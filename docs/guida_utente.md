@@ -15,7 +15,7 @@ Questa guida fornisce istruzioni dettagliate su come installare, configurare e u
 1. Clona il repository o scarica i file:
 
    ```bash
-   git clone https://github.com/yourusername/repolizer.git
+   git clone https://github.com/fabriziosalmi/repolizer.git
    cd repolizer
    ```
 
@@ -65,6 +65,33 @@ Esempio con tutte le opzioni:
 python repolizer.py --repo tensorflow/tensorflow --config config_personalizzato.json --output report_tensorflow.json --no-viz
 ```
 
+## Visualizzazione dei Risultati
+
+### Server di Visualizzazione
+
+Per visualizzare tutti i report generati attraverso un'interfaccia web:
+
+```bash
+python report_server.py
+```
+
+Quindi apri `http://localhost:8000` nel tuo browser. Da qui potrai:
+
+- Visualizzare la classifica generale dei repository analizzati
+- Visualizzare classifiche per categoria 
+- Consultare report dettagliati per ogni repository
+- Scaricare i report in formato JSON
+
+### Tipi di Visualizzazione
+
+L'interfaccia web offre diverse visualizzazioni:
+
+1. **Dashboard Principale**: Classifica generale e informazioni di riepilogo
+2. **Report Dettagliati**: Analisi approfondita di ogni singolo repository
+3. **Top 100**: Classifica dei migliori repository per punteggio totale
+4. **Grafici Radar**: Visualizza le performance per categoria
+5. **Grafici a Barre**: Confronto diretto tra categorie
+
 ## Personalizzazione
 
 ### Modificare i Pesi dei Parametri
@@ -104,6 +131,27 @@ cp config.json config_personalizzato.json
 Modifica il nuovo file secondo le tue esigenze e utilizzalo con l'opzione `--config`.
 
 ## Interpretazione dei Risultati
+
+### Scala dei Punteggi
+
+I punteggi in Repolizer sono assegnati su una scala da 0 a 10:
+
+- **8-10**: Eccellente - Il repository soddisfa completamente i criteri di qualità
+- **6-7.9**: Buono - Il repository soddisfa la maggior parte dei criteri di qualità
+- **4-5.9**: Sufficiente - Il repository soddisfa i criteri di base
+- **0-3.9**: Insufficiente - Il repository necessita di miglioramenti significativi
+
+### Report HTML e JSON
+
+Ogni analisi genera:
+
+- Un file JSON con tutti i dati grezzi dell'analisi
+- Un file HTML con visualizzazioni interattive e suggerimenti
+- Entrambi sono accessibili attraverso il server di visualizzazione
+
+### Suggerimenti di Miglioramento
+
+Per ogni categoria vengono generati suggerimenti specifici per migliorare il punteggio. Questi suggerimenti sono basati sui parametri che hanno ottenuto un punteggio basso e forniscono indicazioni pratiche per migliorare il repository.
 
 ### Report Testuale
 
