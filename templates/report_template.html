@@ -88,7 +88,7 @@
         <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-8 text-center mb-6 sm:mb-8 fade-in">
             <h3 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Punteggio Totale</h3>
             <div id="total-score" class="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6">
-                {{punteggio_totale}}<span class="text-2xl sm:text-3xl text-gray-400">/10</span>
+                {{punteggio_totale}}<span class="text-2xl sm:text-3xl text-gray-400"></span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-3">
                 <div id="score-progress-bar" class="h-3 rounded-full transition-all duration-1000 ease-out" 
@@ -269,7 +269,7 @@
                             displayColors: true,
                             callbacks: {
                                 label: function(context) {
-                                    return `Punteggio: ${context.raw.toFixed(2)}/10`;
+                                    return `Punteggio: ${context.raw.toFixed(2)}`;
                                 }
                             }
                         }
@@ -336,7 +336,7 @@
                                 displayColors: false,
                                 callbacks: {
                                     label: function(context) {
-                                        return `Punteggio: ${context.raw.toFixed(2)}/10`;
+                                        return `Punteggio: ${context.raw.toFixed(2)}`;
                                     }
                                 }
                             }
@@ -399,7 +399,7 @@
                         const formattedScore = Number.isInteger(info.punteggio) ? 
                             info.punteggio : 
                             parseFloat(info.punteggio).toFixed(2);
-                        scoreDisplay = `${formattedScore}/10`;
+                        scoreDisplay = `${formattedScore}`;
                     }
                     
                     // Add mobile-optimized row content

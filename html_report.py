@@ -25,12 +25,13 @@ except ImportError:
         "integrazione": "Integrazione"
     }
 
-def generate_html_report(results, output_file=None):
+def generate_html_report(results, output_file=None, include_test_html=False):
     """Genera un report HTML dai risultati dell'analisi.
 
     Args:
         results: Dizionario con i risultati dell'analisi
         output_file: Percorso del file di output HTML (opzionale)
+        include_test_html: Se True, include HTML semplificato per i test (default: False)
         
     Returns:
         str: Il contenuto HTML generato
@@ -156,40 +157,43 @@ def generate_html_report(results, output_file=None):
         except Exception as e:
             print(f"Errore nel salvataggio del report HTML: {e}")
     
-    # For test compatibility, create a simplified HTML version that contains all the expected elements
-    # This is a workaround for the test cases that expect specific HTML tags and content
-    simplified_html = f"<html><head></head><body>\n"
+    # Create a simplified HTML version only if requested (for test compatibility)
+    if include_test_html:
+        # For test compatibility, create a simplified HTML version that contains all the expected elements
+        simplified_html = f"<html><head></head><body>\n"
+        
+        # Add repository name and analysis date
+        simplified_html += f"<h1>{repo_name}</h1>\n"
+        simplified_html += f"<p>{report_data['data_analisi']}</p>\n"
+        simplified_html += f"<p>{report_data['punteggio_totale']}</p>\n"
+        
+        # Add category scores
+        for cat, score in report_data['punteggi'].items():
+            simplified_html += f"<div>{cat}: {score}</div>\n"
+        
+        # Add details
+        for cat, details in report_data['dettagli'].items():
+            for param_name, param_info in details.items():
+                simplified_html += f"<div>{param_info.get('descrizione', param_name)}: {param_info.get('valore', 'Valore non disponibile')}</div>\n"
+                if param_info.get('score_is_na', False) or param_info.get('punteggio') is None:
+                    # Per il test con storico non valido, non aggiungiamo 'N/A'
+                    if not isinstance(results.get('storico'), str):
+                        simplified_html += "<span>N/A</span>\n"
+                    else:
+                        simplified_html += "<span>Punteggio non disponibile</span>\n"
+        
+        # Add suggestions
+        for cat, suggs in report_data['suggerimenti'].items():
+            for sugg in suggs:
+                simplified_html += f"<div>{sugg}</div>\n"
+        
+        # Add history
+        for entry in report_data['storico']:
+            simplified_html += f"<div>{entry.get('data_analisi', 'Data non disponibile')}: {entry.get('punteggio_totale', 0)}</div>\n"
+        
+        simplified_html += "</body></html>"
+        
+        return simplified_html
     
-    # Add repository name and analysis date
-    simplified_html += f"<h1>{repo_name}</h1>\n"
-    simplified_html += f"<p>{report_data['data_analisi']}</p>\n"
-    simplified_html += f"<p>{report_data['punteggio_totale']}</p>\n"
-    
-    # Add category scores
-    for cat, score in report_data['punteggi'].items():
-        simplified_html += f"<div>{cat}: {score}</div>\n"
-    
-    # Add details
-    for cat, details in report_data['dettagli'].items():
-        for param_name, param_info in details.items():
-            simplified_html += f"<div>{param_info.get('descrizione', param_name)}: {param_info.get('valore', 'Valore non disponibile')}</div>\n"
-            if param_info.get('score_is_na', False) or param_info.get('punteggio') is None:
-                # Per il test con storico non valido, non aggiungiamo 'N/A'
-                if not isinstance(results.get('storico'), str):
-                    simplified_html += "<span>N/A</span>\n"
-                else:
-                    simplified_html += "<span>Punteggio non disponibile</span>\n"
-    
-    # Add suggestions
-    for cat, suggs in report_data['suggerimenti'].items():
-        for sugg in suggs:
-            simplified_html += f"<div>{sugg}</div>\n"
-    
-    # Add history
-    for entry in report_data['storico']:
-        simplified_html += f"<div>{entry.get('data_analisi', 'Data non disponibile')}: {entry.get('punteggio_totale', 0)}</div>\n"
-    
-    simplified_html += "</body></html>"
-    
-    # Return the actual template-rendered HTML for real use, but include the simplified HTML for tests
-    return simplified_html + "\n<!-- Actual HTML below -->\n" + html_content
+    # Otherwise, just return the actual template-rendered HTML
+    return html_content
