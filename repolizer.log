@@ -3159,3 +3159,596 @@ TypeError: Object of type MagicMock is not JSON serializable
 2025-04-09 00:00:57,601 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmps6ap60dw/cache.json
 2025-04-09 00:00:57,602 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
 2025-04-09 00:00:57,627 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpp0_d4i8b/test_cache.json
+2025-04-09 00:04:43,284 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:43,284 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:43,426 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:43,428 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:43,428 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:43,430 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:43,430 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:43,567 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:43,569 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:43,569 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:43,571 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:43,571 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:43,709 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:43,710 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:43,710 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:43,712 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:43,712 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:43,851 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:43,852 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:43,852 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:43,856 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:43,995 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:43,997 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:43,997 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:43,999 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:43,999 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:44,137 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:44,139 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:44,139 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:44,141 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:44,142 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:44,279 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:44,280 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:44,280 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:44,283 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:44,439 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:44,441 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:44,441 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:44,443 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:44,444 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:44,582 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:44,583 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:44,583 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:44,584 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:44,584 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:44,721 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:44,723 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:44,723 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:44,723 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:44,723 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:44,859 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:44,861 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:44,861 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:44,861 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:44,862 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:44,999 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:45,001 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:45,001 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:45,001 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:45,001 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:45,145 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:45,146 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:45,146 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:45,150 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:45,151 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:45,288 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:45,290 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:45,290 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:45,293 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:45,293 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:45,294 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:45,294 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:45,294 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:45,295 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:45,296 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:45,296 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:45,296 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:45,296 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:45,297 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:45,297 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:45,299 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:45,438 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:45,440 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:45,440 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:45,442 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:04:45,442 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:04:45,582 - repolizer - INFO - Complessità media della directory: 10.88
+2025-04-09 00:04:45,583 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:04:45,583 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:04:45,640 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:45,640 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd97ownhi/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:45,640 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd97ownhi/test_repos.txt
+2025-04-09 00:04:45,641 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-09 00:04:45,641 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-09 00:04:45,641 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuxkyxhgv/repos.txt
+2025-04-09 00:04:45,642 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-09 00:04:45,642 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-09 00:04:45,642 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpz567w2xi/cache.json (2 expired/invalid).
+2025-04-09 00:04:45,642 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-09 00:04:45,643 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:45,643 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuas8gqq0/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:45,643 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuas8gqq0/test_repos.txt
+2025-04-09 00:04:45,644 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuas8gqq0/test_cache.json
+2025-04-09 00:04:45,644 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:45,644 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpnd0tlbzt/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:45,645 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpnd0tlbzt/test_repos.txt
+2025-04-09 00:04:45,646 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:45,646 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp7m7e3zv3/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:45,646 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp7m7e3zv3/test_repos.txt
+2025-04-09 00:04:45,647 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:45,647 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_cowezls/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:45,647 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_cowezls/test_repos.txt
+2025-04-09 00:04:45,648 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:45,648 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp25afl0n_/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:45,648 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp25afl0n_/test_repos.txt
+2025-04-09 00:04:45,649 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:45,649 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpfudw3599/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:45,649 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpfudw3599/test_repos.txt
+2025-04-09 00:04:45,649 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-09 00:04:45,649 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-09 00:04:47,656 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-09 00:04:47,656 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-09 00:04:49,668 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:49,668 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmptb1h8ij1/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:49,668 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmptb1h8ij1/test_repos.txt
+2025-04-09 00:04:49,669 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-09 00:04:49,672 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:49,673 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp75_b9t13/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:49,673 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp75_b9t13/test_repos.txt
+2025-04-09 00:04:49,674 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-09 00:04:49,679 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:49,679 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppx6n6ifz/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:49,680 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppx6n6ifz/test_repos.txt
+2025-04-09 00:04:49,683 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:49,684 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpv6fcmk5_/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:49,684 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpv6fcmk5_/test_repos.txt
+2025-04-09 00:04:49,686 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:49,686 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9djluki6/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:49,686 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9djluki6/test_repos.txt
+2025-04-09 00:04:49,688 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9djluki6/test_repos.txt
+2025-04-09 00:04:49,690 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:04:49,690 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvlsyp1_r/test_cache.json (0 expired/invalid).
+2025-04-09 00:04:49,690 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvlsyp1_r/test_repos.txt
+2025-04-09 00:04:49,692 - repolizer - INFO - Found Italian repo: italian/by-owner (Reason: Owner profile - Owner is Italian)
+2025-04-09 00:04:49,694 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvlsyp1_r/test_cache.json
+2025-04-09 00:04:49,694 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9djluki6/test_cache.json
+2025-04-09 00:04:49,695 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpv6fcmk5_/test_cache.json
+2025-04-09 00:04:49,695 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppx6n6ifz/test_cache.json
+2025-04-09 00:04:49,695 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp75_b9t13/test_cache.json
+2025-04-09 00:04:49,695 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmptb1h8ij1/test_cache.json
+2025-04-09 00:04:49,696 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpfudw3599/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-09 00:04:49,697 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp25afl0n_/test_cache.json
+2025-04-09 00:04:49,697 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_cowezls/test_cache.json
+2025-04-09 00:04:49,697 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp7m7e3zv3/test_cache.json
+2025-04-09 00:04:49,697 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpnd0tlbzt/test_cache.json
+2025-04-09 00:04:49,698 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuas8gqq0/test_cache.json
+2025-04-09 00:04:49,698 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpz567w2xi/cache.json
+2025-04-09 00:04:49,698 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-09 00:04:49,722 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd97ownhi/test_cache.json
+2025-04-09 00:06:23,748 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:23,749 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:23,911 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:23,913 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:23,913 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:23,915 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:23,915 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:24,055 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:24,057 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:24,057 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:24,059 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:24,059 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:24,201 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:24,202 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:24,202 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:24,204 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:24,204 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:24,345 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:24,346 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:24,346 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:24,350 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:24,491 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:24,492 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:24,492 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:24,495 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:24,495 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:24,636 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:24,637 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:24,637 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:24,640 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:24,640 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:24,780 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:24,781 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:24,781 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:24,783 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:24,925 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:24,927 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:24,927 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:24,930 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:24,930 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,070 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:25,072 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,072 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,072 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,072 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,212 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:25,214 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,214 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,214 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,215 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,352 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:25,353 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,353 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,354 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,354 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,492 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:25,494 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,494 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,494 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,494 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,631 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:25,633 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,633 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,637 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,637 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,778 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:25,780 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,780 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,783 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,783 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,784 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,784 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,785 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,785 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,786 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,786 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,787 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,787 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,788 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,788 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,789 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:25,929 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:25,930 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:25,930 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:25,933 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-09 00:06:25,933 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-09 00:06:26,074 - repolizer - INFO - Complessità media della directory: 10.87
+2025-04-09 00:06:26,076 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-09 00:06:26,076 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-09 00:06:26,132 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:26,132 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp41bn2zrs/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:26,132 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp41bn2zrs/test_repos.txt
+2025-04-09 00:06:26,133 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-09 00:06:26,133 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-09 00:06:26,133 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8cp1j70h/repos.txt
+2025-04-09 00:06:26,134 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-09 00:06:26,135 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-09 00:06:26,135 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphi4c83uw/cache.json (2 expired/invalid).
+2025-04-09 00:06:26,135 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-09 00:06:26,136 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:26,136 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd3nxoiim/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:26,136 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd3nxoiim/test_repos.txt
+2025-04-09 00:06:26,137 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd3nxoiim/test_cache.json
+2025-04-09 00:06:26,138 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:26,138 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphspch5j2/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:26,138 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphspch5j2/test_repos.txt
+2025-04-09 00:06:26,139 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:26,139 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpj32dkhvh/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:26,139 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpj32dkhvh/test_repos.txt
+2025-04-09 00:06:26,140 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:26,140 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6rq1zlkt/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:26,140 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6rq1zlkt/test_repos.txt
+2025-04-09 00:06:26,141 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:26,141 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpch923f9g/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:26,141 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpch923f9g/test_repos.txt
+2025-04-09 00:06:26,142 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:26,142 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_9tby1ic/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:26,142 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_9tby1ic/test_repos.txt
+2025-04-09 00:06:26,143 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-09 00:06:26,143 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-09 00:06:28,150 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-09 00:06:28,151 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-09 00:06:30,156 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:30,156 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpqsb8xgp1/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:30,156 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpqsb8xgp1/test_repos.txt
+2025-04-09 00:06:30,157 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-09 00:06:30,158 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:30,158 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvnnixm9a/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:30,158 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvnnixm9a/test_repos.txt
+2025-04-09 00:06:30,159 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-09 00:06:30,160 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:30,160 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpab4d8rs0/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:30,160 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpab4d8rs0/test_repos.txt
+2025-04-09 00:06:30,162 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:30,162 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8xssnszf/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:30,162 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8xssnszf/test_repos.txt
+2025-04-09 00:06:30,163 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:30,163 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp93m1q19s/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:30,164 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp93m1q19s/test_repos.txt
+2025-04-09 00:06:30,164 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp93m1q19s/test_repos.txt
+2025-04-09 00:06:30,166 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-09 00:06:30,167 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpjwd1_yl9/test_cache.json (0 expired/invalid).
+2025-04-09 00:06:30,167 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpjwd1_yl9/test_repos.txt
+2025-04-09 00:06:30,167 - repolizer - INFO - Found Italian repo: italian/by-owner (Reason: Owner profile - Owner is Italian)
+2025-04-09 00:06:30,169 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpjwd1_yl9/test_cache.json
+2025-04-09 00:06:30,169 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp93m1q19s/test_cache.json
+2025-04-09 00:06:30,169 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8xssnszf/test_cache.json
+2025-04-09 00:06:30,170 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpab4d8rs0/test_cache.json
+2025-04-09 00:06:30,170 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvnnixm9a/test_cache.json
+2025-04-09 00:06:30,170 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpqsb8xgp1/test_cache.json
+2025-04-09 00:06:30,170 - repolizer - INFO - Successfully saved cache with 2 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_9tby1ic/test_cache.json
+2025-04-09 00:06:30,192 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpch923f9g/test_cache.json
+2025-04-09 00:06:30,192 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6rq1zlkt/test_cache.json
+2025-04-09 00:06:30,192 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpj32dkhvh/test_cache.json
+2025-04-09 00:06:30,192 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphspch5j2/test_cache.json
+2025-04-09 00:06:30,192 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd3nxoiim/test_cache.json
+2025-04-09 00:06:30,193 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphi4c83uw/cache.json
+2025-04-09 00:06:30,193 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-09 00:06:30,193 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp41bn2zrs/test_cache.json

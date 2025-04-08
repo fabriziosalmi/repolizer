@@ -49,6 +49,27 @@ def scraper_instance(temp_dir, mock_session):
         )
         yield scraper
 
+@pytest.fixture(autouse=True)
+def setup_logging():
+    """Fixture to set up and tear down logging for tests."""
+    import logging
+    
+    # Store original loggers
+    original_loggers = logging.Logger.manager.loggerDict.copy()
+    
+    # Configure test logger to use StreamHandler instead of FileHandler
+    logger = logging.getLogger('scraper')
+    logger.handlers = []  # Clear existing handlers
+    logger.addHandler(logging.StreamHandler())  # Use stream handler for tests
+    logger.setLevel(logging.ERROR)  # Only show errors during tests
+    
+    yield
+    
+    # Restore original loggers
+    for logger_name in list(logging.Logger.manager.loggerDict.keys()):
+        if logger_name not in original_loggers:
+            del logging.Logger.manager.loggerDict[logger_name]
+
 # --- Unit tests ---
 
 def test_initialization(scraper_instance, temp_dir):
@@ -117,7 +138,7 @@ def test_load_cache(temp_dir):
 
 def test_save_cache(scraper_instance):
     """Test saving cache to file."""
-    # Add some data to the cache
+    # Add some data to the cache that will be properly serializable
     current_time = datetime.now(timezone.utc).isoformat()
     scraper_instance.cache = {
         "url1": {
@@ -126,21 +147,21 @@ def test_save_cache(scraper_instance):
         }
     }
     
-    # Mock json.dump instead of mocking open to properly test the serialization
-    with patch('json.dump') as mock_dump:
+    # Use a dedicated patch for open() instead of the mock_open approach
+    # to ensure we can properly test the file operations
+    with patch('builtins.open', mock_open()) as mock_file:
         scraper_instance._save_cache()
         
-        # Check that json.dump was called
-        mock_dump.assert_called_once()
+        # Verify file was opened
+        mock_file.assert_called_with(scraper_instance.cache_file, 'w', encoding='utf-8')
         
-        # Get the data that was passed to json.dump
-        cache_data = mock_dump.call_args[0][0]
+        # Get what was written to the file
+        handle = mock_file()
+        written_content = ''.join(call_args[0][0] for call_args in handle.write.call_args_list)
         
-        # Verify the data was correct
-        assert "url1" in cache_data
-        assert "timestamp" in cache_data["url1"]
-        assert "data" in cache_data["url1"]
-        assert cache_data["url1"]["data"]["key"] == "value1"
+        # Check content contains our url and data
+        assert "url1" in written_content
+        assert "value1" in written_content
 
 def test_get_with_cache(scraper_instance, mock_session):
     """Test the _get_with_cache method."""
