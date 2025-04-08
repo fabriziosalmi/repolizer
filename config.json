@@ -245,9 +245,14 @@
                 "metodo": "LLM (valutazione chiarezza istruzioni), Analisi README e docs",
                 "peso": 4
             },
-            "presenza_dockerfile": {
-                "descrizione": "Presenza di un Dockerfile per facilitare il setup del progetto",
-                "metodo": "Analisi struttura repo (ricerca file Dockerfile)",
+            "configurabilita": {
+                "descrizione": "Facilit\u00e0 di configurazione del progetto per adattarsi a diversi scenari",
+                "metodo": "Analisi file di configurazione (es. config.json, settings.py)",
+                "peso": 3
+            },
+            "documentazione_installazione": {
+                "descrizione": "Presenza di documentazione per facilitare il setup del progetto",
+                "metodo": "Analisi struttura repo (ricerca file documentazione installazione)",
                 "peso": 3
             }
         }
