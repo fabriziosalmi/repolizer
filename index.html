@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Repolizer</title> <!-- Updated Title -->
+    <title>Repolizer Arena</title> <!-- Updated Title -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://unpkg.com/@popperjs/core@2" defer></script>
@@ -46,6 +46,10 @@
 
         /* Ensure tooltips are above other elements if needed */
         .tippy-box { z-index: 9999; }
+
+        /* Ensure loading row is displayed correctly initially */
+        #loadingRow { display: table-row; } /* Make sure it's treated as a row */
+        #loadingRow.hidden { display: none; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -56,7 +60,7 @@
         </header>
 
         <!-- Top 100 Rankings Section -->
-        <div id="rankingsSection" class="mb-12"> <!-- Added ID for clarity -->
+        <div id="rankingsSection" class="mb-12">
             <div id="rankings" class="space-y-8">
                 <div class="fade-in">
                     <h2 class="text-3xl font-semibold mb-6 text-center">Classifiche</h2>
@@ -76,8 +80,23 @@
                                 </tr>
                             </thead>
                             <tbody id="overallRanking" class="bg-white divide-y divide-gray-200">
-                                <!-- Overall ranking data will be populated here by JS -->
-                                <tr><td colspan="4" class="text-center py-8 text-gray-500">Caricamento classifiche...</td></tr>
+                                <!-- Progress Bar Row -->
+                                <tr id="loadingRow">
+                                    <td colspan="4" class="py-8">
+                                        <div class="text-center">
+                                            <div id="loading-progress-container" class="w-full max-w-md mx-auto mb-3">
+                                                <div class="bg-gray-200 rounded-full h-2.5 mb-1">
+                                                    <div id="loading-progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                                </div>
+                                                <div class="flex justify-between text-xs text-gray-500">
+                                                    <span id="loading-progress-text">Inizializzazione...</span>
+                                                    <span id="loading-progress-percentage">0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Ranking rows will be inserted here after loading -->
                             </tbody>
                         </table>
                     </div>
@@ -90,6 +109,97 @@
             </div>
             <br>
         </div> <!-- End Rankings Section -->
+
+        <!-- Detail View Section (Initially Hidden) -->
+        <div id="reportDetailView" class="mt-16 mb-12 bg-white rounded-2xl shadow-xl p-6 sm:p-10 fade-in hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div class="flex-1 min-w-0">
+                    <h2 id="repo-name" class="text-2xl sm:text-3xl font-bold text-gray-900 truncate" title="Repository Name">Nome Repository</h2>
+                    <a id="repo-url" href="#" target="_blank" rel="noopener noreferrer" class="text-sm text-indigo-600 hover:text-indigo-800 truncate block" title="Repository URL">url...</a>
+                    <p id="data-analisi" class="text-xs text-gray-500 mt-1">Report generato il...</p>
+                </div>
+                <div class="flex flex-col items-end md:items-center gap-2 flex-shrink-0">
+                     <!-- Score Display -->
+                    <div id="total-score" class="text-4xl sm:text-5xl font-bold score-medium" title="Punteggio Totale">0.00</div>
+                    <div class="w-32 sm:w-40 bg-gray-200 rounded-full h-2.5">
+                        <div id="score-progress-bar" class="h-2.5 rounded-full progress-medium" style="width: 0%"></div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-3">
+                         <button aria-label="Scarica il report in formato JSON" title="Scarica JSON" class="inline-flex items-center px-3 py-2 border border-indigo-500 text-sm font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m3 4.5V3" />
+                            </svg>
+                            Scarica JSON
+                        </button>
+                        <!-- View HTML button will be added here by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div class="bg-gray-50 rounded-xl p-4 shadow-inner">
+                     <h3 class="text-lg font-semibold mb-3 text-gray-700 text-center">Panoramica Categorie</h3>
+                     <div class="chart-container">
+                         <canvas id="radarChart"></canvas>
+                     </div>
+                </div>
+                 <div class="bg-gray-50 rounded-xl p-4 shadow-inner">
+                    <h3 class="text-lg font-semibold mb-3 text-gray-700 text-center">Punteggi per Categoria</h3>
+                    <div class="chart-container category-chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Details Section -->
+            <div>
+                <h3 class="text-2xl font-semibold mb-6 categories-title-fixed">Dettagli per Categoria</h3>
+                <div id="categoryDetails" class="space-y-6">
+                    <!-- Category details will be populated here -->
+                </div>
+            </div>
+
+        </div> <!-- End Detail View Section -->
+
+        <!-- Template for Category Details -->
+        <template id="categoryTemplate">
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <button class="category-toggle-button flex justify-between items-center w-full px-5 py-4 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition duration-150 ease-in-out" aria-expanded="true">
+                    <span class="text-lg font-semibold text-gray-800 category-name">Nome Categoria</span>
+                    <svg class="w-6 h-6 text-gray-600 transform transition-transform duration-200 category-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div class="category-content px-5 py-6">
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold mb-3 text-gray-700">Parametri Valutati</h4>
+                        <div class="overflow-x-auto rounded-md border border-gray-200">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parametro</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valore</th>
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Descrizione</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200 parameters-list">
+                                    <!-- Parameter rows will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-md font-semibold mb-3 text-gray-700">Suggerimenti</h4>
+                        <ul class="space-y-3 suggestions-list">
+                            <!-- Suggestion list items will be added here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </template>
+
 
     </div> <!-- Closing main max-w-7xl container -->
 
@@ -112,42 +222,71 @@
             }
         }
 
-        // Modify the loadLatestReports function to store the source filename 
+        // Modify the loadLatestReports function to store the source filename and track progress
         async function loadLatestReports() {
+            const overallRankingTableBody = document.getElementById('overallRanking');
+            const loadingRow = document.getElementById('loadingRow');
+            const progressBar = document.getElementById('loading-progress-bar');
+            const progressText = document.getElementById('loading-progress-text');
+            const progressPercentage = document.getElementById('loading-progress-percentage');
+            const detailView = document.getElementById('reportDetailView'); // Get detail view reference
+
+            // Ensure loading row and elements exist
+             if (!overallRankingTableBody || !loadingRow || !progressBar || !progressText || !progressPercentage) {
+                 console.error("Loading progress elements not found in the DOM.");
+                 if (overallRankingTableBody) {
+                     overallRankingTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-red-500 italic">Errore UI: Elementi di caricamento mancanti.</td></tr>`;
+                 }
+                 return;
+             }
+
+            // 1. Show loading bar initially
+            loadingRow.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Inizializzazione...';
+            progressPercentage.textContent = '0%';
+            overallRankingTableBody.innerHTML = ''; // Clear any previous content
+            overallRankingTableBody.appendChild(loadingRow); // Ensure loading row is the only content
+
+             // Reset allReports array
+            allReports = [];
+
             try {
+                // 2. Fetch the list of reports
                 const response = await fetch('/latest_reports');
                 if (!response.ok) {
                      throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const reports = await response.json();
+                const reportsInfoList = await response.json();
+                const totalReports = reportsInfoList.length;
+                let processedCount = 0;
 
-                // Reset allReports array
-                allReports = [];
-                console.log(`Found ${reports.length} reports`);
+                console.log(`Found ${totalReports} potential report files.`);
 
-                if (reports.length === 0) {
-                    // Display message within the existing ranking table
-                    const overallRankingTable = document.getElementById('overallRanking');
-                     if (overallRankingTable) {
-                        overallRankingTable.innerHTML = `
-                            <tr><td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
-                                Nessun report .json trovato nella directory 'reports'.
-                            </td></tr>`;
-                    }
-                     // Hide detail view if no reports
-                    const detailView = document.getElementById('reportDetailView');
-                    if (detailView) detailView.classList.add('hidden');
-                    return;
+                // Handle case where no report files are found
+                 if (totalReports === 0) {
+                     loadingRow.classList.add('hidden'); // Hide progress bar
+                     overallRankingTableBody.innerHTML = `
+                        <tr><td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
+                            Nessun report .json trovato nella directory 'reports'.
+                        </td></tr>`;
+                     if (detailView) detailView.classList.add('hidden'); // Hide detail view
+                     return; // Stop execution
                 }
 
-                // Process each report
-                for (const reportInfo of reports) {
-                    // Ensure we only fetch JSON files
-                     if (!reportInfo.filename || !reportInfo.filename.endsWith('.json')) {
-                        console.warn(`Skipping non-JSON file: ${reportInfo.filename}`);
-                        continue;
-                     }
+                // Initial progress update after getting the list
+                progressText.textContent = `Caricamento report 0 di ${totalReports}...`;
+
+                // 3. Process each report file
+                for (const reportInfo of reportsInfoList) {
+                    let reportLoadedSuccessfully = false;
                     try {
+                        // Ensure we only fetch JSON files
+                         if (!reportInfo.filename || !reportInfo.filename.endsWith('.json')) {
+                            console.warn(`Skipping non-JSON file: ${reportInfo.filename}`);
+                            continue; // Skip this file, move to the next
+                         }
+
                         const reportResponse = await fetch(reportInfo.filename);
                          if (!reportResponse.ok) {
                              throw new Error(`HTTP error loading report ${reportInfo.filename}! status: ${reportResponse.status}`);
@@ -159,7 +298,7 @@
 
                         // Ensure punteggio_totale exists (robust check)
                         if (typeof reportData.punteggio_totale !== 'number' && reportData.punteggi) {
-                            const scores = Object.values(reportData.punteggi).filter(score => typeof score === 'number'); // Filter out non-numeric scores
+                            const scores = Object.values(reportData.punteggi).filter(score => typeof score === 'number');
                             if (scores.length > 0) {
                                 const sum = scores.reduce((a, b) => a + b, 0);
                                 reportData.punteggio_totale = +(sum / scores.length).toFixed(2);
@@ -167,7 +306,6 @@
                                 reportData.punteggio_totale = 0;
                             }
                         } else if (typeof reportData.punteggio_totale !== 'number') {
-                            // Handle cases where punteggi might also be missing or invalid
                             reportData.punteggio_totale = 0;
                         }
 
@@ -177,56 +315,72 @@
                             continue; // Skip incomplete reports
                         }
 
-                        // Store the report data for later use
+                        // Store the report data
                         allReports.push(reportData);
+                        reportLoadedSuccessfully = true;
+
                     } catch (error) {
                         console.error(`Error loading or parsing report ${reportInfo.filename}:`, error);
+                        // Don't re-throw, allow loop to continue and update progress
+                    } finally {
+                        // 4. Update progress IN THE LOOP (whether success or error)
+                        processedCount++;
+                        const percentage = Math.round((processedCount / totalReports) * 100);
+                        progressBar.style.width = `${percentage}%`;
+                        progressText.textContent = `Caricamento report ${processedCount} di ${totalReports}...`;
+                        progressPercentage.textContent = `${percentage}%`;
+                        // Optional: Add a small delay for visual effect if needed, but usually not necessary
+                        // await new Promise(resolve => setTimeout(resolve, 50));
                     }
-                }
+                } // End of loop
+
+                // 5. Finalize Progress and Populate Data
+                progressText.textContent = 'Completato';
+                progressPercentage.textContent = '100%';
+                progressBar.style.width = '100%';
+
+                // Add a short delay before hiding the progress bar and showing results
+                 await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+
+                loadingRow.classList.add('hidden'); // Hide the progress row
 
                 // Filter out any reports that might still be null if skipped above
                  allReports = allReports.filter(report => report !== null);
 
+                 // Check if any valid reports were loaded after processing all files
                  if (allReports.length === 0) {
-                    const overallRankingTable = document.getElementById('overallRanking');
-                     if (overallRankingTable) {
-                        overallRankingTable.innerHTML = `
-                            <tr><td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
-                                Nessun report valido trovato o caricato. Controlla la console per errori.
-                            </td></tr>`;
-                    }
-                     // Hide detail view if no reports
-                    const detailView = document.getElementById('reportDetailView');
-                    if (detailView) detailView.classList.add('hidden');
+                    overallRankingTableBody.innerHTML = `
+                        <tr><td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
+                            Nessun report valido trovato o caricato dopo il processo. Controlla la console per errori.
+                        </td></tr>`;
+                     if (detailView) detailView.classList.add('hidden');
                      return;
-                }
+                 }
 
-                // After loading all reports, populate rankings
+                // Populate rankings and categories
                 populateRankings();
                 populateCategoryRankings();
 
-                // Get the detail view container
-                const detailView = document.getElementById('reportDetailView');
-
-                // If we have reports, show the first one AND make the section visible
+                // Show the first report's details and make the detail section visible
                 if (allReports.length > 0 && detailView) {
-                    detailView.classList.remove('hidden'); // <-- Make detail view visible
-                    populatePage(allReports[0]); // Now populate it
+                    detailView.classList.remove('hidden'); // Make detail view visible
+                    populatePage(allReports[0]); // Populate with the first report
                 } else if (detailView) {
-                    detailView.classList.add('hidden'); // Keep it hidden if no reports
+                    detailView.classList.add('hidden'); // Keep hidden if somehow no reports remain
                 }
 
             } catch (error) {
+                 // Handle errors during the initial report list fetch
                 console.error('Error fetching report list:', error);
-                 const overallRankingTable = document.getElementById('overallRanking');
-                 if (overallRankingTable) {
-                    overallRankingTable.innerHTML = `
-                        <tr><td colspan="4" class="px-6 py-12 text-center text-red-500 italic">
-                            Errore nel caricamento della lista dei report. Controlla la console.
-                        </td></tr>`;
-                }
+                loadingRow.classList.add('hidden'); // Hide progress bar on error
+                overallRankingTableBody.innerHTML = `
+                    <tr><td colspan="4" class="px-6 py-12 text-center text-red-500 italic">
+                        Errore nel caricamento della lista dei report. Controlla la console.
+                    </td></tr>`;
+                if (detailView) detailView.classList.add('hidden'); // Hide details on error
             }
         }
+
 
         function populatePage(reportData) {
             if (!reportData) {
@@ -268,7 +422,7 @@
             }
 
             // Set score colors
-            const scoreElement = document.getElementById('total-score');
+            const scoreElement = document.getElementById('total-score'); // Changed ID to match HTML
             if (scoreElement && scoreBar) {
                 // Remove previous color classes
                 scoreElement.classList.remove('score-high', 'score-medium', 'score-low');
@@ -283,28 +437,40 @@
             populateCategoryDetails(reportData);
 
             // Handle download JSON button click for the DETAILED VIEW section.
-            const detailDownloadButton = detailView.querySelector('button[aria-label="Scarica il report in formato JSON"]');
-            if (detailDownloadButton) {
-                // Clone and replace to remove old listeners safely
-                const newButton = detailDownloadButton.cloneNode(true);
-                detailDownloadButton.parentNode.replaceChild(newButton, detailDownloadButton);
+             const detailButtonsContainer = detailView.querySelector('#total-score')?.parentElement?.querySelector('.flex.items-center.gap-2.mt-3'); // Find button container relative to score
+             if (detailButtonsContainer) {
+                 // Remove existing buttons first to avoid duplication
+                 detailButtonsContainer.querySelectorAll('.detail-view-html-button, button[aria-label="Scarica il report in formato JSON"]').forEach(btn => btn.remove());
 
-                newButton.onclick = () => {
-                     if (currentReportData) {
-                         downloadSpecificReport(JSON.stringify(currentReportData, null, 2), currentReportData.nome_repository);
-                     } else {
-                         console.error("No current report data available for download.");
-                     }
-                };
-                
-                // Add View HTML button next to the download button
+                 // Create and configure Download JSON button
+                 const downloadButton = document.createElement('button');
+                 downloadButton.setAttribute('aria-label', 'Scarica il report in formato JSON');
+                 downloadButton.title = 'Scarica JSON';
+                 downloadButton.className = 'inline-flex items-center px-3 py-2 border border-indigo-500 text-sm font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200';
+                 downloadButton.innerHTML = `
+                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m3 4.5V3" />
+                     </svg>
+                     Scarica JSON
+                 `;
+                 downloadButton.onclick = () => {
+                      if (currentReportData) {
+                          downloadSpecificReport(JSON.stringify(currentReportData, null, 2), currentReportData.nome_repository);
+                      } else {
+                          console.error("No current report data available for download.");
+                      }
+                 };
+                 detailButtonsContainer.appendChild(downloadButton); // Add download button
+
+                 // Create and configure View HTML button
                 const htmlReportPath = getHtmlReportPath(reportData);
                 const viewButton = document.createElement('a');
-                viewButton.classList.add('detail-view-html-button'); // Add a specific class for identification
+                viewButton.classList.add('detail-view-html-button'); // Specific class
                 viewButton.href = htmlReportPath;
                 viewButton.target = '_blank';
                 viewButton.rel = 'noopener noreferrer';
                 viewButton.setAttribute('aria-label', `Visualizza il report HTML per ${reportData.nome_repository || 'repository'}`);
+                viewButton.title = 'Visualizza HTML';
                 viewButton.className = 'inline-flex ml-2 items-center px-3 py-2 border border-green-500 text-sm font-medium rounded-md text-green-600 bg-white hover:bg-green-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200';
                 viewButton.innerHTML = `
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -313,47 +479,15 @@
                     </svg>
                     Visualizza HTML
                 `;
-                
-                // Add the view button after the download button
-                newButton.parentNode.appendChild(viewButton);
+                detailButtonsContainer.appendChild(viewButton); // Add view button
+
+                 // Call updateViewButtons immediately to attach handlers for special paths
+                 updateViewButtons(); // Ensure handlers are attached right away
+
             } else {
-                console.warn("Detail view download button not found.");
+                console.warn("Detail view buttons container not found.");
             }
 
-            // Call updateViewButtons to handle special HTML paths
-            setTimeout(() => {
-                // Wait a tiny bit for the DOM to update
-                document.querySelectorAll('.detail-view-html-button').forEach(btn => {
-                    const href = btn.getAttribute('href');
-                    if (href.includes('_*.html') || href.startsWith('reports/?repo=')) {
-                        btn.addEventListener('click', function(event) {
-                            event.preventDefault();
-                            
-                            // Show loading state
-                            const originalText = btn.innerHTML;
-                            btn.innerHTML = `
-                                <svg class="animate-spin w-4 h-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Caricamento...
-                            `;
-                            
-                            findMatchingHtmlReport(href)
-                                .then(matchedPath => {
-                                    window.open(matchedPath, '_blank');
-                                })
-                                .catch(error => {
-                                    console.error("Error finding HTML report:", error);
-                                    alert("Could not find a matching HTML report");
-                                })
-                                .finally(() => {
-                                    btn.innerHTML = originalText;
-                                });
-                        });
-                    }
-                });
-            }, 100);
         }
 
         // Modified setTotalScoreColors to accept elements
@@ -376,20 +510,31 @@
             Chart.defaults.color = '#4B5563'; // text-gray-600
 
              // Ensure canvas elements exist before getting context
-            const radarCanvas = document.getElementById('radarChart');
-            const categoryCanvas = document.getElementById('categoryChart');
+            let radarCanvas = document.getElementById('radarChart');
+            let categoryCanvas = document.getElementById('categoryChart');
+
+            // Helper function to recreate canvas if needed
+            const recreateCanvas = (containerId, canvasId) => {
+                 const container = document.getElementById(containerId)?.parentNode; // Get parent .chart-container
+                 if (container) {
+                     container.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+                     return document.getElementById(canvasId);
+                 }
+                 return null;
+            };
+
+            if (!radarCanvas) {
+                console.warn("Radar chart canvas not found, attempting to recreate.");
+                radarCanvas = recreateCanvas('radarChart', 'radarChart');
+            }
+             if (!categoryCanvas) {
+                console.warn("Category chart canvas not found, attempting to recreate.");
+                categoryCanvas = recreateCanvas('categoryChart', 'categoryChart');
+             }
 
             if (!radarCanvas || !categoryCanvas) {
-                 console.error("Chart canvas element(s) not found!");
-                 // Clear any potential leftover message/chart in parent container
-                 if (radarCanvas && radarCanvas.parentNode) radarCanvas.parentNode.innerHTML = '<canvas id="radarChart"></canvas>';
-                 if (categoryCanvas && categoryCanvas.parentNode) categoryCanvas.parentNode.innerHTML = '<canvas id="categoryChart"></canvas>';
-                 // Try to get canvas again after resetting HTML (might help if DOM was manipulated badly)
-                 const newRadarCanvas = document.getElementById('radarChart');
-                 const newCategoryCanvas = document.getElementById('categoryChart');
-                 if (!newRadarCanvas || !newCategoryCanvas) return; // Still not found, give up.
-                 radarCanvas = newRadarCanvas;
-                 categoryCanvas = newCategoryCanvas;
+                 console.error("Chart canvas element(s) could not be found or recreated!");
+                 return; // Cannot proceed without canvas elements
             }
 
             const ctxRadar = radarCanvas.getContext('2d');
@@ -412,7 +557,7 @@
             };
             const barColors = scores.map(getBarColor);
 
-             // Destroy existing charts if they exist (redundant check, but safe)
+             // Destroy existing charts if they exist
             destroyCharts();
 
             // Init Radar Chart
@@ -462,6 +607,7 @@
                 ctxRadar.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
                 ctxRadar.textAlign = 'center';
                 ctxRadar.fillStyle = '#6B7280'; // gray-500
+                ctxRadar.font = '14px "Inter", sans-serif';
                 ctxRadar.fillText('Nessun dato per il grafico radar', radarCanvas.width / 2, radarCanvas.height / 2);
              }
 
@@ -504,13 +650,14 @@
                             }
                         },
                         layout: { padding: { left: 10, right: 20, top: 10, bottom: 10 } }, // Added top/bottom padding
-                        animation: { duration: 1000, easing: 'easeOutCubic' } // Adjusted animation
+                        animation: { duration: 800, easing: 'easeOutCubic' } // Slightly faster animation
                     }
                 });
             } else {
                  ctxCategory.clearRect(0, 0, categoryCanvas.width, categoryCanvas.height);
                  ctxCategory.textAlign = 'center';
                  ctxCategory.fillStyle = '#6B7280'; // gray-500
+                 ctxCategory.font = '14px "Inter", sans-serif';
                  ctxCategory.fillText('Nessun dato per il grafico categorie', categoryCanvas.width / 2, categoryCanvas.height / 2);
              }
         }
@@ -570,7 +717,8 @@
                     const parameterName = nome.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Capitalize
                     const parameterIcon = getParameterIcon(info.tipo || 'default');
                     const description = info.descrizione || 'Nessuna descrizione';
-                    const tippyDescription = info.descrizione ? info.descrizione.replace(/"/g, '"') : 'Nessuna descrizione'; // Escape quotes for attribute
+                    // Ensure tippyDescription is properly escaped and handles null/undefined
+                    const tippyDescription = info.descrizione ? String(info.descrizione).replace(/"/g, '"') : 'Nessuna descrizione';
 
                     // Handle the score display
                     let scoreDisplay = 'N/A';
@@ -590,14 +738,14 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-normal text-sm text-gray-500"> <!-- Allow wrap -->
-                            <span class="font-mono bg-gray-100 px-2 py-1 rounded break-all">${info.valore !== null && info.valore !== undefined ? info.valore : 'N/A'}</span>
+                            <span class="font-mono bg-gray-100 px-2 py-1 rounded break-all">${info.valore !== null && info.valore !== undefined ? String(info.valore).replace(/</g, '<').replace(/>/g, '>') : 'N/A'}</span> <!-- Added basic escaping for value -->
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-center"> <!-- Center score -->
                             <span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium ${scoreClass}" style="min-width: 50px;"> <!-- Min width for N/A -->
                                 ${scoreDisplay}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500 hidden md:table-cell whitespace-normal">${description}</td> <!-- Allow wrap -->
+                        <td class="px-6 py-4 text-sm text-gray-500 hidden md:table-cell whitespace-normal">${String(description).replace(/</g, '<').replace(/>/g, '>')}</td> <!-- Allow wrap & escape -->
                     `;
                     parametersList.appendChild(row);
                 });
@@ -611,7 +759,7 @@
                          if (typeof suggestion !== 'string' || suggestion.trim() === '') return; // Skip empty/invalid suggestions
                         const li = document.createElement('li');
                         li.className = 'p-3 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg';
-                        // Basic sanitization (replace potential HTML tags) - consider a more robust library if needed
+                        // Basic sanitization
                         const sanitizedSuggestion = suggestion.replace(/</g, "<").replace(/>/g, ">");
                         li.innerHTML = `<p class="text-gray-700">${sanitizedSuggestion}</p>`;
                         suggestionsList.appendChild(li);
@@ -659,7 +807,18 @@
                 'documentation': '<svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
                 'default': '<svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-5-5h12l-5 5z"></path></svg>' // Example: Adjust icon
             };
-            return icons[tipo] || icons.default;
+            // Add more specific icons based on category names if available
+            const categorySpecificIcons = {
+                'distribuzione': '<svg class="w-5 h-5 text-cyan-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>',
+                'manutenzione': '<svg class="w-5 h-5 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
+                'codice': icons.code_quality, // Reuse if appropriate
+                'documentazione': icons.documentation,
+                'collaborazione': '<svg class="w-5 h-5 text-pink-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
+                'sicurezza': icons.security,
+                'integrazione': icons.performance, // Reuse or choose a better one like puzzle piece
+                'adozione': '<svg class="w-5 h-5 text-lime-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
+            };
+            return categorySpecificIcons[tipo] || icons[tipo] || icons.default;
         }
 
         function getScoreClass(punteggio) {
@@ -687,9 +846,12 @@
             // Get top 100
             const topReports = sortedReports.slice(0, 100);
 
-            const overallRankingTable = document.getElementById('overallRanking');
-            if (!overallRankingTable) return; // Exit if table not found
-            overallRankingTable.innerHTML = ''; // Clear loading/previous state
+            const overallRankingTableBody = document.getElementById('overallRanking');
+            if (!overallRankingTableBody) return; // Exit if table not found
+
+            // Clear only potential message rows, keep loading row structure if needed (though it should be hidden now)
+            overallRankingTableBody.innerHTML = ''; // Clear previous content (including loading row if it wasn't hidden properly)
+
 
             // Check if we have any valid reports to rank
             if (topReports.length === 0) {
@@ -699,13 +861,13 @@
                         Nessun report valido disponibile per la classifica.
                     </td>
                 `;
-                overallRankingTable.appendChild(emptyRow);
+                overallRankingTableBody.appendChild(emptyRow);
                 return;
             }
 
             // Populate the ranking table
             topReports.forEach((report, index) => {
-                 if (!report || !report.punteggio_totale || !report.nome_repository) {
+                 if (!report || typeof report.punteggio_totale !== 'number' || !report.nome_repository) { // Stricter check for score type
                      console.warn("Skipping invalid report object in ranking:", report);
                      return; // Skip malformed report objects
                  }
@@ -717,7 +879,7 @@
                 let positionClass = 'bg-gray-100 text-gray-800';
                 if (index === 0) positionClass = 'bg-yellow-100 text-yellow-800 font-semibold'; // Gold
                 else if (index === 1) positionClass = 'bg-gray-200 text-gray-700 font-semibold'; // Silver
-                else if (index === 2) positionClass = 'bg-orange-100 text-orange-800 font-semibold'; // Bronze (using orange for better contrast)
+                else if (index === 2) positionClass = 'bg-orange-100 text-orange-800 font-semibold'; // Bronze
 
                 // Medal icon
                 let medal = '';
@@ -726,26 +888,28 @@
                 else if (index === 2) medal = '<span class="text-orange-500 ml-1" aria-label="Bronze medal">🥉</span>';
 
                 // Score color class
-                const scoreClass = getScoreColorClass(report.punteggio_totale); // Use the function for consistency
+                const scoreClass = getScoreColorClass(report.punteggio_totale);
 
                 // Category score indicators
-                const categoryIcons = { /* ... same icons as before ... */
-                    distribuzione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>',
-                    manutenzione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
-                    codice: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
-                    documentazione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
-                    collaborazione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
-                    sicurezza: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
-                    integrazione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
-                    adozione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
+                const categoryIcons = { /* Use icons from getParameterIcon for consistency */
+                    distribuzione: getParameterIcon('distribuzione').replace('w-5 h-5', 'w-4 h-4'),
+                    manutenzione: getParameterIcon('manutenzione').replace('w-5 h-5', 'w-4 h-4'),
+                    codice: getParameterIcon('codice').replace('w-5 h-5', 'w-4 h-4'),
+                    documentazione: getParameterIcon('documentazione').replace('w-5 h-5', 'w-4 h-4'),
+                    collaborazione: getParameterIcon('collaborazione').replace('w-5 h-5', 'w-4 h-4'),
+                    sicurezza: getParameterIcon('sicurezza').replace('w-5 h-5', 'w-4 h-4'),
+                    integrazione: getParameterIcon('integrazione').replace('w-5 h-5', 'w-4 h-4'),
+                    adozione: getParameterIcon('adozione').replace('w-5 h-5', 'w-4 h-4'),
+                    default: getParameterIcon('default').replace('w-5 h-5', 'w-4 h-4')
                  };
                  const categoryScoresHTML = Object.entries(report.punteggi || {}).map(([category, score]) => {
-                     const numScore = typeof score === 'number' ? score : NaN; // Ensure numeric score
-                     if (isNaN(numScore)) return ''; // Skip if score is not a number
+                     const numScore = typeof score === 'number' ? score : NaN;
+                     if (isNaN(numScore)) return '';
                     const categoryClass = getScoreColorClass(numScore);
-                    const icon = categoryIcons[category] || categoryIcons.default || ''; // Fallback icon
+                    const icon = categoryIcons[category] || categoryIcons.default || '';
                     const categoryName = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    const tippyContent = `${categoryName}: ${numScore.toFixed(1)}`.replace(/"/g, '"'); // Escape quotes
+                    // Escape quotes for attribute safety
+                    const tippyContent = `${categoryName}: ${numScore.toFixed(1)}`.replace(/"/g, '"');
 
                     return `
                         <div class="flex items-center gap-1 px-2 py-0.5 rounded ${categoryClass}" data-tippy-content="${tippyContent}">
@@ -761,16 +925,16 @@
                 // Download button and View Report button HTML
                 const actionsHTML = `
                     <div class="flex flex-wrap gap-2 justify-end">
-                        <button aria-label="Scarica report JSON per ${report.nome_repository.replace(/"/g, '"')}"
+                        <button aria-label="Scarica report JSON per ${String(report.nome_repository).replace(/"/g, '"')}"
                                 title="Scarica report JSON"
                                 class="download-json-button inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-indigo-500 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
                             <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m3 4.5V3" />
                             </svg>
                             JSON
                         </button>
                         <a href="${htmlReportPath}" target="_blank" rel="noopener noreferrer"
-                           aria-label="Visualizza report HTML per ${report.nome_repository.replace(/"/g, '"')}"
+                           aria-label="Visualizza report HTML per ${String(report.nome_repository).replace(/"/g, '"')}"
                            title="Visualizza report HTML"
                            class="view-html-button inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-green-500 text-green-600 hover:bg-green-600 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1">
                             <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -797,7 +961,7 @@
                             </div>
                             <div class="min-w-0 flex-1"> <!-- Allow text to wrap -->
                                 <a href="${report.url || '#'}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors break-words">
-                                    ${report.nome_repository}
+                                    ${String(report.nome_repository).replace(/</g, '<').replace(/>/g, '>')} <!-- Basic XSS prevention -->
                                 </a>
                                 <div class="text-xs text-gray-500 mt-1">Analizzato: ${report.data_analisi || 'N/A'}</div>
                                 <div class="mt-2 flex flex-wrap gap-1">
@@ -820,15 +984,14 @@
                 row.style.cursor = 'pointer';
                 const cellsToClick = row.querySelectorAll('td:not(:last-child)'); // Exclude actions column
                 cellsToClick.forEach(cell => {
-                     // Using function declaration for 'this' context if needed later, though arrow function is fine here
-                    cell.addEventListener('click', function() {
+                     cell.addEventListener('click', function() {
                         const detailView = document.getElementById('reportDetailView');
                         if (!detailView) return;
-                        detailView.classList.remove('hidden');
+                        // Don't hide/show, just populate and scroll
                         populatePage(report); // Pass the correct report object
-                        // Scroll detail view into viewport
+                        // Scroll detail view into viewport smoothly
                         detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    });
+                     });
                  });
 
 
@@ -841,7 +1004,7 @@
                     });
                 }
 
-                overallRankingTable.appendChild(row);
+                overallRankingTableBody.appendChild(row);
             });
 
             // Re-Initialize tooltips for any new elements in the ranking table
@@ -864,24 +1027,26 @@
                 }
             });
 
-            const categoryIcons = { /* ... same icons as before ... */
-                    distribuzione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>',
-                    manutenzione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
-                    codice: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
-                    documentazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
-                    collaborazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
-                    sicurezza: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
-                    integrazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
-                    adozione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>',
-                    default: '' // Default empty icon
-                 };
+            const categoryIcons = { /* Use getParameterIcon for consistency */
+                distribuzione: getParameterIcon('distribuzione').replace('flex-shrink-0', ''), // Remove shrink class
+                manutenzione: getParameterIcon('manutenzione').replace('flex-shrink-0', ''),
+                codice: getParameterIcon('codice').replace('flex-shrink-0', ''),
+                documentazione: getParameterIcon('documentazione').replace('flex-shrink-0', ''),
+                collaborazione: getParameterIcon('collaborazione').replace('flex-shrink-0', ''),
+                sicurezza: getParameterIcon('sicurezza').replace('flex-shrink-0', ''),
+                integrazione: getParameterIcon('integrazione').replace('flex-shrink-0', ''),
+                adozione: getParameterIcon('adozione').replace('flex-shrink-0', ''),
+                default: getParameterIcon('default').replace('flex-shrink-0', '')
+             };
 
             const categoryRankingsContainer = document.getElementById('categoryRankings');
             if (!categoryRankingsContainer) return;
             categoryRankingsContainer.innerHTML = ''; // Clear previous
-             // Apply grid layout if there are categories, otherwise clear classes
+
+             // Apply grid layout if there are categories
              if (categories.size > 0) {
-                categoryRankingsContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-12'; // Keep classList simple
+                // Adjusted grid for better spacing, especially on larger screens
+                categoryRankingsContainer.className = 'grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-8 mt-12';
              } else {
                  categoryRankingsContainer.className = 'mt-12'; // Reset if no categories
                  categoryRankingsContainer.innerHTML = '<p class="text-center text-gray-500 italic">Nessuna categoria trovata nei report.</p>';
@@ -889,22 +1054,22 @@
 
 
             categories.forEach(category => {
-                // Sort reports by this category's score (handle missing scores)
+                // Sort reports by this category's score
                 const sortedByCategory = [...allReports]
-                    .filter(r => r && r.punteggi && typeof r.punteggi[category] === 'number') // Ensure report, punteggi, and specific score exist and are numbers
+                    .filter(r => r && r.punteggi && typeof r.punteggi[category] === 'number')
                     .sort((a, b) => b.punteggi[category] - a.punteggi[category])
-                    .slice(0, 10); // Show Top 10 per category to save space
+                    .slice(0, 10); // Top 10 per category
 
                 if (sortedByCategory.length === 0) return; // Skip if no reports have this category score
 
                 const categorySection = document.createElement('div');
-                categorySection.className = 'bg-white rounded-2xl shadow-lg p-6 fade-in'; // Slightly smaller padding
+                categorySection.className = 'bg-white rounded-2xl shadow-lg p-5 sm:p-6 fade-in'; // Consistent padding
 
                 const categoryName = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 const categoryIcon = categoryIcons[category] || categoryIcons.default;
 
                 categorySection.innerHTML = `
-                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                    <h3 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
                         ${categoryIcon}
                         <span>Top 10 - ${categoryName}</span>
                     </h3>
@@ -912,37 +1077,36 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead>
                                 <tr>
-                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pos.</th> <!-- Shorter header -->
-                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
-                                    <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th> <!-- Right aligned -->
+                                    <th scope="col" class="pl-3 pr-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pos.</th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
+                                    <th scope="col" class="pl-2 pr-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 ${sortedByCategory.map((report, index) => {
                                     const score = report.punteggi[category];
                                     const scoreClass = getScoreColorClass(score);
-                                    // Find the original report index in the main allReports array
-                                    const originalIndex = allReports.findIndex(r => r.nome_repository === report.nome_repository && r.data_analisi === report.data_analisi);
+                                    const originalIndex = allReports.findIndex(r => r._sourceFilename === report._sourceFilename); // Use source filename for unique ID if available
                                     const htmlReportPath = getHtmlReportPath(report);
-                                    
+
                                     return `
-                                    <tr class="hover:bg-gray-50 cursor-pointer category-rank-row" data-report-index="${originalIndex >= 0 ? originalIndex : ''}"> <!-- Store original index -->
-                                        <td class="px-4 py-3 whitespace-nowrap">
+                                    <tr class="hover:bg-gray-50 cursor-pointer category-rank-row" data-report-index="${originalIndex >= 0 ? originalIndex : ''}">
+                                        <td class="pl-3 pr-2 py-3 whitespace-nowrap">
                                             <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                                 ${index + 1}
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 whitespace-normal text-sm font-medium text-gray-900 hover:text-indigo-600 break-words min-w-[150px]"> <!-- Allow wrap, min width -->
-                                            ${report.nome_repository}
+                                        <td class="px-2 py-3 whitespace-normal text-sm font-medium text-gray-900 hover:text-indigo-600 break-words min-w-[150px]">
+                                            ${String(report.nome_repository).replace(/</g, '<').replace(/>/g, '>')} <!-- Basic XSS prevention -->
                                         </td>
-                                        <td class="px-4 py-3 whitespace-nowrap text-right flex items-center justify-end gap-2">
+                                        <td class="pl-2 pr-3 py-3 whitespace-nowrap text-right flex items-center justify-end gap-2">
                                             <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium ${scoreClass}" style="min-width: 50px;">
                                                 ${score.toFixed(2)}
                                             </span>
-                                            <a href="${htmlReportPath}" target="_blank" rel="noopener noreferrer" 
-                                               class="view-btn" title="Visualizza report HTML"
-                                               onclick="event.stopPropagation()">
-                                                <svg class="w-4 h-4 text-green-600 hover:text-green-800" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <a href="${htmlReportPath}" target="_blank" rel="noopener noreferrer"
+                                               class="view-btn flex-shrink-0 text-green-600 hover:text-green-800 transition-colors" title="Visualizza report HTML"
+                                               onclick="event.stopPropagation()"> <!-- Prevent row click -->
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
@@ -963,11 +1127,23 @@
                          if (reportIndex !== '' && allReports[reportIndex]) {
                             const detailView = document.getElementById('reportDetailView');
                             if (!detailView) return;
-                            detailView.classList.remove('hidden');
+                            // Don't hide/show, just populate and scroll
                             populatePage(allReports[reportIndex]);
                             detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
                          } else {
-                            console.warn("Could not find report for category ranking row.");
+                            console.warn("Could not find report for category ranking row using index:", reportIndex);
+                            // Fallback: try to find by name (less reliable if duplicates exist)
+                            const repoNameInRow = row.querySelector('td:nth-child(2)').textContent.trim();
+                            const fallbackReport = allReports.find(r => r.nome_repository === repoNameInRow);
+                             if (fallbackReport) {
+                                const detailView = document.getElementById('reportDetailView');
+                                if (detailView) {
+                                     populatePage(fallbackReport);
+                                     detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                             } else {
+                                console.error("Fallback search by name also failed for:", repoNameInRow);
+                             }
                          }
                      });
                  });
@@ -987,34 +1163,35 @@
                  return;
              }
             try {
-                // Encode the JSON string for the Data URI
-                const encodedData = encodeURIComponent(jsonDataString);
-                const dataStr = "data:text/json;charset=utf-8," + encodedData;
+                const blob = new Blob([jsonDataString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
 
                 const downloadAnchorNode = document.createElement('a');
-                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("href", url);
 
-                // Sanitize filename (replace potentially problematic characters)
-                const safeRepoName = repoName.replace(/[\s\/\\?%*:|"<>]+/g, '_'); // Replace space and others with underscore
+                // Sanitize filename
+                const safeRepoName = String(repoName).replace(/[\s\/\\?%*:|"<>]+/g, '_');
                 const filename = `${safeRepoName}_report.json`;
                 downloadAnchorNode.setAttribute("download", filename);
 
-                // Append temporarily, click, and remove
                 document.body.appendChild(downloadAnchorNode);
                 downloadAnchorNode.click();
+
+                // Clean up
                 document.body.removeChild(downloadAnchorNode);
+                URL.revokeObjectURL(url);
+
             } catch (error) {
                 console.error("Error during JSON download:", error);
-                // Optionally, inform the user
-                // alert("Si è verificato un errore durante il tentativo di download del report.");
+                alert("Si è verificato un errore durante il tentativo di download del report JSON.");
             }
         }
         // Expose to global scope (optional, but can be useful for debugging)
         window.downloadSpecificReport = downloadSpecificReport;
 
-        // --- Utility function for score color class (based on background/text pairing) ---
+        // --- Utility function for score color class ---
         function getScoreColorClass(score) {
-             const scoreNum = Number(score); // Ensure it's a number
+             const scoreNum = Number(score);
              if (isNaN(scoreNum) || score === null || score === undefined) {
                 return 'bg-gray-100 text-gray-500';
              }
@@ -1023,64 +1200,75 @@
             return 'bg-red-100 text-red-800';
         }
 
-        // Function to generate the HTML report path based on report data
-        function getHtmlReportPath(report) {
+        // Function to generate the HTML report path
+         function getHtmlReportPath(report) {
             if (!report || !report.nome_repository) return '#';
-            
+
             try {
-                // First try to find the exact filename in our loaded data
-                // Look for the JSON filename in our allReports array's source paths
-                for (const loadedReport of allReports) {
-                    // Find the matching report by repository name and date
-                    if (loadedReport.nome_repository === report.nome_repository && 
-                        loadedReport.data_analisi === report.data_analisi) {
-                        
-                        // If we have the original source filename, use it
-                        if (loadedReport._sourceFilename && loadedReport._sourceFilename.endsWith('.json')) {
-                            // Convert JSON path to HTML path
-                            return loadedReport._sourceFilename.replace('.json', '.html');
-                        }
-                    }
+                // Use the stored source filename if available
+                if (report._sourceFilename && report._sourceFilename.endsWith('.json')) {
+                    // Simple replacement: assumes HTML is alongside JSON with same base name
+                    return report._sourceFilename.replace('.json', '.html');
                 }
-                
-                // If we couldn't find a direct match, try to construct the filename from the data_analisi
-                if (report.data_analisi) {
-                    const formattedDate = formatDateForFilename(report.data_analisi);
-                    if (formattedDate) {
-                        return `reports/report_${formattedDate}.html`;
-                    }
-                }
-                
-                // If all else fails, use a special format that will be handled by our click handler
-                return `reports/?repo=${encodeURIComponent(report.nome_repository)}`;
-                
+
+                // Fallback: If source filename isn't stored, construct based on date
+                 // (Less reliable if naming convention changes or multiple reports on same day)
+                 if (report.data_analisi) {
+                     const formattedDate = formatDateForFilename(report.data_analisi);
+                     if (formattedDate) {
+                         // Assume a standard naming pattern like report_YYYYMMDD_HHMMSS.html
+                         // This might need adjustment based on the actual generator script
+                         const potentialPath = `reports/report_${formattedDate}.html`;
+                         console.warn(`Using constructed path ${potentialPath} as fallback for ${report.nome_repository}`);
+                         return potentialPath;
+                     }
+                 }
+
+                // If absolutely no source filename or usable date, create a placeholder link
+                // that the findMatchingHtmlReport logic might handle via server list fetch
+                 console.warn(`Could not determine exact HTML path for ${report.nome_repository}. Using wildcard path.`);
+                return `reports/?repo=${encodeURIComponent(report.nome_repository)}`; // Wildcard/search format
+
             } catch (error) {
                 console.error("Error generating HTML report path:", error, report);
-                return `reports/?repo=${encodeURIComponent(report.nome_repository)}`;
+                 return `reports/?repo=${encodeURIComponent(report.nome_repository)}`; // Fallback on error
             }
         }
-        
+
         // Helper function to format a date string for the filename
         function formatDateForFilename(dateStr) {
+            if (!dateStr) return '';
             try {
-                // Extract date components from the string
-                let match;
-                let year, month, day, hour, minute, second;
-                
-                // Try YYYY-MM-DD HH:MM:SS format (like 2025-04-08 10:08:29)
-                if (match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/)) {
-                    [, year, month, day, hour, minute, second] = match;
-                } 
-                // Try DD/MM/YYYY HH:MM:SS format
-                else if (match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/)) {
-                    [, day, month, year, hour, minute, second] = match;
+                // Robust date parsing - Try common formats
+                let dateObj;
+                // Try ISO format (YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SSZ etc.)
+                if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/.test(dateStr)) {
+                    dateObj = new Date(dateStr.replace(' ', 'T') + 'Z'); // Assume UTC if no offset
                 }
-                // If no format matches, return empty string
-                else {
+                // Try DD/MM/YYYY HH:MM:SS format
+                else if (/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/.test(dateStr)) {
+                     const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+                     // Construct ISO-like string for Date constructor: YYYY-MM-DDTHH:MM:SS
+                     dateObj = new Date(`${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}:${match[6]}Z`); // Assume UTC
+                } else {
+                    // Attempt direct parsing (less reliable)
+                    dateObj = new Date(dateStr);
+                }
+
+                // Check if date parsing was successful
+                if (!dateObj || isNaN(dateObj.getTime())) {
+                    console.warn("Could not parse date string:", dateStr);
                     return '';
                 }
-                
-                // Format as YYYYMMDD_HHMMSS
+
+                // Format as YYYYMMDD_HHMMSS (using UTC to avoid timezone issues)
+                const year = dateObj.getUTCFullYear();
+                const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(dateObj.getUTCDate()).padStart(2, '0');
+                const hour = String(dateObj.getUTCHours()).padStart(2, '0');
+                const minute = String(dateObj.getUTCMinutes()).padStart(2, '0');
+                const second = String(dateObj.getUTCSeconds()).padStart(2, '0');
+
                 return `${year}${month}${day}_${hour}${minute}${second}`;
             } catch (error) {
                 console.error("Error formatting date for filename:", error, dateStr);
@@ -1088,213 +1276,223 @@
             }
         }
 
-        // Modified findMatchingHtmlReport function to handle the new format
-        function findMatchingHtmlReport(wildcardPath) {
-            return new Promise((resolve, reject) => {
-                // Extract repo name from the path
-                let repoName = null;
-                
-                if (wildcardPath.startsWith('reports/?repo=')) {
-                    const params = new URLSearchParams(wildcardPath.substring(wildcardPath.indexOf('?')));
-                    repoName = params.get('repo');
+        // Function to find a matching HTML report, prioritizing known paths, then checking server list
+        function findMatchingHtmlReport(targetPath) {
+            return new Promise(async (resolve, reject) => {
+                console.log("Attempting to resolve HTML path:", targetPath);
+
+                // Case 1: Path is already a direct, valid HTML file (from _sourceFilename)
+                if (targetPath.endsWith('.html') && !targetPath.includes('?repo=')) {
+                     try {
+                         const headResponse = await fetch(targetPath, { method: 'HEAD' });
+                         if (headResponse.ok) {
+                             console.log("Direct path confirmed:", targetPath);
+                             resolve(targetPath); // Path is valid, use it directly
+                             return;
+                         } else {
+                            console.warn("Direct path check failed (HEAD request), proceeding to repo search:", targetPath);
+                         }
+                     } catch (error) {
+                        console.warn("Error during HEAD request for direct path, proceeding to repo search:", error);
+                     }
                 }
-                
-                if (!repoName) {
-                    reject("Invalid repository path");
+
+                // Case 2: Path is a search/wildcard format (reports/?repo=...) or direct path failed
+                let repoNameToFind = null;
+                if (targetPath.startsWith('reports/?repo=')) {
+                    try {
+                        const url = new URL(targetPath, window.location.origin); // Need a base URL for URLSearchParams
+                        repoNameToFind = url.searchParams.get('repo');
+                    } catch (e) {
+                         console.error("Error parsing repo search URL:", targetPath, e);
+                         reject("Invalid repository search path format");
+                         return;
+                    }
+                } else if (targetPath.includes('/')) {
+                    // Extract potential repo name from the failed direct path as a last resort guess
+                    // This is brittle - depends heavily on naming convention
+                     try {
+                         const parts = targetPath.split('/');
+                         const filename = parts[parts.length - 1];
+                         // Very basic guess - might need refinement based on actual report names
+                         const potentialName = filename.replace(/_report.*\.html$/, '').replace(/_/g, '-');
+                         repoNameToFind = potentialName;
+                         console.log("Extracted potential repo name from failed path:", repoNameToFind);
+                     } catch { /* ignore errors here */ }
+                }
+
+
+                if (!repoNameToFind) {
+                    reject("Could not determine repository name to search for");
                     return;
                 }
-                
-                // First check if we have an exact match in our loaded reports
-                for (const report of allReports) {
-                    if (report && report.nome_repository === repoName) {
-                        // Check if we have the source filename
-                        if (report._sourceFilename && report._sourceFilename.endsWith('.json')) {
-                            const htmlPath = report._sourceFilename.replace('.json', '.html');
-                            
-                            // Check if this HTML file exists
-                            fetch(htmlPath, { method: 'HEAD' })
-                                .then(response => {
-                                    if (response.ok) {
-                                        resolve(htmlPath);
-                                    } else {
-                                        throw new Error("HTML file not found");
-                                    }
-                                })
-                                .catch(() => {
-                                    requestReportsList(repoName).then(resolve).catch(reject);
-                                });
-                            return;
-                        }
-                        
-                        // Try using the formatted date
-                        if (report.data_analisi) {
-                            const formattedDate = formatDateForFilename(report.data_analisi);
-                            if (formattedDate) {
-                                const htmlPath = `reports/report_${formattedDate}.html`;
-                                
-                                // Check if this file exists
-                                fetch(htmlPath, { method: 'HEAD' })
-                                    .then(response => {
-                                        if (response.ok) {
-                                            resolve(htmlPath); 
-                                        } else {
-                                            throw new Error("HTML file not found");
-                                        }
-                                    })
-                                    .catch(() => {
-                                        requestReportsList(repoName).then(resolve).catch(reject);
-                                    });
-                                return;
+
+                console.log("Searching for report for repository:", repoNameToFind);
+
+                // Try finding in already loaded reports first (efficient)
+                const foundInMemory = allReports.find(r => r.nome_repository === repoNameToFind);
+                if (foundInMemory && foundInMemory._sourceFilename) {
+                    const potentialHtmlPath = foundInMemory._sourceFilename.replace('.json', '.html');
+                     try {
+                         const headResponse = await fetch(potentialHtmlPath, { method: 'HEAD' });
+                         if (headResponse.ok) {
+                             console.log("Found matching HTML path in memory:", potentialHtmlPath);
+                             resolve(potentialHtmlPath);
+                             return;
+                         }
+                     } catch { /* ignore error, proceed to server list */ }
+                }
+
+                // Case 3: Fetch the full list from the server and try to match
+                console.log("Fetching report list from server to find match for:", repoNameToFind);
+                try {
+                    const listResponse = await fetch('/latest_reports');
+                    if (!listResponse.ok) throw new Error(`HTTP error fetching list: ${listResponse.status}`);
+                    const allServerReports = await listResponse.json();
+
+                    const htmlReportFiles = allServerReports
+                        .filter(r => r.filename && r.filename.endsWith('.html'))
+                        .map(r => r.filename);
+
+                     if (htmlReportFiles.length === 0) {
+                         reject("No HTML report files found on the server list.");
+                         return;
+                     }
+
+                    // Check JSON content of corresponding reports to find the correct name match
+                    let bestMatchPath = null;
+                    for (const htmlPath of htmlReportFiles) {
+                        const jsonPath = htmlPath.replace('.html', '.json');
+                        try {
+                            const reportDataResponse = await fetch(jsonPath);
+                            if (!reportDataResponse.ok) continue; // Skip if JSON missing or error
+                            const reportData = await reportDataResponse.json();
+                            if (reportData && reportData.nome_repository === repoNameToFind) {
+                                bestMatchPath = htmlPath; // Found the matching report
+                                console.log("Found matching report via server list:", bestMatchPath);
+                                break; // Stop searching once found
                             }
+                        } catch (jsonError) {
+                            console.warn(`Error fetching or parsing JSON ${jsonPath} during search:`, jsonError);
                         }
                     }
+
+                    if (bestMatchPath) {
+                        resolve(bestMatchPath);
+                    } else {
+                        // Fallback: If no exact name match, maybe return the latest HTML report? Or reject?
+                         console.warn(`No exact match found for ${repoNameToFind} in server list. Returning first found HTML report as fallback.`);
+                         resolve(htmlReportFiles[0]); // Return the first as a last resort
+                         // Or: reject(`No report found matching name '${repoNameToFind}' on the server.`);
+                    }
+
+                } catch (error) {
+                    console.error("Error fetching or processing server report list:", error);
+                    reject(`Failed to search for report: ${error.message || error}`);
                 }
-                
-                // If we didn't find a match in loaded reports, request the list
-                requestReportsList(repoName).then(resolve).catch(reject);
-            });
-        }
-        
-        // Function to request the list of reports and find the best match
-        function requestReportsList(repoName) {
-            return new Promise((resolve, reject) => {
-                fetch('/latest_reports')
-                    .then(response => response.json())
-                    .then(reports => {
-                        // Filter for HTML reports
-                        const htmlReports = reports.filter(r => 
-                            r.filename && r.filename.endsWith('.html')
-                        ).map(r => r.filename);
-                        
-                        console.log(`Searching for HTML report for repo ${repoName}`);
-                        console.log("Available HTML reports:", htmlReports);
-                        
-                        if (htmlReports.length > 0) {
-                            // Try to find a matching report
-                            const findPromises = htmlReports.map(htmlPath => {
-                                const jsonPath = htmlPath.replace('.html', '.json');
-                                return fetch(jsonPath)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        return {
-                                            path: htmlPath,
-                                            match: data.nome_repository === repoName
-                                        };
-                                    })
-                                    .catch(() => ({ path: htmlPath, match: false }));
-                            });
-                            
-                            Promise.all(findPromises)
-                                .then(results => {
-                                    const match = results.find(r => r.match);
-                                    if (match) {
-                                        resolve(match.path);
-                                    } else {
-                                        // If no match, return the first report as a fallback
-                                        resolve(htmlReports[0]);
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error("Error checking JSON files:", error);
-                                    // Return the first HTML report as a fallback
-                                    resolve(htmlReports[0]);
-                                });
-                        } else {
-                            reject("No HTML reports found");
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error fetching reports list:", error);
-                        reject(error);
-                    });
             });
         }
 
-        // Update the view HTML button click handler for main rankings
-        function updateViewButtons() {
-            document.querySelectorAll('.view-html-button').forEach(btn => {
-                const originalHref = btn.getAttribute('href');
-                
-                // Only modify special paths
-                if (originalHref.includes('_*.html') || originalHref.startsWith('reports/?repo=')) {
-                    btn.addEventListener('click', function(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        
-                        // Show loading state
-                        const originalText = btn.innerHTML;
-                        btn.innerHTML = `
-                            <svg class="animate-spin w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Loading...
-                        `;
-                        
-                        // Try to find a matching HTML report
-                        findMatchingHtmlReport(originalHref)
-                            .then(matchedPath => {
-                                console.log("Found matching report:", matchedPath);
-                                window.open(matchedPath, '_blank');
-                            })
-                            .catch(error => {
-                                console.error("Error finding HTML report:", error);
-                                alert("Could not find a matching HTML report");
-                            })
-                            .finally(() => {
-                                btn.innerHTML = originalText;
-                            });
-                    });
-                }
-            });
-            
-            // Also update view buttons in category rankings
-            document.querySelectorAll('.view-btn').forEach(btn => {
-                const originalHref = btn.getAttribute('href');
-                
-                if (originalHref.includes('_*.html') || originalHref.startsWith('reports/?repo=')) {
-                    btn.addEventListener('click', function(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        
-                        // Show loading state with just the spinner for small buttons
-                        const originalHTML = btn.innerHTML;
-                        btn.innerHTML = `
-                            <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                        `;
-                        
-                        findMatchingHtmlReport(originalHref)
-                            .then(matchedPath => {
-                                window.open(matchedPath, '_blank');
-                            })
-                            .catch(error => {
-                                console.error("Error finding HTML report:", error);
-                                alert("Could not find a matching HTML report");
-                            })
-                            .finally(() => {
-                                btn.innerHTML = originalHTML;
-                            });
-                    });
-                }
-            });
+
+        // Centralized function to add loading behavior to view buttons
+        function addLoadingClickHandler(button, pathSourceAttribute = 'href') {
+             // Clone and replace the node to remove any existing listeners safely
+             const newButton = button.cloneNode(true);
+             button.parentNode.replaceChild(newButton, button);
+
+             newButton.addEventListener('click', function(event) {
+                 event.preventDefault();
+                 event.stopPropagation(); // Prevent row clicks if button is inside a row
+
+                 const originalHref = newButton.getAttribute(pathSourceAttribute);
+                 if (!originalHref || originalHref === '#') {
+                     console.warn("View button has no valid href/path.");
+                     return;
+                 }
+
+                 const originalContent = newButton.innerHTML;
+                 const isSmallButton = !newButton.textContent.trim(); // Check if it's likely just an icon
+
+                 // Show loading state
+                 newButton.disabled = true; // Disable button during load
+                 newButton.innerHTML = `
+                     <svg class="animate-spin ${isSmallButton ? 'w-4 h-4' : 'w-4 h-4 mr-1.5'}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                     </svg>
+                     ${isSmallButton ? '' : 'Caricamento...'}
+                 `;
+
+                 findMatchingHtmlReport(originalHref)
+                     .then(matchedPath => {
+                         console.log("Resolved path:", matchedPath, " Opening in new tab.");
+                         window.open(matchedPath, '_blank');
+                     })
+                     .catch(error => {
+                         console.error("Error finding HTML report:", error);
+                         alert(`Impossibile trovare il report HTML corrispondente.\n Dettagli: ${error}`);
+                     })
+                     .finally(() => {
+                         // Restore button state
+                         newButton.innerHTML = originalContent;
+                         newButton.disabled = false;
+                     });
+             });
         }
+
+        // Function to update ALL view buttons across the page
+        function updateViewButtons() {
+             // Main ranking table buttons
+             document.querySelectorAll('#overallRanking .view-html-button').forEach(btn => {
+                 const href = btn.getAttribute('href');
+                 // Only add the loading handler if the path needs resolving
+                 if (href?.startsWith('reports/?repo=') || (href?.endsWith('.html'))) { // Add check for potentially direct but maybe invalid paths too
+                     addLoadingClickHandler(btn);
+                 } else {
+                     // For direct, known good links (if any), ensure they open correctly without special handling
+                     btn.target = '_blank';
+                     btn.rel = 'noopener noreferrer';
+                 }
+             });
+
+             // Category ranking table buttons (small icon buttons)
+             document.querySelectorAll('#categoryRankings .view-btn').forEach(btn => {
+                 const href = btn.getAttribute('href');
+                  if (href?.startsWith('reports/?repo=') || (href?.endsWith('.html'))) {
+                     addLoadingClickHandler(btn);
+                 } else {
+                     btn.target = '_blank';
+                     btn.rel = 'noopener noreferrer';
+                 }
+             });
+
+             // Detail view button
+             document.querySelectorAll('#reportDetailView .detail-view-html-button').forEach(btn => {
+                 const href = btn.getAttribute('href');
+                 if (href?.startsWith('reports/?repo=') || (href?.endsWith('.html'))) {
+                      addLoadingClickHandler(btn);
+                 } else {
+                      btn.target = '_blank';
+                      btn.rel = 'noopener noreferrer';
+                 }
+             });
+        }
+
 
         // --- DOMContentLoaded Listener ---
         document.addEventListener('DOMContentLoaded', () => {
-            loadLatestReports(); // Load data and populate everything
+            loadLatestReports(); // Load data and populate everything (now includes progress)
 
-            // Initial Tippy setup for static elements (like footer link) - delegate for dynamic ones
+            // Initial Tippy setup for static elements + delegation for dynamic ones
              tippy('body', {
-                 target: '[data-tippy-content]:not(body)', // Target elements with the attribute, excluding body itself
+                 target: '[data-tippy-content]:not(body)',
                  theme: 'light',
                  placement: 'top',
                  arrow: true,
-                 allowHTML: true, // Important if tooltips contain HTML (like icons)
-                 // delay: [100, 0], // Optional: Slight delay on show, none on hide
-                 // trigger: 'mouseenter focus', // Add focus for keyboard accessibility
+                 allowHTML: true,
+                 // delay: [100, 0], // Optional delay
+                 trigger: 'mouseenter focus', // Good for accessibility
+                 appendTo: document.body, // Helps with potential z-index issues
              });
         });
     </script>
