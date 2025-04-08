@@ -4,22 +4,22 @@
             "stelle": {
                 "descrizione": "Indicatore diretto di apprezzamento e visibilit\u00e0",
                 "metodo": "API GitHub (Conteggio), Analisi trend (storico stelle)",
-                "peso": 4
+                "peso": 5
             },
             "forks": {
                 "descrizione": "Interesse nel modificare/usare il codice come base",
                 "metodo": "API GitHub (Conteggio), Analisi trend (storico fork)",
-                "peso": 4
+                "peso": 5
             },
             "watchers": {
                 "descrizione": "Interesse nel seguire attivamente gli aggiornamenti",
                 "metodo": "API GitHub (Conteggio)",
-                "peso": 2
+                "peso": 4
             },
             "contributori": {
                 "descrizione": "Ampiezza della base di sviluppo (pu\u00f2 indicare complessit\u00e0 o community)",
                 "metodo": "API GitHub (Conteggio lista contributori)",
-                "peso": 2
+                "peso": 5
             },
             "dipendenti": {
                 "descrizione": "Impatto reale: quanti altri progetti si basano su questo",
@@ -29,7 +29,7 @@
             "engagement_rate": {
                 "descrizione": "Misura l'interazione degli utenti con il repository (stelle, fork, watchers per mese)",
                 "metodo": "API GitHub (storico attività)",
-                "peso": 3
+                "peso": 4
             }
         },
         "manutenzione": {
@@ -98,27 +98,27 @@
             "complessita_media": {
                 "descrizione": "Misura oggettiva della difficolt\u00e0 di comprensione/manutenzione del codice",
                 "metodo": "Tool Analisi Statica (es. Radon, Lizard per Python; SonarQube, PMD per Java, etc.)",
-                "peso": 3
+                "peso": 4
             },
             "aderenza_stile": {
                 "descrizione": "Consistenza e leggibilit\u00e0 del codice secondo standard definiti",
                 "metodo": "Analisi file configurazione linter (.flake8, .eslintrc), Output CI, Esecuzione linter locale",
-                "peso": 4
+                "peso": 5
             },
             "code_smells": {
                 "descrizione": "Pattern noti che suggeriscono problemi strutturali o di design",
                 "metodo": "Tool Analisi Statica",
-                "peso": 3
+                "peso": 4
             },
             "commenti_codice": {
                 "descrizione": "Presenza e (potenzialmente) utilit\u00e0 dei commenti per spiegare logiche complesse",
                 "metodo": "Analisi Statica (densit\u00e0), LLM (valutazione qualitativa/semantica)",
-                "peso": 3
+                "peso": 4
             },
             "test_flake8": {
                 "descrizione": "Valutazione della qualità del codice tramite flake8",
                 "metodo": "Esecuzione flake8 su tutti i file Python",
-                "peso": 3
+                "peso": 4
             }
         },
         "documentazione": {
@@ -211,7 +211,7 @@
             "presenza_test_suite": {
                 "descrizione": "Esistenza di test automatici per verificare la correttezza",
                 "metodo": "Analisi struttura repo (presenza cartelle /tests, /spec, etc.)",
-                "peso": 4
+                "peso": 5
             },
             "test_coverage": {
                 "descrizione": "Percentuale di codice coperta dai test (indicatore di robustezza)",
