@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Repolizer Report</title>
+    <title>Repolizer Report Top 10</title> <!-- Updated Title -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://unpkg.com/@popperjs/core@2" defer></script>
@@ -19,17 +19,20 @@
         .chart-container {
             position: relative;
             margin: auto;
-            height: 300px;
+            height: 300px; /* Default height */
             width: 100%;
             padding: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+        .category-chart-container { /* Specific container for potentially taller bar chart */
+             height: 350px;
+        }
         .categories-title-fixed {
             font-size: 1.2rem;
         }
-        .category-content.hidden { display: none; } /* Ensure hidden class works */
+        .category-content.hidden { display: none; }
 
         /* Score color classes */
         .score-high { color: #16a34a; } /* text-green-600 */
@@ -40,143 +43,339 @@
         .progress-high { background-color: #16a34a; } /* bg-green-600 */
         .progress-medium { background-color: #eab308; } /* bg-yellow-500 */
         .progress-low { background-color: #dc2626; } /* bg-red-600 */
+
+        /* Ensure tooltips are above other elements if needed */
+        .tippy-box { z-index: 9999; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <!-- Header -->
         <header class="text-center mb-16 fade-in">
-            <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl mb-4">repolizer/top10</h1>
+            <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl mb-4">Repolizer Top 10</h1>
         </header>
 
-        <!-- Top 10 Rankings -->
-        <div id="rankings" class="space-y-8">
-            <div class="fade-in">
-                <h2 class="text-3xl font-semibold mb-6 text-center">Classifiche</h2>
-            </div>
+        <!-- Top 10 Rankings Section -->
+        <div id="rankingsSection" class="mb-12"> <!-- Added ID for clarity -->
+            <div id="rankings" class="space-y-8">
+                <div class="fade-in">
+                    <h2 class="text-3xl font-semibold mb-6 text-center">Classifiche</h2>
+                </div>
 
-            <!-- Overall Score Ranking -->
-            <div class="bg-white rounded-2xl shadow-lg p-8 fade-in">
-                <h3 class="text-2xl font-semibold mb-4">Top 10 - Punteggio Totale</h3>
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posizione</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody id="overallRanking" class="bg-white divide-y divide-gray-200">
-                        <!-- Overall ranking data will be populated here -->
-                    </tbody>
-                </table>
-            </div>
+                <!-- Overall Score Ranking -->
+                <div class="bg-white rounded-2xl shadow-lg p-8 fade-in">
+                    <h3 class="text-2xl font-semibold mb-4">Top 10 - Punteggio Totale</h3>
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posizione</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overallRanking" class="bg-white divide-y divide-gray-200">
+                            <!-- Overall ranking data will be populated here by JS -->
+                            <tr><td colspan="4" class="text-center py-8 text-gray-500">Caricamento classifiche...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            <!-- Category Rankings -->
-            <div id="categoryRankings" class="space-y-8">
-                <!-- Category ranking tables will be dynamically added here -->
+                <!-- Category Rankings -->
+                <div id="categoryRankings" class="space-y-8">
+                    <!-- Category ranking tables will be dynamically added here by JS -->
+                </div>
             </div>
-        </div>
-        <br>
+            <br>
+        </div> <!-- End Rankings Section -->
 
-    </div>
+        <!-- Report Detail View (Initially Hidden) -->
+        <div id="reportDetailView" class="max-w-7xl mx-auto py-12 hidden"> <!-- Removed redundant container classes, added hidden -->
+            <hr class="my-12 border-gray-300"> <!-- Separator -->
+            <h2 class="text-3xl font-semibold mb-8 text-center fade-in">Dettaglio Report</h2>
+
+            <!-- Header Section -->
+            <section aria-labelledby="report-heading" class="mb-12 fade-in">
+                 <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h3 id="repo-name" class="text-2xl font-bold text-gray-900">Nome Repository</h3>
+                            <p class="mt-1 text-sm text-gray-500">
+                                <a id="repo-url" href="#" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 break-all transition-colors">URL Repository</a>
+                            </p>
+                        </div>
+                        <div class="text-left md:text-right mt-4 md:mt-0 flex-shrink-0">
+                             <p id="data-analisi" class="text-sm text-gray-500 mb-2">Data Analisi</p>
+                             <button aria-label="Scarica il report in formato JSON" title="Scarica JSON" class="inline-flex items-center px-4 py-2 border border-indigo-600 text-sm font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50 transition-colors">
+                                <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                </svg>
+                                Scarica JSON
+                            </button>
+                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Score Overview -->
+            <section aria-labelledby="score-overview-heading" class="mb-12 fade-in">
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h3 id="score-overview-heading" class="text-2xl font-semibold mb-6 text-center">Punteggio Totale</h3>
+                    <div class="flex flex-col items-center">
+                        <div id="total-score" class="text-6xl font-bold mb-4">
+                            <span id="punteggio-totale">0.0</span>/10
+                        </div>
+                        <div class="w-full max-w-md bg-gray-200 rounded-full h-4 overflow-hidden">
+                            <div id="score-progress-bar" class="h-4 rounded-full transition-all duration-500 ease-out" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section aria-labelledby="charts-heading" class="mb-12 grid grid-cols-1 md:grid-cols-2 gap-8 fade-in">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h4 class="text-xl font-semibold mb-4 text-center">Vista Radar Categorie</h4>
+                    <div class="chart-container">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h4 class="text-xl font-semibold mb-4 text-center">Punteggi per Categoria</h4>
+                    <div class="chart-container category-chart-container"> <!-- Used specific class -->
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Category Details Section -->
+            <section aria-labelledby="category-details-heading" class="mb-12 fade-in">
+                 <h3 id="category-details-heading" class="text-3xl font-semibold mb-6 text-center">Dettagli per Categoria</h3>
+                 <div id="categoryDetails" class="space-y-6">
+                     <!-- Category details will be populated here by JS -->
+                     <p class="text-center py-8 text-gray-500">Seleziona un report dalla classifica per vedere i dettagli.</p>
+                 </div>
+            </section>
+
+            <!-- Template for category details -->
+            <template id="categoryTemplate">
+                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <button class="category-toggle-button w-full flex justify-between items-center p-6 text-left bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-t-2xl" aria-expanded="true">
+                        <h4 class="category-name text-lg font-semibold text-gray-800 categories-title-fixed">NOME CATEGORIA</h4>
+                        <svg class="category-arrow w-6 h-6 text-gray-600 transform transition-transform duration-300" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="category-content p-6 border-t border-gray-200">
+                        <div class="mb-6">
+                            <h5 class="text-md font-semibold mb-3 text-gray-700">Parametri Valutati</h5>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parametro</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valore</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Descrizione</th> <!-- Hide on small screens -->
+                                        </tr>
+                                    </thead>
+                                    <tbody class="parameters-list bg-white divide-y divide-gray-200">
+                                        <!-- Parameter rows added by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="text-md font-semibold mb-3 text-gray-700">Suggerimenti</h5>
+                            <ul class="suggestions-list space-y-3">
+                                <!-- Suggestion list items added by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div> <!-- End Report Detail View -->
+
+    </div> <!-- Closing main max-w-7xl container -->
 
     <script>
-        // Global array to store all reports
+        // Global variables
         let allReports = [];
+        let currentReportData = null; // Keep track of the currently displayed report data
+        let radarChartInstance = null; // To destroy previous charts
+        let categoryChartInstance = null; // To destroy previous charts
+
+        // --- Helper to destroy charts ---
+        function destroyCharts() {
+            if (radarChartInstance) {
+                radarChartInstance.destroy();
+                radarChartInstance = null;
+            }
+            if (categoryChartInstance) {
+                categoryChartInstance.destroy();
+                categoryChartInstance = null;
+            }
+        }
 
         async function loadLatestReports() {
             try {
                 const response = await fetch('/latest_reports');
+                if (!response.ok) {
+                     throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const reports = await response.json();
 
                 // Reset allReports array
                 allReports = [];
-                
                 console.log(`Found ${reports.length} reports`);
-                
+
                 if (reports.length === 0) {
-                    document.body.innerHTML = `
-                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                            <div class="text-center py-12">
-                                <h1 class="text-3xl font-bold text-gray-900">No reports found</h1>
-                                <p class="mt-4 text-lg text-gray-600">No repository reports were found in the reports directory.</p>
-                            </div>
-                        </div>
-                    `;
+                    // Display message within the existing ranking table
+                    const overallRankingTable = document.getElementById('overallRanking');
+                     if (overallRankingTable) {
+                        overallRankingTable.innerHTML = `
+                            <tr><td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
+                                Nessun report .json trovato nella directory 'reports'.
+                            </td></tr>`;
+                    }
+                     // Hide detail view if no reports
+                    const detailView = document.getElementById('reportDetailView');
+                    if (detailView) detailView.classList.add('hidden');
                     return;
                 }
 
                 // Process each report
                 for (const reportInfo of reports) {
+                    // Ensure we only fetch JSON files
+                     if (!reportInfo.filename || !reportInfo.filename.endsWith('.json')) {
+                        console.warn(`Skipping non-JSON file: ${reportInfo.filename}`);
+                        continue;
+                     }
                     try {
                         const reportResponse = await fetch(reportInfo.filename);
+                         if (!reportResponse.ok) {
+                             throw new Error(`HTTP error loading report ${reportInfo.filename}! status: ${reportResponse.status}`);
+                        }
                         const reportData = await reportResponse.json();
-                        
-                        // Ensure punteggio_totale exists
-                        if (!reportData.punteggio_totale && reportData.punteggi) {
-                            // Calculate total score if not present
-                            const scores = Object.values(reportData.punteggi);
+
+                        // Ensure punteggio_totale exists (robust check)
+                        if (typeof reportData.punteggio_totale !== 'number' && reportData.punteggi) {
+                            const scores = Object.values(reportData.punteggi).filter(score => typeof score === 'number'); // Filter out non-numeric scores
                             if (scores.length > 0) {
                                 const sum = scores.reduce((a, b) => a + b, 0);
                                 reportData.punteggio_totale = +(sum / scores.length).toFixed(2);
                             } else {
                                 reportData.punteggio_totale = 0;
                             }
+                        } else if (typeof reportData.punteggio_totale !== 'number') {
+                            // Handle cases where punteggi might also be missing or invalid
+                            reportData.punteggio_totale = 0;
                         }
-                        
+
+                         // Basic validation for core properties
+                        if (!reportData.nome_repository || !reportData.url || !reportData.data_analisi || !reportData.dettagli) {
+                            console.warn(`Report ${reportInfo.filename} is missing essential data. Skipping.`);
+                            continue; // Skip incomplete reports
+                        }
+
                         // Store the report data for later use
                         allReports.push(reportData);
                     } catch (error) {
-                        console.error(`Error loading report ${reportInfo.filename}:`, error);
+                        console.error(`Error loading or parsing report ${reportInfo.filename}:`, error);
                     }
                 }
-                
+
+                // Filter out any reports that might still be null if skipped above
+                 allReports = allReports.filter(report => report !== null);
+
+                 if (allReports.length === 0) {
+                    const overallRankingTable = document.getElementById('overallRanking');
+                     if (overallRankingTable) {
+                        overallRankingTable.innerHTML = `
+                            <tr><td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
+                                Nessun report valido trovato o caricato. Controlla la console per errori.
+                            </td></tr>`;
+                    }
+                     // Hide detail view if no reports
+                    const detailView = document.getElementById('reportDetailView');
+                    if (detailView) detailView.classList.add('hidden');
+                     return;
+                }
+
                 // After loading all reports, populate rankings
                 populateRankings();
                 populateCategoryRankings();
-                
-                // If we have reports, show the first one
-                if (allReports.length > 0) {
-                    populatePage(allReports[0]);
+
+                // Get the detail view container
+                const detailView = document.getElementById('reportDetailView');
+
+                // If we have reports, show the first one AND make the section visible
+                if (allReports.length > 0 && detailView) {
+                    detailView.classList.remove('hidden'); // <-- Make detail view visible
+                    populatePage(allReports[0]); // Now populate it
+                } else if (detailView) {
+                    detailView.classList.add('hidden'); // Keep it hidden if no reports
                 }
-                
-            } catch (error) {
-                console.error('Error fetching reports:', error);
-            }
-        }
-
-        async function loadAndProcessReport(reportInfo) {
-            try {
-                const reportResponse = await fetch(reportInfo.filename);
-                const reportData = await reportResponse.json();
-
-                // Populate the page with the report data.
-                populatePage(reportData); // Pass the report data to this function.
 
             } catch (error) {
-                console.error(`Error loading or processing report for ${reportInfo.website}:`, error);
+                console.error('Error fetching report list:', error);
+                 const overallRankingTable = document.getElementById('overallRanking');
+                 if (overallRankingTable) {
+                    overallRankingTable.innerHTML = `
+                        <tr><td colspan="4" class="px-6 py-12 text-center text-red-500 italic">
+                            Errore nel caricamento della lista dei report. Controlla la console.
+                        </td></tr>`;
+                }
             }
         }
 
         function populatePage(reportData) {
-            // Set header information
-            document.getElementById('repo-name').textContent = reportData.nome_repository;
-            document.getElementById('repo-url').href = reportData.url;
-            document.getElementById('data-analisi').textContent = `Report generato il ${reportData.data_analisi}`;
+            if (!reportData) {
+                console.error("populatePage called with invalid reportData");
+                return;
+            }
+            currentReportData = reportData; // Store the data for the download button
+            destroyCharts(); // Destroy old charts before creating new ones
+
+            // Make sure the detail view is visible
+            const detailView = document.getElementById('reportDetailView');
+            if (!detailView) return; // Cannot proceed if detail view is missing
+            detailView.classList.remove('hidden');
+
+            // --- Safely update elements ---
+            const safelyUpdateElement = (id, property, value) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element[property] = value;
+                } else {
+                    console.warn(`Element with ID '${id}' not found for updating.`);
+                }
+            };
+
+            safelyUpdateElement('repo-name', 'textContent', reportData.nome_repository || 'N/A');
+            safelyUpdateElement('repo-url', 'href', reportData.url || '#');
+            safelyUpdateElement('repo-url', 'textContent', reportData.url || 'N/A');
+            safelyUpdateElement('data-analisi', 'textContent', `Report generato il ${reportData.data_analisi || 'N/A'}`);
 
             // Set the total score
-            const punteggioTotale = reportData.punteggio_totale;
-            document.getElementById('punteggio-totale').textContent = punteggioTotale;
+            const punteggioTotale = typeof reportData.punteggio_totale === 'number' ? reportData.punteggio_totale : 0;
+            safelyUpdateElement('punteggio-totale', 'textContent', punteggioTotale.toFixed(2));
 
-            // Calculate the percentage for the progress bar
+            // Calculate and set progress bar width
             const punteggioTotalePercentuale = (punteggioTotale / 10) * 100;
             const scoreBar = document.getElementById('score-progress-bar');
-            scoreBar.style.width = `${punteggioTotalePercentuale}%`;
+            if (scoreBar) {
+                scoreBar.style.width = `${Math.max(0, Math.min(100, punteggioTotalePercentuale))}%`; // Clamp between 0 and 100
+            }
 
             // Set score colors
-            setTotalScoreColors(punteggioTotale);
+            const scoreElement = document.getElementById('total-score');
+            if (scoreElement && scoreBar) {
+                // Remove previous color classes
+                scoreElement.classList.remove('score-high', 'score-medium', 'score-low');
+                scoreBar.classList.remove('progress-high', 'progress-medium', 'progress-low');
+                setTotalScoreColors(punteggioTotale, scoreElement, scoreBar); // Pass elements
+            }
 
             // Initialize charts
             initCharts(reportData);
@@ -184,16 +383,28 @@
             // Populate category details
             populateCategoryDetails(reportData);
 
-            // Populate rankings (example - you'll need to adapt this to your specific ranking data)
-            //populateRankings(reportData); // Implement this based on where ranking info comes from.
+            // Handle download JSON button click for the DETAILED VIEW section.
+            const detailDownloadButton = detailView.querySelector('button[aria-label="Scarica il report in formato JSON"]');
+            if (detailDownloadButton) {
+                // Clone and replace to remove old listeners safely
+                const newButton = detailDownloadButton.cloneNode(true);
+                detailDownloadButton.parentNode.replaceChild(newButton, detailDownloadButton);
 
-            // Handle download JSON button click.
-            document.querySelector('button[aria-label="Scarica il report in formato JSON"]').onclick = () => downloadJSON(reportData, reportData.nome_repository); // Pass data to the downloadJSON()
+                newButton.onclick = () => {
+                     if (currentReportData) {
+                         downloadSpecificReport(JSON.stringify(currentReportData, null, 2), currentReportData.nome_repository);
+                     } else {
+                         console.error("No current report data available for download.");
+                     }
+                };
+            } else {
+                console.warn("Detail view download button not found.");
+            }
         }
 
-        function setTotalScoreColors(score) {
-            const scoreElement = document.getElementById('total-score');
-            const scoreBar = document.getElementById('score-progress-bar');
+        // Modified setTotalScoreColors to accept elements
+        function setTotalScoreColors(score, scoreElement, scoreBar) {
+            if (!scoreElement || !scoreBar) return; // Guard clause
             if (score >= 7) {
                 scoreElement.classList.add('score-high');
                 scoreBar.classList.add('progress-high');
@@ -208,99 +419,102 @@
 
         function initCharts(reportData) {
             Chart.defaults.font.family = '"Inter", sans-serif';
-            Chart.defaults.color = '#4B5563';
+            Chart.defaults.color = '#4B5563'; // text-gray-600
 
-            // Prepare data for charts
-            const categoryLabels = Object.keys(reportData.punteggi).map(label => {
+             // Ensure canvas elements exist before getting context
+            const radarCanvas = document.getElementById('radarChart');
+            const categoryCanvas = document.getElementById('categoryChart');
+
+            if (!radarCanvas || !categoryCanvas) {
+                 console.error("Chart canvas element(s) not found!");
+                 // Clear any potential leftover message/chart in parent container
+                 if (radarCanvas && radarCanvas.parentNode) radarCanvas.parentNode.innerHTML = '<canvas id="radarChart"></canvas>';
+                 if (categoryCanvas && categoryCanvas.parentNode) categoryCanvas.parentNode.innerHTML = '<canvas id="categoryChart"></canvas>';
+                 // Try to get canvas again after resetting HTML (might help if DOM was manipulated badly)
+                 const newRadarCanvas = document.getElementById('radarChart');
+                 const newCategoryCanvas = document.getElementById('categoryChart');
+                 if (!newRadarCanvas || !newCategoryCanvas) return; // Still not found, give up.
+                 radarCanvas = newRadarCanvas;
+                 categoryCanvas = newCategoryCanvas;
+            }
+
+            const ctxRadar = radarCanvas.getContext('2d');
+            const ctxCategory = categoryCanvas.getContext('2d');
+
+            // Prepare data for charts - check if punteggi exists
+            const categoryData = reportData.punteggi || {};
+            const categoryLabels = Object.keys(categoryData).map(label => {
                 return label.replace(/_/g, ' ')
                     .split(' ')
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                     .join(' ');
             });
-            const scores = Object.values(reportData.punteggi);
+            const scores = Object.values(categoryData).map(score => typeof score === 'number' ? score : 0); // Default non-numeric scores to 0
 
             const getBarColor = (score) => {
-                if (score >= 7) return 'rgba(34, 197, 94, 0.8)';      // Green for good scores
-                if (score >= 4) return 'rgba(234, 179, 8, 0.8)';       // Yellow for medium scores
-                return 'rgba(239, 68, 68, 0.8)';                       // Red for low scores
+                if (score >= 7) return 'rgba(22, 163, 74, 0.8)';   // green-600
+                if (score >= 4) return 'rgba(234, 179, 8, 0.8)';    // yellow-500
+                return 'rgba(220, 38, 38, 0.8)';                    // red-600
             };
-
             const barColors = scores.map(getBarColor);
 
+             // Destroy existing charts if they exist (redundant check, but safe)
+            destroyCharts();
+
             // Init Radar Chart
-            const ctxRadar = document.getElementById('radarChart').getContext('2d');
-            new Chart(ctxRadar, {
-                type: 'radar',
-                data: {
-                    labels: categoryLabels,
-                    datasets: [{
-                        label: 'Punteggio',
-                        data: scores,
-                        backgroundColor: 'rgba(99, 102, 241, 0.2)', // Indigo with opacity
-                        borderColor: 'rgba(99, 102, 241, 0.8)',
-                        borderWidth: 2,
-                        pointBackgroundColor: scores.map(score => getBarColor(score).replace('0.8', '1')),
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
-                    }]
-                },
-                options: {
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            max: 10,
-                            ticks: {
-                                stepSize: 2,
-                                backdropColor: 'transparent'
-                            },
-                            pointLabels: {
-                                font: {
-                                    size: 11
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(226, 232, 240, 0.7)'
-                            },
-                            angleLines: {
-                                color: 'rgba(226, 232, 240, 0.7)'
-                            }
-                        }
+             if (categoryLabels.length > 0) {
+                radarChartInstance = new Chart(ctxRadar, {
+                    type: 'radar',
+                    data: {
+                        labels: categoryLabels,
+                        datasets: [{
+                            label: 'Punteggio',
+                            data: scores,
+                            backgroundColor: 'rgba(99, 102, 241, 0.2)', // Indigo-500 with opacity
+                            borderColor: 'rgba(99, 102, 241, 0.8)',    // Indigo-500
+                            borderWidth: 2,
+                            pointBackgroundColor: scores.map(score => getBarColor(score).replace('0.8', '1')),
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
+                        }]
                     },
-                    plugins: {
-                        legend: {
-                            display: false
+                    options: {
+                        maintainAspectRatio: false, // Allow chart to fill container height
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 10,
+                                ticks: { stepSize: 2, backdropColor: 'transparent' },
+                                pointLabels: { font: { size: 11 } },
+                                grid: { color: 'rgba(229, 231, 235, 0.7)' }, // gray-200
+                                angleLines: { color: 'rgba(229, 231, 235, 0.7)' } // gray-200
+                            }
                         },
-                        tooltip: {
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            titleColor: '#1F2937',
-                            bodyColor: '#1F2937',
-                            borderColor: '#E5E7EB',
-                            borderWidth: 1,
-                            padding: 12,
-                            displayColors: true,
-                            callbacks: {
-                                label: function (context) {
-                                    return `Punteggio: ${context.raw.toFixed(2)}/10`;
-                                }
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                titleColor: '#1F2937', bodyColor: '#1F2937', // gray-800
+                                borderColor: '#E5E7EB', borderWidth: 1, // gray-200
+                                padding: 12, displayColors: false, // Only show point color itself
+                                callbacks: { label: (context) => `Punteggio: ${context.raw.toFixed(2)}/10` }
                             }
-                        }
-                    },
-                    elements: {
-                        line: {
-                            tension: 0.1
-                        }
+                        },
+                        elements: { line: { tension: 0.1 } }
                     }
-                }
-            });
+                });
+             } else {
+                ctxRadar.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
+                ctxRadar.textAlign = 'center';
+                ctxRadar.fillStyle = '#6B7280'; // gray-500
+                ctxRadar.fillText('Nessun dato per il grafico radar', radarCanvas.width / 2, radarCanvas.height / 2);
+             }
+
 
             // Category Bar Chart
-            const ctxCategory = document.getElementById('categoryChart').getContext('2d');
-
-            // Check if we have data to display
             if (categoryLabels.length > 0) {
-                // Create vertical bar chart
-                new Chart(ctxCategory, {
+                categoryChartInstance = new Chart(ctxCategory, {
                     type: 'bar',
                     data: {
                         labels: categoryLabels,
@@ -311,210 +525,224 @@
                             borderColor: barColors.map(color => color.replace('0.8', '1')),
                             borderWidth: 1,
                             borderRadius: 6,
-                            maxBarThickness: 60
+                            maxBarThickness: 40 // Adjusted thickness
                         }]
                     },
                     options: {
-                        indexAxis: 'y',  // Makes bars horizontal
+                        indexAxis: 'y',
+                        maintainAspectRatio: false, // Allow chart to fill container height
                         scales: {
                             x: {
-                                beginAtZero: true,
-                                max: 10,
-                                grid: {
-                                    display: true,
-                                    drawBorder: false,
-                                    color: 'rgba(226, 232, 240, 0.7)'
-                                },
-                                ticks: {
-                                    stepSize: 2
-                                }
+                                beginAtZero: true, max: 10,
+                                grid: { display: true, drawBorder: false, color: 'rgba(229, 231, 235, 0.7)' }, // gray-200
+                                ticks: { stepSize: 2 }
                             },
-                            y: {
-                                grid: {
-                                    display: false,
-                                    drawBorder: false
-                                }
-                            }
+                            y: { grid: { display: false, drawBorder: false } }
                         },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
-                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                titleColor: '#1F2937',
-                                bodyColor: '#1F2937',
-                                borderColor: '#E5E7EB',
-                                borderWidth: 1,
-                                padding: 12,
-                                displayColors: false,
-                                callbacks: {
-                                    label: function (context) {
-                                        return `Punteggio: ${context.raw.toFixed(2)}/10`;
-                                    }
-                                }
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                titleColor: '#1F2937', bodyColor: '#1F2937', // gray-800
+                                borderColor: '#E5E7EB', borderWidth: 1, // gray-200
+                                padding: 12, displayColors: false,
+                                callbacks: { label: (context) => `Punteggio: ${context.raw.toFixed(2)}/10` }
                             }
                         },
-                        layout: {
-                            padding: {
-                                left: 10,
-                                right: 20,
-                                top: 0,
-                                bottom: 0
-                            }
-                        },
-                        animation: {
-                            duration: 2000,
-                            easing: 'easeOutQuart'
-                        }
+                        layout: { padding: { left: 10, right: 20, top: 10, bottom: 10 } }, // Added top/bottom padding
+                        animation: { duration: 1000, easing: 'easeOutCubic' } // Adjusted animation
                     }
                 });
             } else {
-                console.warn('No category data available for chart');
-                document.getElementById('categoryChart').parentNode.innerHTML =
-                    '<div class="text-center text-gray-500">Nessun dato disponibile per il grafico</div>';
-            }
+                 ctxCategory.clearRect(0, 0, categoryCanvas.width, categoryCanvas.height);
+                 ctxCategory.textAlign = 'center';
+                 ctxCategory.fillStyle = '#6B7280'; // gray-500
+                 ctxCategory.fillText('Nessun dato per il grafico categorie', categoryCanvas.width / 2, categoryCanvas.height / 2);
+             }
         }
 
         function populateCategoryDetails(reportData) {
             const container = document.getElementById('categoryDetails');
             const template = document.getElementById('categoryTemplate');
-            container.innerHTML = '';
 
-            Object.entries(reportData.dettagli).forEach(([categoria, dettagli]) => {
+            if (!container || !template) {
+                console.error("Category details container or template not found.");
+                return;
+            }
+            container.innerHTML = ''; // Clear previous details
+
+            const detailsData = reportData.dettagli || {};
+             const suggestionsData = reportData.suggerimenti || {};
+
+            if (Object.keys(detailsData).length === 0) {
+                 container.innerHTML = '<p class="text-center py-8 text-gray-500 italic">Nessun dettaglio disponibile per questo report.</p>';
+                 return;
+            }
+
+
+            Object.entries(detailsData).forEach(([categoria, dettagli]) => {
+                 if (!dettagli || typeof dettagli !== 'object') return; // Skip invalid category data
+
                 const categoryElement = template.content.cloneNode(true);
                 const section = categoryElement.querySelector('.bg-white'); // Get the main div
-                const categoryName = categoria.replace(/_/g, ' ').toUpperCase();
+                const categoryName = categoria.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Capitalize
 
-                // Set category name and button aria-label
-                section.querySelector('.category-name').textContent = categoryName;
+                 // Safely query elements within the cloned template fragment
+                const categoryNameElement = section.querySelector('.category-name');
                 const toggleButton = section.querySelector('.category-toggle-button');
-                toggleButton.setAttribute('aria-label', `Mostra/Nascondi dettagli per ${categoryName}`);
-                toggleButton.setAttribute('aria-controls', `category-content-${categoria}`); // Link button to content
-
                 const content = section.querySelector('.category-content');
-                content.id = `category-content-${categoria}`; // Set unique ID for content
+                const parametersList = section.querySelector('.parameters-list');
+                const suggestionsList = section.querySelector('.suggestions-list');
+                const arrow = section.querySelector('.category-arrow');
+
+                 if (!categoryNameElement || !toggleButton || !content || !parametersList || !suggestionsList || !arrow) {
+                    console.warn(`Template structure for category '${categoria}' seems incomplete. Skipping.`);
+                    return;
+                 }
+
+                categoryNameElement.textContent = categoryName;
+                toggleButton.setAttribute('aria-label', `Mostra/Nascondi dettagli per ${categoryName}`);
+                const contentId = `category-content-${categoria.replace(/[^a-zA-Z0-9]/g, '-')}`; // Sanitize ID
+                toggleButton.setAttribute('aria-controls', contentId);
+                content.id = contentId; // Set unique ID for content
 
                 // Populate parameters table
-                const parametersList = section.querySelector('.parameters-list');
                 parametersList.innerHTML = ''; // Clear template content if any
                 Object.entries(dettagli).forEach(([nome, info]) => {
+                     if (!info || typeof info !== 'object') return; // Skip invalid parameter info
+
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-gray-50';
-                    const parameterName = nome.replace(/_/g, ' ').toUpperCase();
+                    const parameterName = nome.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Capitalize
                     const parameterIcon = getParameterIcon(info.tipo || 'default');
-                    const description = info.descrizione || 'Nessuna descrizione disponibile';
+                    const description = info.descrizione || 'Nessuna descrizione';
+                    const tippyDescription = info.descrizione ? info.descrizione.replace(/"/g, '"') : 'Nessuna descrizione'; // Escape quotes for attribute
 
                     // Handle the score display
-                    let scoreDisplay;
-                    if (info.punteggio === null || info.punteggio === undefined || info.score_is_na) {
-                        scoreDisplay = 'N/A';
-                    } else {
-                        // Format the score to have a maximum of 2 decimal places
-                        const formattedScore = Number.isInteger(info.punteggio) ?
-                            info.punteggio :
-                            parseFloat(info.punteggio).toFixed(2);
+                    let scoreDisplay = 'N/A';
+                     let scoreClass = 'bg-gray-100 text-gray-500'; // Default N/A style
+                     if (typeof info.punteggio === 'number' && !info.score_is_na) {
+                        const formattedScore = Number.isInteger(info.punteggio) ? info.punteggio : parseFloat(info.punteggio).toFixed(2);
                         scoreDisplay = `${formattedScore}/10`;
-                    }
+                         scoreClass = getScoreClass(info.punteggio); // Get color class based on actual score
+                     }
 
                     row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            <div class="flex items-center gap-2" data-tippy-content="${description}">
+                        <td class="px-6 py-4 whitespace-normal text-sm font-medium text-gray-900"> <!-- Allow wrap -->
+                            <div class="flex items-center gap-2" data-tippy-content="${tippyDescription}">
                                 ${parameterIcon}
                                 <span>${parameterName}</span>
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                ${info.descrizione ? `<svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>` : ''}
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <span class="font-mono bg-gray-100 px-2 py-1 rounded">${info.valore !== null && info.valore !== undefined ? info.valore : 'N/A'}</span>
+                        <td class="px-6 py-4 whitespace-normal text-sm text-gray-500"> <!-- Allow wrap -->
+                            <span class="font-mono bg-gray-100 px-2 py-1 rounded break-all">${info.valore !== null && info.valore !== undefined ? info.valore : 'N/A'}</span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getScoreClass(info.punteggio)}">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-center"> <!-- Center score -->
+                            <span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium ${scoreClass}" style="min-width: 50px;"> <!-- Min width for N/A -->
                                 ${scoreDisplay}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">${description}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500 hidden md:table-cell whitespace-normal">${description}</td> <!-- Allow wrap -->
                     `;
                     parametersList.appendChild(row);
                 });
 
                 // Populate suggestions
-                const suggestionsList = section.querySelector('.suggestions-list');
                 suggestionsList.innerHTML = ''; // Clear template content
-                const categorySuggestions = reportData.suggerimenti[categoria] || [];
+                const categorySuggestions = suggestionsData[categoria] || [];
 
                 if (categorySuggestions.length > 0) {
                     categorySuggestions.forEach(suggestion => {
+                         if (typeof suggestion !== 'string' || suggestion.trim() === '') return; // Skip empty/invalid suggestions
                         const li = document.createElement('li');
                         li.className = 'p-3 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg';
-                        li.innerHTML = `<p class="text-gray-700">${suggestion}</p>`;
+                        // Basic sanitization (replace potential HTML tags) - consider a more robust library if needed
+                        const sanitizedSuggestion = suggestion.replace(/</g, "<").replace(/>/g, ">");
+                        li.innerHTML = `<p class="text-gray-700">${sanitizedSuggestion}</p>`;
                         suggestionsList.appendChild(li);
                     });
-                } else {
+                }
+
+                 // Add "no suggestions" message only if the list is still empty
+                 if (suggestionsList.children.length === 0) {
                     const li = document.createElement('li');
                     li.className = 'p-3 bg-gray-50 rounded-lg text-gray-500 italic';
-                    li.textContent = 'Nessun suggerimento per questa categoria';
+                    li.textContent = 'Nessun suggerimento specifico per questa categoria.';
                     suggestionsList.appendChild(li);
                 }
 
-                // Add collapse functionality with default expanded state
-                const arrow = section.querySelector('.category-arrow');
+
+                // Add collapse functionality (default expanded)
+                 content.classList.remove('hidden'); // Ensure it starts expanded
+                 arrow.style.transform = 'rotate(180deg)';
+                 toggleButton.setAttribute('aria-expanded', 'true');
+
                 toggleButton.addEventListener('click', () => {
                     const isHidden = content.classList.toggle('hidden');
-                    arrow.style.transform = isHidden ? '' : 'rotate(180deg)'; // Rotate when shown
+                    arrow.style.transform = isHidden ? '' : 'rotate(180deg)'; // Rotate correctly
                     toggleButton.setAttribute('aria-expanded', !isHidden);
                 });
 
                 container.appendChild(section); // Append the whole section div
             });
 
-            // Re-initialize Tippy for dynamically added elements
+            // Re-initialize Tippy for dynamically added elements with data-tippy-content
             tippy('[data-tippy-content]', {
                 theme: 'light',
                 placement: 'top',
-                arrow: true
+                arrow: true,
+                allowHTML: true // Allow basic HTML in descriptions if needed, ensure content is safe
             });
         }
 
         function getParameterIcon(tipo) {
+            // Usingheroicons v1 outlines (ensure consistency or update if needed)
             const icons = {
-                'performance': '<svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
-                'security': '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
-                'code_quality': '<svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
-                'default': '<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>'
+                'performance': '<svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
+                'security': '<svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
+                'code_quality': '<svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
+                'documentation': '<svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
+                'default': '<svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-5-5h12l-5 5z"></path></svg>' // Example: Adjust icon
             };
             return icons[tipo] || icons.default;
         }
 
         function getScoreClass(punteggio) {
-            // Handle null, undefined or N/A scores
+            // Handle null, undefined explicitly first
             if (punteggio === null || punteggio === undefined) {
-                return 'bg-gray-100 text-gray-500'; // Grey for N/A values
+                return 'bg-gray-100 text-gray-500';
             }
-
             // Handle numeric scores
-            if (punteggio >= 7) return 'bg-green-100 text-green-800';
-            if (punteggio >= 4) return 'bg-yellow-100 text-yellow-800';
-            return 'bg-red-100 text-red-800'; // Any score < 4, including 0
+             const scoreNum = Number(punteggio); // Ensure it's a number
+             if (isNaN(scoreNum)) {
+                return 'bg-gray-100 text-gray-500'; // Treat NaN as N/A
+             }
+            if (scoreNum >= 7) return 'bg-green-100 text-green-800'; // green-100 text-green-800
+            if (scoreNum >= 4) return 'bg-yellow-100 text-yellow-800'; // yellow-100 text-yellow-800
+            return 'bg-red-100 text-red-800'; // red-100 text-red-800
         }
 
+
         function populateRankings() {
-            // Sort reports by overall score in descending order
-            const sortedReports = [...allReports].sort((a, b) => 
-                b.punteggio_totale - a.punteggio_totale
+            // Sort reports by overall score (ensure score is numeric)
+            const sortedReports = [...allReports].sort((a, b) =>
+                (b.punteggio_totale || 0) - (a.punteggio_totale || 0) // Default to 0 if score missing/invalid
             );
-            
-            // Get top 10 (or fewer if there aren't 10 reports)
+
+            // Get top 10
             const topReports = sortedReports.slice(0, 10);
-            
+
             const overallRankingTable = document.getElementById('overallRanking');
-            overallRankingTable.innerHTML = '';
-            
-            // Check if we have any reports
+            if (!overallRankingTable) return; // Exit if table not found
+            overallRankingTable.innerHTML = ''; // Clear loading/previous state
+
+            // Check if we have any valid reports to rank
             if (topReports.length === 0) {
                 const emptyRow = document.createElement('tr');
                 emptyRow.innerHTML = `
                     <td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
-                        Nessun report disponibile per la classifica
+                        Nessun report valido disponibile per la classifica.
                     </td>
                 `;
                 overallRankingTable.appendChild(emptyRow);
@@ -523,26 +751,31 @@
 
             // Populate the ranking table
             topReports.forEach((report, index) => {
+                 if (!report || !report.punteggio_totale || !report.nome_repository) {
+                     console.warn("Skipping invalid report object in ranking:", report);
+                     return; // Skip malformed report objects
+                 }
+
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50 transition-colors duration-150';
-                
-                // Determine the style for the position badge based on rank
+
+                // Position badge style
                 let positionClass = 'bg-gray-100 text-gray-800';
-                if (index === 0) positionClass = 'bg-yellow-100 text-yellow-800'; // Gold
-                else if (index === 1) positionClass = 'bg-gray-200 text-gray-800'; // Silver
-                else if (index === 2) positionClass = 'bg-amber-100 text-amber-800'; // Bronze
-                
-                // Add medal icon for top 3
+                if (index === 0) positionClass = 'bg-yellow-100 text-yellow-800 font-semibold'; // Gold
+                else if (index === 1) positionClass = 'bg-gray-200 text-gray-700 font-semibold'; // Silver
+                else if (index === 2) positionClass = 'bg-orange-100 text-orange-800 font-semibold'; // Bronze (using orange for better contrast)
+
+                // Medal icon
                 let medal = '';
-                if (index === 0) medal = '<span class="text-yellow-500 ml-1">🏆</span>';
-                else if (index === 1) medal = '<span class="text-gray-500 ml-1">🥈</span>';
-                else if (index === 2) medal = '<span class="text-amber-500 ml-1">🥉</span>';
-                
-                // Get score class based on the score value
-                const scoreClass = getScoreColorClass(report.punteggio_totale);
-                
-                // Create category score indicators with icons
-                const categoryIcons = {
+                if (index === 0) medal = '<span class="text-yellow-500 ml-1" aria-label="Gold medal">🏆</span>';
+                else if (index === 1) medal = '<span class="text-gray-500 ml-1" aria-label="Silver medal">🥈</span>';
+                else if (index === 2) medal = '<span class="text-orange-500 ml-1" aria-label="Bronze medal">🥉</span>';
+
+                // Score color class
+                const scoreClass = getScoreColorClass(report.punteggio_totale); // Use the function for consistency
+
+                // Category score indicators
+                const categoryIcons = { /* ... same icons as before ... */
                     distribuzione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>',
                     manutenzione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
                     codice: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
@@ -551,227 +784,288 @@
                     sicurezza: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
                     integrazione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
                     adozione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
-                };
-                
-                const categoryScores = Object.entries(report.punteggi || {}).map(([category, score]) => {
-                    const categoryClass = getScoreColorClass(score);
-                    const icon = categoryIcons[category] || '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
-                    const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
-                    
+                 };
+                 const categoryScoresHTML = Object.entries(report.punteggi || {}).map(([category, score]) => {
+                     const numScore = typeof score === 'number' ? score : NaN; // Ensure numeric score
+                     if (isNaN(numScore)) return ''; // Skip if score is not a number
+                    const categoryClass = getScoreColorClass(numScore);
+                    const icon = categoryIcons[category] || categoryIcons.default || ''; // Fallback icon
+                    const categoryName = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    const tippyContent = `${categoryName}: ${numScore.toFixed(1)}/10`.replace(/"/g, '"'); // Escape quotes
+
                     return `
-                        <div class="flex items-center gap-1 px-2 py-1 rounded ${categoryClass}" data-tippy-content="${categoryName}: ${score.toFixed(1)}/10">
+                        <div class="flex items-center gap-1 px-2 py-0.5 rounded ${categoryClass}" data-tippy-content="${tippyContent}">
                             ${icon}
-                            <span class="text-xs font-medium">${score.toFixed(1)}</span>
+                            <span class="text-xs font-medium">${numScore.toFixed(1)}</span>
                         </div>
                     `;
                 }).join('');
-                
-                // Create download button for this report
-                const reportData = encodeURIComponent(JSON.stringify(report, null, 2));
-                const downloadButton = `
-                    <button onclick="event.stopPropagation(); downloadSpecificReport('${reportData}', '${report.nome_repository}')" 
-                            class="inline-flex items-center px-2 py-1 text-xs font-medium rounded border border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-200">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v4m0 0l-2-2m2 2l2-2m-2 2v4m7 4H5m0 0l2 2m10-2l2 2"/>
+
+                // Download button HTML (no inline JS)
+                const downloadButtonHTML = `
+                    <button aria-label="Scarica report JSON per ${report.nome_repository.replace(/"/g, '"')}"
+                            title="Scarica report JSON"
+                            class="download-json-button inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-indigo-500 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+                        <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                         </svg>
                         JSON
                     </button>
                 `;
-                
+
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium ${positionClass}">
+                        <span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm ${positionClass}">
                             ${index + 1}${medal}
                         </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-6 py-4 whitespace-normal"> <!-- Allow wrapping -->
                         <div class="flex items-center">
-                            <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center bg-indigo-100 rounded-full">
-                                <svg class="h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
+                             <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center bg-gray-100 rounded-full mr-3">
+                                <svg class="h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <a href="${report.url}" target="_blank" class="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                            <div class="min-w-0 flex-1"> <!-- Allow text to wrap -->
+                                <a href="${report.url || '#'}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors break-words">
                                     ${report.nome_repository}
                                 </a>
-                                <div class="text-xs text-gray-500">Analizzato: ${report.data_analisi}</div>
+                                <div class="text-xs text-gray-500 mt-1">Analizzato: ${report.data_analisi || 'N/A'}</div>
                                 <div class="mt-2 flex flex-wrap gap-1">
-                                    ${categoryScores}
+                                    ${categoryScoresHTML}
                                 </div>
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${scoreClass}">
+                    <td class="px-6 py-4 whitespace-nowrap text-center"> <!-- Center score -->
+                        <span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium ${scoreClass}" style="min-width: 60px;">
                             ${report.punteggio_totale.toFixed(2)}/10
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right">
-                        ${downloadButton}
+                        ${downloadButtonHTML}
                     </td>
                 `;
-                
-                // Add click event to load this report details
+
+                // --- Add click event to load report details ---
                 row.style.cursor = 'pointer';
-                row.addEventListener('click', () => {
-                    populatePage(report);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                });
-                
+                const cellsToClick = row.querySelectorAll('td:not(:last-child)'); // Exclude actions column
+                cellsToClick.forEach(cell => {
+                     // Using function declaration for 'this' context if needed later, though arrow function is fine here
+                    cell.addEventListener('click', function() {
+                        const detailView = document.getElementById('reportDetailView');
+                        if (!detailView) return;
+                        detailView.classList.remove('hidden');
+                        populatePage(report); // Pass the correct report object
+                        // Scroll detail view into viewport
+                        detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                 });
+
+
+                // --- Attach listener to the download button ---
+                const downloadBtn = row.querySelector('.download-json-button');
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', (event) => {
+                        event.stopPropagation(); // IMPORTANT: Prevent row click
+                        downloadSpecificReport(JSON.stringify(report, null, 2), report.nome_repository);
+                    });
+                }
+
                 overallRankingTable.appendChild(row);
             });
-            
-            // Initialize tooltips after populating the rankings
-            tippy('[data-tippy-content]', {
+
+            // Re-Initialize tooltips for any new elements in the ranking table
+            tippy('#overallRanking [data-tippy-content]', {
                 theme: 'light',
                 placement: 'top',
-                arrow: true
+                arrow: true,
+                 allowHTML: true
             });
         }
-        
+
         function populateCategoryRankings() {
-            // Get all unique categories from the reports
             const categories = new Set();
             allReports.forEach(report => {
-                if (report.punteggi) {
+                if (report && report.punteggi) { // Check report and punteggi exist
                     Object.keys(report.punteggi).forEach(cat => categories.add(cat));
                 }
             });
-            
-            // Map of category icons (reuse from above)
-            const categoryIcons = {
-                distribuzione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>',
-                manutenzione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
-                codice: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
-                documentazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
-                collaborazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
-                sicurezza: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
-                integrazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
-                adozione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
-            };
-            
-            // Create ranking tables for each category
+
+            const categoryIcons = { /* ... same icons as before ... */
+                    distribuzione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>',
+                    manutenzione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
+                    codice: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
+                    documentazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
+                    collaborazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
+                    sicurezza: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
+                    integrazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
+                    adozione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>',
+                    default: '' // Default empty icon
+                 };
+
             const categoryRankingsContainer = document.getElementById('categoryRankings');
-            categoryRankingsContainer.innerHTML = '';
-            categoryRankingsContainer.classList.add('grid', 'grid-cols-1', 'md:grid-cols-2', 'gap-6');
-            
-            // Process each category
+            if (!categoryRankingsContainer) return;
+            categoryRankingsContainer.innerHTML = ''; // Clear previous
+             // Apply grid layout if there are categories, otherwise clear classes
+             if (categories.size > 0) {
+                categoryRankingsContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-12'; // Keep classList simple
+             } else {
+                 categoryRankingsContainer.className = 'mt-12'; // Reset if no categories
+                 categoryRankingsContainer.innerHTML = '<p class="text-center text-gray-500 italic">Nessuna categoria trovata nei report.</p>';
+             }
+
+
             categories.forEach(category => {
-                // Sort reports by this category's score
+                // Sort reports by this category's score (handle missing scores)
                 const sortedByCategory = [...allReports]
-                    .filter(r => r.punteggi && r.punteggi[category] !== undefined)
+                    .filter(r => r && r.punteggi && typeof r.punteggi[category] === 'number') // Ensure report, punteggi, and specific score exist and are numbers
                     .sort((a, b) => b.punteggi[category] - a.punteggi[category])
-                    .slice(0, 10); // Top 10 for each category
-                
-                if (sortedByCategory.length === 0) return;
-                
-                // Create the category ranking table
+                    .slice(0, 5); // Show Top 5 per category to save space
+
+                if (sortedByCategory.length === 0) return; // Skip if no reports have this category score
+
                 const categorySection = document.createElement('div');
-                categorySection.className = 'bg-white rounded-2xl shadow-lg p-8 fade-in';
-                
-                const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
-                const categoryIcon = categoryIcons[category] || '';
-                
+                categorySection.className = 'bg-white rounded-2xl shadow-lg p-6 fade-in'; // Slightly smaller padding
+
+                const categoryName = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const categoryIcon = categoryIcons[category] || categoryIcons.default;
+
                 categorySection.innerHTML = `
-                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
                         ${categoryIcon}
-                        <span>Top 10 - ${categoryName}</span>
+                        <span>Top 5 - ${categoryName}</span>
                     </h3>
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posizione</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            ${sortedByCategory.map((report, index) => {
-                                const score = report.punteggi[category];
-                                const scoreClass = getScoreColorClass(score);
-                                const reportData = encodeURIComponent(JSON.stringify(report, null, 2));
-                                
-                                return `
-                                <tr class="hover:bg-gray-50 cursor-pointer" onclick="populatePage(allReports[${allReports.indexOf(report)}]); window.scrollTo({top: 0, behavior: 'smooth'});">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            ${index + 1}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">${report.nome_repository}</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${scoreClass}">
-                                            ${score.toFixed(2)}/10
-                                        </span>
-                                    </td>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pos.</th> <!-- Shorter header -->
+                                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
+                                    <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th> <!-- Right aligned -->
                                 </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                ${sortedByCategory.map((report, index) => {
+                                    const score = report.punteggi[category];
+                                    const scoreClass = getScoreColorClass(score);
+                                    // Find the original report index in the main allReports array
+                                    const originalIndex = allReports.findIndex(r => r.nome_repository === report.nome_repository && r.data_analisi === report.data_analisi);
+
+                                    return `
+                                    <tr class="hover:bg-gray-50 cursor-pointer category-rank-row" data-report-index="${originalIndex >= 0 ? originalIndex : ''}"> <!-- Store original index -->
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                ${index + 1}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-normal text-sm font-medium text-gray-900 hover:text-indigo-600 break-words min-w-[150px]"> <!-- Allow wrap, min width -->
+                                            ${report.nome_repository}
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap text-right"> <!-- Right aligned -->
+                                            <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium ${scoreClass}" style="min-width: 50px;">
+                                                ${score.toFixed(2)}/10
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 `;
-                
+
+                 // Add click listeners to rows in this category table
+                 categorySection.querySelectorAll('.category-rank-row').forEach(row => {
+                     row.addEventListener('click', () => {
+                         const reportIndex = row.dataset.reportIndex;
+                         if (reportIndex !== '' && allReports[reportIndex]) {
+                            const detailView = document.getElementById('reportDetailView');
+                            if (!detailView) return;
+                            detailView.classList.remove('hidden');
+                            populatePage(allReports[reportIndex]);
+                            detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                         } else {
+                            console.warn("Could not find report for category ranking row.");
+                         }
+                     });
+                 });
+
+
                 categoryRankingsContainer.appendChild(categorySection);
             });
-            
-            // Initialize tooltips for any new elements
-            tippy('[data-tippy-content]', {
-                theme: 'light',
-                placement: 'top',
-                arrow: true
-            });
         }
-        
-        // Add function to download a specific report
-        function downloadSpecificReport(encodedData, repoName) {
-            const dataStr = "data:text/json;charset=utf-8," + encodedData;
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", repoName + "_report.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+
+        // --- Download Function (accepts raw JSON string) ---
+        function downloadSpecificReport(jsonDataString, repoName) {
+             if (!jsonDataString || !repoName) {
+                 console.error("Download function called with invalid data.");
+                 return;
+             }
+            try {
+                // Encode the JSON string for the Data URI
+                const encodedData = encodeURIComponent(jsonDataString);
+                const dataStr = "data:text/json;charset=utf-8," + encodedData;
+
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+
+                // Sanitize filename (replace potentially problematic characters)
+                const safeRepoName = repoName.replace(/[\s\/\\?%*:|"<>]+/g, '_'); // Replace space and others with underscore
+                const filename = `${safeRepoName}_report.json`;
+                downloadAnchorNode.setAttribute("download", filename);
+
+                // Append temporarily, click, and remove
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                document.body.removeChild(downloadAnchorNode);
+            } catch (error) {
+                console.error("Error during JSON download:", error);
+                // Optionally, inform the user
+                // alert("Si è verificato un errore durante il tentativo di download del report.");
+            }
         }
+        // Expose to global scope (optional, but can be useful for debugging)
         window.downloadSpecificReport = downloadSpecificReport;
 
+        // --- Utility function for score color class (based on background/text pairing) ---
         function getScoreColorClass(score) {
-            if (score >= 7) return 'bg-green-100 text-green-800';
-            if (score >= 4) return 'bg-yellow-100 text-yellow-800';
+             const scoreNum = Number(score); // Ensure it's a number
+             if (isNaN(scoreNum) || score === null || score === undefined) {
+                return 'bg-gray-100 text-gray-500';
+             }
+            if (scoreNum >= 7) return 'bg-green-100 text-green-800';
+            if (scoreNum >= 4) return 'bg-yellow-100 text-yellow-800';
             return 'bg-red-100 text-red-800';
         }
 
-        function downloadJSON(reportData, reportName) {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `${reportName}_report.json`);  // Dynamic report name
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-        window.downloadJSON = downloadJSON;
 
+        // --- DOMContentLoaded Listener ---
         document.addEventListener('DOMContentLoaded', () => {
-            loadLatestReports(); // Load and process all the latest reports.
+            loadLatestReports(); // Load data and populate everything
 
-            tippy('[data-tippy-content]', {
-                theme: 'light',
-                placement: 'top',
-                arrow: true
-            });
+            // Initial Tippy setup for static elements (like footer link) - delegate for dynamic ones
+             tippy('body', {
+                 target: '[data-tippy-content]:not(body)', // Target elements with the attribute, excluding body itself
+                 theme: 'light',
+                 placement: 'top',
+                 arrow: true,
+                 allowHTML: true, // Important if tooltips contain HTML (like icons)
+                 // delay: [100, 0], // Optional: Slight delay on show, none on hide
+                 // trigger: 'mouseenter focus', // Add focus for keyboard accessibility
+             });
         });
     </script>
-    <footer>
-        <div class="flex justify-center gap-4">
-            <a href="https://github.com/fabriziosalmi/repolizer" id="repo-url" aria-label="Visualizza il repository su GitHub" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 ease-in-out gap-2">
-                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+
+    <footer class="mt-16 pt-8 border-t border-gray-200">
+        <div class="flex justify-center gap-4 mb-8">
+            <a href="https://github.com/fabriziosalmi/repolizer" target="_blank" rel="noopener noreferrer" aria-label="Visualizza il codice sorgente su GitHub" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200 ease-in-out gap-2">
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.026 2.747-1.026.546 1.379.201 2.397.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" /></svg>
                 Codice sorgente
             </a>
         </div>
-        <hr class="my-8 border-gray-200">
+         <p class="text-center text-sm text-gray-500">© Repolizer Project</p>
     </footer>
+
 </body>
 </html>

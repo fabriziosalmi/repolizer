@@ -33,3 +33,5 @@ ENV/
 Thumbs.db
 
 reports/*
+
+*.log
