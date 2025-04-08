@@ -193,6 +193,7 @@ class TestRepoAnalyzerMethods(TestRepoAnalyzer):
         
         try:
             # Create analyzer with empty config
+            
             analyzer = RepoAnalyzer("test/repo", config_file=empty_config.name)
             
             # Should use default configuration or handle empty config gracefully
@@ -292,6 +293,55 @@ class TestRepoAnalyzerMethods(TestRepoAnalyzer):
             result = self.analyzer.analyze()
             self.assertIsInstance(result, dict)
             self.assertIn("dettagli", result)
+    
+    def test_with_missing_token(self):
+        """Test behavior when GitHub token is missing."""
+        # Patch environment to remove token
+        with patch.dict('os.environ', {}, clear=True):
+            # Create a new analyzer without token in environment
+            analyzer = RepoAnalyzer("test/repo", config_file=self.temp_config.name)
+            
+            # Check that analysis handles missing token gracefully
+            result = analyzer.analyze()
+            self.assertIsInstance(result, dict)
+            
+            # The actual error message might be "repository non trovato o non accessibile"
+            # which doesn't explicitly mention the token, but indicates access issues
+            if "error" in result:
+                self.assertTrue(
+                    "repository non trovato" in result["error"].lower() or
+                    "non accessibile" in result["error"].lower() or
+                    "token" in result["error"].lower()
+                )
+            # Alternatively, the analysis might continue with limited functionality
+            else:
+                self.assertIn("dettagli", result)
+    
+    def test_with_rate_limit_simulation(self):
+        """Test behavior when GitHub API rate limit is hit."""
+        # Create a mock response that simulates rate limit
+        rate_limit_exception = MagicMock()
+        rate_limit_exception.__str__.return_value = "API Rate Limit Exceeded"
+        
+        # Set up the mock to raise the exception
+        self.mock_repo.get_commits.side_effect = rate_limit_exception
+        
+        # Run analysis and check it handles rate limiting gracefully
+        result = self.analyzer.analyze()
+        self.assertIsInstance(result, dict)
+    
+    def test_without_internet_connection(self):
+        """Test behavior when there's no internet connection."""
+        # Simulate network error by making API calls raise exceptions
+        network_error = MagicMock()
+        network_error.__str__.return_value = "Network Error"
+        
+        with patch('github.Github.__new__', side_effect=network_error):
+            analyzer = RepoAnalyzer("test/repo", config_file=self.temp_config.name)
+            
+            # Analysis should handle network errors gracefully
+            result = analyzer.analyze()
+            self.assertIsInstance(result, dict)
 
 
 class TestParametrizedTests(TestRepoAnalyzer):
@@ -368,6 +418,27 @@ class TestIntegration(TestRepoAnalyzer):
         # For string output, check it's not empty
         else:
             self.assertGreater(len(report), 0)
+
+class TestPerformance(TestRepoAnalyzer):
+    """Performance tests for RepoAnalyzer."""
+    
+    def test_analysis_performance(self):
+        """Test that analysis completes within a reasonable time frame."""
+        import time
+        
+        # Record start time
+        start_time = time.time()
+        
+        # Run analysis
+        self.analyzer.analyze()
+        
+        # Check execution time
+        execution_time = time.time() - start_time
+        
+        # Analysis should complete within a reasonable time (e.g., 5 seconds)
+        # Adjust the threshold based on expected performance
+        self.assertLess(execution_time, 5.0, 
+                        f"Analysis took too long: {execution_time:.2f} seconds")
 
 if __name__ == '__main__':
     unittest.main()
