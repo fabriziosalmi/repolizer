@@ -314,8 +314,13 @@ class RepoAnalyzer:
                     old_timeout = self.github.timeout
                     self.github.timeout = 20
                 
-                result = fetch_func(*args, **kwargs)
-                
+                try:
+                    result = fetch_func(*args, **kwargs)
+                except IndexError:
+                    # Handle empty paginated lists (like when a repo has no releases)
+                    logger.debug(f"Empty result when fetching data for {key}")
+                    result = []
+                    
                 # Ripristina il timeout originale se necessario
                 if hasattr(original_func, '__self__') and isinstance(original_func.__self__, Github):
                     self.github.timeout = old_timeout
@@ -326,7 +331,7 @@ class RepoAnalyzer:
                 
                 self._cache[key] = result
             except TimeoutError as e:
-                print(f"Timeout durante il recupero dei dati per {key}: {e}")
+                logger.error(f"Timeout durante il recupero dei dati per {key}: {e}")
                 return None
             except Exception as e:
                 # Log more specific error for debugging
@@ -382,7 +387,28 @@ class RepoAnalyzer:
                     if complexities:
                         avg_complexity = sum(complexities) / len(complexities)
                         logger.info(f"Complessità media calcolata da {len(complexities)} blocchi: {avg_complexity:.2f}")
-                        return avg_complexity
+                        
+                        # Provide more granular complexity score conversion
+                        if avg_complexity <= 2.0:
+                            return 10.0  # Excellent: Very simple, maintainable code
+                        elif avg_complexity <= 4.0:
+                            return 9.0   # Very good: Simple, clean code
+                        elif avg_complexity <= 6.0:
+                            return 8.0   # Good: Reasonably simple code
+                        elif avg_complexity <= 8.0:
+                            return 7.0   # Fairly good: Moderate complexity
+                        elif avg_complexity <= 10.0:
+                            return 6.0   # Acceptable: Getting complex
+                        elif avg_complexity <= 12.0:
+                            return 5.0   # Moderate: Definitely complex
+                        elif avg_complexity <= 14.0:
+                            return 4.0   # Concerning: High complexity
+                        elif avg_complexity <= 16.0:
+                            return 3.0   # Poor: Very high complexity
+                        elif avg_complexity <= 20.0:
+                            return 2.0   # Bad: Extremely complex
+                        else:
+                            return 1.0   # Critical: Unmaintainable complexity
                     else:
                         logger.warning("Nessun dato di complessità raccolto dai file Python individuali.")
                         # Fall through to directory analysis if individual file analysis failed or yielded no results
@@ -401,11 +427,32 @@ class RepoAnalyzer:
                     if match:
                         avg_complexity = float(match.group(1))
                         logger.info(f"Complessità media della directory: {avg_complexity:.2f}")
-                        return avg_complexity
+                        
+                        # Apply the same granular scoring for directory analysis
+                        if avg_complexity <= 2.0:
+                            return 10.0  # Excellent: Very simple, maintainable code
+                        elif avg_complexity <= 4.0:
+                            return 9.0   # Very good: Simple, clean code
+                        elif avg_complexity <= 6.0:
+                            return 8.0   # Good: Reasonably simple code
+                        elif avg_complexity <= 8.0:
+                            return 7.0   # Fairly good: Moderate complexity
+                        elif avg_complexity <= 10.0:
+                            return 6.0   # Acceptable: Getting complex
+                        elif avg_complexity <= 12.0:
+                            return 5.0   # Moderate: Definitely complex
+                        elif avg_complexity <= 14.0:
+                            return 4.0   # Concerning: High complexity
+                        elif avg_complexity <= 16.0:
+                            return 3.0   # Poor: Very high complexity
+                        elif avg_complexity <= 20.0:
+                            return 2.0   # Bad: Extremely complex
+                        else:
+                            return 1.0   # Critical: Unmaintainable complexity
                     else:
-                         logger.warning(f"Impossibile estrarre la complessità media dall'output di Radon: {avg_line}")
+                        logger.warning(f"Impossibile estrarre la complessità media dall'output di Radon: {avg_line}")
                 elif cmd_result.returncode != 0:
-                     logger.warning(f"Radon ha fallito per la directory {effective_path}: {cmd_result.stderr}")
+                    logger.warning(f"Radon ha fallito per la directory {effective_path}: {cmd_result.stderr}")
 
             except subprocess.TimeoutExpired:
                 logger.warning(f"Timeout analisi complessità per la directory: {effective_path}")
@@ -1558,10 +1605,15 @@ class RepoAnalyzer:
                 if nome_param == "release_tag_frequenza":
                     try:
                         # Prima verifica le release ufficiali
-                        releases = self._get_cached_data(
-                            "releases",
-                            lambda: list(self.repo.get_releases()[:MAX_ITEMS_PER_REQUEST])
-                        )
+                        try:
+                            releases = self._get_cached_data(
+                                "releases",
+                                lambda: list(self.repo.get_releases()[:MAX_ITEMS_PER_REQUEST])
+                            )
+                        except IndexError:
+                            # Handle the case when there are no releases
+                            releases = []
+                            
                         # Poi cerca i tag
                         tags_data = self._fetch_tags_data()
                         
@@ -1612,6 +1664,7 @@ class RepoAnalyzer:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Si è verificato un errore nell'analisi delle release e tag"
                         )
+
                 elif nome_param == "attivita_issues_ratio":
                     try:
                         issues = self._get_cached_data(
@@ -1646,6 +1699,7 @@ class RepoAnalyzer:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Si è verificato un errore nell'analisi delle issues"
                         )
+
                 elif nome_param == "data_ultimo_commit":
                     # Usa la cache per ottenere il commit più recente
                     last_commit = self._get_cached_data(
@@ -1667,29 +1721,52 @@ class RepoAnalyzer:
                                 days_since_last_commit = max(0, days_since_last_commit)
                                 valore = f"{days_since_last_commit} giorni fa"
                                 
-                                # Stepped scoring based on recency
-                                if days_since_last_commit <= 30:
-                                    punteggio = 10.0
-                                    # Suggestion: Keep up the good work (optional, maybe too verbose)
-                                elif days_since_last_commit <= 90:
-                                    punteggio = 8.0
+                                # More granular scoring based on recency
+                                if days_since_last_commit <= 7:
+                                    punteggio = 10.0  # Very recent activity (within a week)
+                                elif days_since_last_commit <= 14:
+                                    punteggio = 9.0   # Recent activity (within two weeks)
+                                elif days_since_last_commit <= 30:
+                                    punteggio = 8.0   # Active (within a month)
+                                elif days_since_last_commit <= 60:
+                                    punteggio = 7.0   # Somewhat active (within two months)
                                     self.results["suggerimenti"].setdefault(categoria, []).append(
                                         "L'attività di commit è buona, ma cerca di mantenerla più frequente (idealmente entro 30 giorni)."
                                     )
+                                elif days_since_last_commit <= 90:
+                                    punteggio = 6.0   # Less active (within three months)
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "L'attività di commit è rallentata. Considera di aumentare la frequenza degli aggiornamenti."
+                                    )
+                                elif days_since_last_commit <= 120:
+                                    punteggio = 5.0   # Moderately inactive (four months)
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "Il repository non riceve commit da alcuni mesi. Valuta di riprendere lo sviluppo attivo."
+                                    )
                                 elif days_since_last_commit <= 180:
-                                    punteggio = 6.0
+                                    punteggio = 4.0   # Starting to stagnate (six months)
                                     self.results["suggerimenti"].setdefault(categoria, []).append(
                                         "Il repository non riceve commit da diversi mesi. Considera di riprendere lo sviluppo attivo."
                                     )
-                                elif days_since_last_commit <= 365:
-                                    punteggio = 3.0
+                                elif days_since_last_commit <= 270:
+                                    punteggio = 3.0   # Stagnant (nine months)
                                     self.results["suggerimenti"].setdefault(categoria, []).append(
-                                        "Il repository sembra poco manutenuto (ultimo commit tra 6 e 12 mesi fa). Pianifica aggiornamenti o valuta l'archiviazione."
+                                        "Il repository sembra poco manutenuto (ultimo commit tra 6 e 9 mesi fa). Pianifica aggiornamenti."
                                     )
-                                else: # More than a year
-                                    punteggio = 0.0
+                                elif days_since_last_commit <= 365:
+                                    punteggio = 2.0   # Very stagnant (a year)
                                     self.results["suggerimenti"].setdefault(categoria, []).append(
-                                        "Il repository è inattivo da oltre un anno. Considera di archiviarlo se non è più mantenuto."
+                                        "Il repository sembra poco manutenuto (ultimo commit tra 9 e 12 mesi fa). Pianifica aggiornamenti o valuta l'archiviazione."
+                                    )
+                                elif days_since_last_commit <= 730:
+                                    punteggio = 1.0   # Nearly abandoned (two years)
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "Il repository è pressoché inattivo (ultimo commit tra 1 e 2 anni fa). Valuta seriamente l'archiviazione se non è più mantenuto."
+                                    )
+                                else:
+                                    punteggio = 0.0   # Abandoned (more than two years)
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "Il repository è inattivo da oltre due anni. Considera di archiviarlo se non è più mantenuto."
                                     )
                             else:
                                 valore = "Data non disponibile"
@@ -1713,6 +1790,7 @@ class RepoAnalyzer:
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Non sono stati trovati commit. Il repository potrebbe essere vuoto o inaccessibile."
                         )
+
                 elif nome_param == "frequenza_commit":
                     # Usa la cache per ottenere i commit
                     commits = self._get_cached_data(
@@ -1743,26 +1821,82 @@ class RepoAnalyzer:
                                 if days_diff > 0:
                                     commits_per_day = len(commits) / days_diff
                                     valore = f"{commits_per_day:.2f} commit/giorno (ultimi {len(commits)})"
-                                    # Normalize: 0.5 commit/giorno = 5 punti, 2 commit/giorno = 10 punti
-                                    punteggio = self._normalize_score(commits_per_day, 0, 2, 0, 10)
                                     
-                                    if commits_per_day < 0.1:  # Meno di un commit ogni 10 giorni
+                                    # More granular scoring based on commits frequency
+                                    if commits_per_day >= 5.0:
+                                        punteggio = 10.0  # Excellent: Very active development
+                                    elif commits_per_day >= 3.0:
+                                        punteggio = 9.5   # Exceptional: Highly active development
+                                    elif commits_per_day >= 2.0:
+                                        punteggio = 9.0   # Great: Very active development
+                                    elif commits_per_day >= 1.5:
+                                        punteggio = 8.5   # Very good: Active daily development
+                                    elif commits_per_day >= 1.0:
+                                        punteggio = 8.0   # Good: About one commit per day
+                                    elif commits_per_day >= 0.7:
+                                        punteggio = 7.0   # Fairly good: Regular commits (5+ per week)
+                                    elif commits_per_day >= 0.5:
+                                        punteggio = 6.0   # Moderate: Several commits per week
+                                    elif commits_per_day >= 0.3:
+                                        punteggio = 5.0   # Acceptable: About 2 commits per week
                                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                                            "La frequenza dei commit è molto bassa. Considera di aumentare l'attività di sviluppo"
+                                            "La frequenza dei commit è accettabile, ma potrebbe essere aumentata per una maggiore continuità"
                                         )
-                                    elif commits_per_day < 0.3:  # Meno di un commit ogni 3 giorni
+                                    elif commits_per_day >= 0.15:
+                                        punteggio = 4.0   # Below average: About 1 commit per week
                                         self.results["suggerimenti"].setdefault(categoria, []).append(
-                                            "Aumenta la frequenza dei commit per mantenere un sviluppo più costante"
+                                            "Aumenta la frequenza dei commit per mantenere uno sviluppo più costante (almeno 2-3 a settimana)"
+                                        )
+                                    elif commits_per_day >= 0.1:
+                                        punteggio = 3.0   # Slow: Less than 1 commit per week
+                                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                                            "La frequenza dei commit è bassa. Cerca di commitare almeno settimanalmente"
+                                        )
+                                    elif commits_per_day >= 0.05:
+                                        punteggio = 2.0   # Very slow: About 1-2 commits per month
+                                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                                            "La frequenza dei commit è molto bassa (1-2 al mese). Considera di aumentare l'attività di sviluppo"
+                                        )
+                                    elif commits_per_day > 0:
+                                        punteggio = 1.0   # Minimal: Less than 1 commit per month
+                                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                                            "L'attività di commit è minima (meno di uno al mese). Il progetto necessita di maggiore attività"
+                                        )
+                                    else:
+                                        punteggio = 0.0   # Inactive
+                                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                                            "Non ci sono stati commit recenti nel periodo analizzato"
                                         )
                                 else:
                                     # Handle case where all commits are within the same day or less than 24h apart
                                     valore = f"{len(commits)} commit recenti (stesso giorno)"
-                                    # Score based on number of commits if timeframe is too short
-                                    punteggio = self._normalize_score(len(commits), 1, 10, 0, 10) 
+                                    
+                                    # More granular scoring based on number of same-day commits
+                                    if len(commits) >= 20:
+                                        punteggio = 10.0  # Excellent: Very intense development
+                                    elif len(commits) >= 15:
+                                        punteggio = 9.5   # Exceptional: Many commits in one day
+                                    elif len(commits) >= 10:
+                                        punteggio = 9.0   # Great: Many commits in one day
+                                    elif len(commits) >= 8:
+                                        punteggio = 8.5   # Very good: Active development
+                                    elif len(commits) >= 6:
+                                        punteggio = 8.0   # Good: Solid development session
+                                    elif len(commits) >= 5:
+                                        punteggio = 7.5   # Fairly good: Good development session
+                                    elif len(commits) >= 4:
+                                        punteggio = 7.0   # Above average: Good development activity
+                                    elif len(commits) >= 3:
+                                        punteggio = 6.0   # Moderate: Several commits
+                                    elif len(commits) == 2:
+                                        punteggio = 5.0   # Acceptable: A couple of commits
+                                    else:
+                                        punteggio = 4.0   # Below average: Minimal commits
+                                    
                                     logger.debug("Commit troppo ravvicinati per calcolare frequenza giornaliera sensata.")
                             else:
                                 valore = "Date commit non valide"
-                                punteggio = 5 # Neutral score if dates are missing
+                                punteggio = 5  # Neutral score if dates are missing
                                 logger.warning("Date autore non trovate per alcuni commit recenti.")
                         except Exception as e:
                             logger.error(f"Errore nel calcolo della frequenza dei commit: {e}", exc_info=True)
@@ -1773,19 +1907,25 @@ class RepoAnalyzer:
                                 "Si è verificato un errore nel calcolo della frequenza dei commit"
                             )
                     elif commits and len(commits) == 1:
-                         valore = "1 commit recente"
-                         punteggio = 1 # Low score for single commit
-                    else: # No commits or empty list
+                        valore = "1 commit recente"
+                        punteggio = 1  # Low score for single commit
+                        self.results["suggerimenti"].setdefault(categoria, []).append(
+                            "È stato trovato un solo commit recente. Aumenta la frequenza di sviluppo"
+                        )
+                    else:  # No commits or empty list
                         valore = "Nessun commit recente"
                         punteggio = 0
                         self.results["suggerimenti"].setdefault(categoria, []).append(
                             "Non sono stati trovati commit recenti. Il repository potrebbe essere inattivo"
                         )
+
+                        
                 elif nome_param == "stato_archivio":
                     valore = "Attivo" if not self.repo.archived else "Archiviato"
                     punteggio = 10 if not self.repo.archived else 0
                     conta_punteggio = True
                     return valore, round(punteggio, 2), conta_punteggio
+                
                 elif nome_param == "attivita_issues_tempo":
                     issues_data = self._fetch_issues_data()
                     closed_times = issues_data.get("closed_times", [])
@@ -2497,74 +2637,209 @@ class RepoAnalyzer:
 
             # Setup & Usabilità
             elif categoria == "adozione":
+
                 if nome_param == "facilita_setup":
-                    # Improve the setup analysis with actual checks
+                    # Enhanced setup analysis with comprehensive checks
                     valore = "Analisi in corso"
                     punteggio = 5  # Default neutral value
                     
-                    setup_files = ["setup.py", "requirements.txt", "package.json", "Makefile", "Dockerfile", "docker-compose.yml"]
-                    found_files = []
+                    # Expanded list of setup files by ecosystem
+                    setup_files = {
+                        "python": ["setup.py", "requirements.txt", "Pipfile", "pyproject.toml", "setup.cfg", "environment.yml"],
+                        "javascript": ["package.json", "package-lock.json", "yarn.lock", "npm-shrinkwrap.json"],
+                        "docker": ["Dockerfile", "docker-compose.yml", "docker-compose.yaml"],
+                        "build": ["Makefile", "CMakeLists.txt", "build.gradle", "pom.xml", "build.xml", "build.sbt"],
+                        "ruby": ["Gemfile", "Gemfile.lock"],
+                        "php": ["composer.json", "composer.lock"],
+                        "go": ["go.mod", "go.sum"]
+                    }
+                    
+                    all_setup_files = [file for files in setup_files.values() for file in files]
+                    found_files = {}
+                    readme_contains_setup = False
+                    installation_guide = None
                     
                     try:
+                        # Check for setup files
                         if self.local_repo_path:
-                            # Check local repository
+                            # Check local repository with better traversal
                             for root, _, files in os.walk(self.local_repo_path):
+                                # Limit depth for better performance
+                                rel_path = os.path.relpath(root, self.local_repo_path)
+                                depth = len(rel_path.split(os.sep)) if rel_path != '.' else 0
+                                if depth > 2:  # Don't go deeper than 2 levels
+                                    continue
+                                
                                 for file in files:
-                                    if file.lower() in [s.lower() for s in setup_files]:
-                                        found_files.append(file)
+                                    file_lower = file.lower()
+                                    # Check each ecosystem's setup files
+                                    for ecosystem, ecosystem_files in setup_files.items():
+                                        if file_lower in [s.lower() for s in ecosystem_files]:
+                                            found_files.setdefault(ecosystem, []).append(file)
+                                    
+                                    # Also check README for setup instructions
+                                    if file_lower in ["readme.md", "readme", "readme.txt", "readme.rst"]:
+                                        readme_path = os.path.join(root, file)
+                                        try:
+                                            with open(readme_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                                readme_content = f.read().lower()
+                                                # Check for installation sections in README
+                                                if any(section in readme_content for section in ["# installation", "## installation", 
+                                                                                            "# setup", "## setup", 
+                                                                                            "# getting started", "## getting started",
+                                                                                            "# quick start", "## quick start",
+                                                                                            "# installazione", "## installazione"]):
+                                                    readme_contains_setup = True
+                                                    installation_guide = "README contiene istruzioni di installazione"
+                                        except Exception as e:
+                                            logger.debug(f"Errore nella lettura del README {readme_path}: {e}")
                         else:
-                            # Use GitHub API
+                            # Use GitHub API with more comprehensive checks
                             contents = self._get_cached_data(
                                 "root_contents",
                                 lambda: list(self.repo.get_contents(""))
                             )
                             
                             for item in contents:
-                                if item.type == "file" and item.name.lower() in [s.lower() for s in setup_files]:
-                                    found_files.append(item.name)
+                                if item.type == "file":
+                                    file_lower = item.name.lower()
+                                    # Check each ecosystem's setup files
+                                    for ecosystem, ecosystem_files in setup_files.items():
+                                        if file_lower in [s.lower() for s in ecosystem_files]:
+                                            found_files.setdefault(ecosystem, []).append(item.name)
+                                    
+                                    # Check README for setup instructions
+                                    if file_lower in ["readme.md", "readme", "readme.txt", "readme.rst"]:
+                                        try:
+                                            readme_content = self.repo.get_contents(item.path).decoded_content.decode('utf-8', errors='ignore').lower()
+                                            # Check for installation sections in README
+                                            if any(section in readme_content for section in ["# installation", "## installation", 
+                                                                                        "# setup", "## setup", 
+                                                                                        "# getting started", "## getting started",
+                                                                                        "# quick start", "## quick start",
+                                                                                        "# installazione", "## installazione"]):
+                                                readme_contains_setup = True
+                                                installation_guide = "README contiene istruzioni di installazione"
+                                        except Exception as e:
+                                            logger.debug(f"Errore nel recupero del README {item.path}: {e}")
                         
-                        if found_files:
-                            setup_score = min(len(found_files) * 2.5, 10)  # Each setup file adds 2.5 points, max 10
-                            valore = f"Setup files trovati: {', '.join(found_files)}"
+                        # Calculate score based on multiple factors
+                        ecosystems_count = len(found_files)
+                        total_files = sum(len(files) for files in found_files.values())
+                        
+                        # Base score from setup files (weighted by ecosystem coverage)
+                        if total_files > 0:
+                            # More ecosystems covered = better score
+                            ecosystem_coverage = min(ecosystems_count * 2, 6)  # Up to 6 points for ecosystem coverage
+                            
+                            # More setup files = more comprehensive setup
+                            file_coverage = min(total_files * 0.8, 4)  # Up to 4 points for number of files
+                            
+                            # Calculate base score combining both factors
+                            setup_score = ecosystem_coverage + file_coverage
+                            
+                            # Bonus for README with installation instructions
+                            if readme_contains_setup:
+                                setup_score = min(10, setup_score + 2)  # +2 bonus for good documentation
+                            
                             punteggio = setup_score
                             
-                            if punteggio < 5:
-                                self.results["suggerimenti"].setdefault(categoria, []).append(
-                                    "Aggiungi file come requirements.txt, setup.py o Dockerfile per facilitare l'installazione e l'esecuzione"
-                                )
+                            # Prepare descriptive value with ecosystem breakdown
+                            ecosystem_descriptions = []
+                            for ecosystem, files in found_files.items():
+                                if len(files) > 2:
+                                    ecosystem_descriptions.append(f"{ecosystem} ({len(files)} files)")
+                                else:
+                                    ecosystem_descriptions.append(f"{ecosystem} ({', '.join(files)})")
+                            
+                            valore = f"Setup files trovati: {' + '.join(ecosystem_descriptions)}"
+                            if installation_guide:
+                                valore += f" e {installation_guide}"
+                                
+                            # Targeted suggestions based on missing ecosystems
+                            if punteggio < 8:
+                                missing_ecosystems = []
+                                if "docker" not in found_files:
+                                    missing_ecosystems.append("Docker (Dockerfile/docker-compose.yml)")
+                                if "python" not in found_files and "javascript" not in found_files:
+                                    missing_ecosystems.append("setup di base (requirements.txt/package.json)")
+                                
+                                if missing_ecosystems:
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        f"Migliora la facilità di installazione aggiungendo file per {' e '.join(missing_ecosystems)}"
+                                    )
+                                
+                                if not readme_contains_setup:
+                                    self.results["suggerimenti"].setdefault(categoria, []).append(
+                                        "Aggiungi una sezione 'Installation' o 'Getting Started' al README con istruzioni chiare"
+                                    )
                         else:
                             valore = "Nessun file di setup rilevato"
                             punteggio = 0
                             self.results["suggerimenti"].setdefault(categoria, []).append(
-                                "Aggiungi file di setup come requirements.txt o setup.py per facilitare l'installazione"
+                                "Aggiungi file di setup come requirements.txt, package.json o Dockerfile per facilitare l'installazione"
                             )
+                            if not readme_contains_setup:
+                                self.results["suggerimenti"].setdefault(categoria, []).append(
+                                    "Documenta le istruzioni di installazione nel README con esempi e prerequisiti"
+                                )
                     except Exception as e:
-                        logger.warning(f"Errore nell'analisi dei file di setup: {e}")
+                        logger.warning(f"Errore nell'analisi dei file di setup: {e}", exc_info=True)
                         valore = "Errore nell'analisi"
                         punteggio = 5
                 
                 elif nome_param == "configurabilita":
                     # Check for configuration files and options
                     valore = "Analisi in corso"
-                    config_files = ["config.json", "config.yml", "config.yaml", ".env.example", "settings.py"]
+                    config_files = [
+                        # General config files
+                        "config.json", "config.yml", "config.yaml", ".env.example", 
+                        "settings.py", ".env", ".env.sample", ".env.template",
+                        # Framework specific configs
+                        "app.config.js", "next.config.js", "webpack.config.js",
+                        "nuxt.config.js", "vue.config.js", "angular.json",
+                        "django_settings.py", "settings.gradle", "application.properties",
+                        "application.yml", "appsettings.json"
+                    ]
                     found_configs = []
                     
                     try:
                         if self.local_repo_path:
                             for root, _, files in os.walk(self.local_repo_path):
+                                # Don't go too deep into the repository to avoid long analysis
+                                if root.count(os.sep) - self.local_repo_path.count(os.sep) > 3:
+                                    continue
+                                    
                                 for file in files:
+                                    # Check for standard config files
                                     if file.lower() in [c.lower() for c in config_files]:
                                         found_configs.append(file)
-                                        
-                                    # Check Python files for argparse usage (configurability via command line)
+                                    
+                                    # Check Python files for CLI argument libraries
                                     if file.endswith('.py'):
                                         try:
-                                            with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
+                                            file_path = os.path.join(root, file)
+                                            with open(file_path, 'r', encoding='utf-8') as f:
                                                 content = f.read()
+                                                # Check for various command-line parsing libraries
                                                 if 'argparse' in content and 'ArgumentParser' in content:
                                                     found_configs.append('command-line arguments (via argparse)')
                                                     break
-                                        except Exception:
+                                                elif 'import click' in content or 'from click import' in content:
+                                                    found_configs.append('command-line arguments (via click)')
+                                                    break
+                                                elif 'import typer' in content or 'from typer import' in content:
+                                                    found_configs.append('command-line arguments (via typer)')
+                                                    break
+                                                elif 'docopt' in content:
+                                                    found_configs.append('command-line arguments (via docopt)')
+                                                    break
+                                                # Check for environment variable usage
+                                                elif 'os.environ' in content or 'os.getenv' in content:
+                                                    found_configs.append('environment variables')
+                                                    break
+                                        except Exception as e:
+                                            logger.debug(f"Error analyzing Python file {file}: {e}")
                                             pass
                         else:
                             # Check via GitHub API
@@ -2577,19 +2852,55 @@ class RepoAnalyzer:
                                 if item.type == "file" and item.name.lower() in [c.lower() for c in config_files]:
                                     found_configs.append(item.name)
                             
-                            # Look for argparse in Python files - limited to reduce API calls
+                            # Look for config in common Python files - limited to reduce API calls
                             try:
-                                main_py = next((item for item in contents if item.name == 'main.py' or item.name == self.repo_name.split('/')[-1] + '.py'), None)
-                                if main_py:
-                                    content = self.repo.get_contents(main_py.path).decoded_content.decode('utf-8')
-                                    if 'argparse' in content and 'ArgumentParser' in content:
-                                        found_configs.append('command-line arguments (via argparse)')
-                            except Exception:
+                                likely_files = ['main.py', 'app.py', 'run.py', 'cli.py', 'config.py', 'settings.py']
+                                likely_files.append(self.repo_name.split('/')[-1] + '.py')
+                                
+                                for filename in likely_files:
+                                    py_file = next((item for item in contents if item.name == filename), None)
+                                    if py_file:
+                                        content = self.repo.get_contents(py_file.path).decoded_content.decode('utf-8')
+                                        if 'argparse' in content and 'ArgumentParser' in content:
+                                            found_configs.append('command-line arguments (via argparse)')
+                                            break
+                                        elif 'import click' in content or 'from click import' in content:
+                                            found_configs.append('command-line arguments (via click)')
+                                            break
+                                        elif 'import typer' in content or 'from typer import' in content:
+                                            found_configs.append('command-line arguments (via typer)')
+                                            break
+                                        elif 'os.environ' in content or 'os.getenv' in content:
+                                            found_configs.append('environment variables')
+                                            break
+                            except Exception as e:
+                                logger.debug(f"Error analyzing Python files via API: {e}")
                                 pass
                         
-                        if found_configs:
-                            config_score = min(len(found_configs) * 2.5, 10)
-                            valore = f"Opzioni di configurazione trovate: {', '.join(found_configs)}"
+                        # Remove duplicates while preserving order
+                        unique_configs = []
+                        for config in found_configs:
+                            if config not in unique_configs:
+                                unique_configs.append(config)
+                        
+                        if unique_configs:
+                            # More granular scoring based on number and variety of config options
+                            config_count = len(unique_configs)
+                            config_score = min(config_count * 2.0, 10)
+                            
+                            # Bonus for having multiple configuration methods
+                            config_categories = set()
+                            if any('command-line' in c for c in unique_configs):
+                                config_categories.add('cli')
+                            if any(c.endswith(('.json', '.yml', '.yaml')) for c in unique_configs):
+                                config_categories.add('file')
+                            if any('env' in c.lower() for c in unique_configs):
+                                config_categories.add('env')
+                            
+                            if len(config_categories) > 1:
+                                config_score = min(10, config_score + 1)  # Bonus for multiple config methods
+                                
+                            valore = f"Opzioni di configurazione trovate: {', '.join(unique_configs)}"
                             punteggio = config_score
                         else:
                             valore = "Configurazione limitata o assente"
@@ -2743,8 +3054,10 @@ class RepoAnalyzer:
         try:
             effective_path = self.local_repo_path  # Always use cloned path for Bandit
             logger.info(f"Esecuzione di Bandit su: {effective_path}")
+            
+            # Add confidence level to the analysis
             result = subprocess.run(
-                ["bandit", "-r", effective_path, "-f", "json", "-q"],
+                ["bandit", "-r", effective_path, "-f", "json", "-q", "--confidence-level", "medium"],
                 capture_output=True, text=True, timeout=120, check=False
             )
 
@@ -2760,56 +3073,173 @@ class RepoAnalyzer:
                     if total_loc == 0:  # Avoid division by zero
                         total_loc = 1
                     
-                    # Count issues by severity
+                    # Count issues by severity and confidence level
                     severity_counts = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+                    confidence_counts = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+                    issue_types = {}
+                    
                     for issue in issues:
                         severity = issue.get("issue_severity", "LOW")
+                        confidence = issue.get("issue_confidence", "LOW")
+                        issue_id = issue.get("test_id", "")
+                        
+                        # Count by severity
                         if severity in severity_counts:
                             severity_counts[severity] += 1
+                        
+                        # Count by confidence level
+                        if confidence in confidence_counts:
+                            confidence_counts[confidence] += 1
+                        
+                        # Track issue types for more specific recommendations
+                        issue_types.setdefault(issue_id, 0)
+                        issue_types[issue_id] += 1
                     
-                    # Calculate weighted issues (HIGH issues are most important)
-                    weighted_issues = (
-                        severity_counts["HIGH"] * 5.0 + 
-                        severity_counts["MEDIUM"] * 2.0 + 
-                        severity_counts["LOW"] * 0.5
-                    )
+                    # Calculate weighted issues with more granular weighting based on severity and confidence
+                    # High severity + high confidence is weighted most heavily
+                    weighted_issues = 0
+                    for issue in issues:
+                        severity = issue.get("issue_severity", "LOW")
+                        confidence = issue.get("issue_confidence", "LOW")
+                        
+                        # Combined weight matrix
+                        if severity == "HIGH" and confidence == "HIGH":
+                            weighted_issues += 10.0  # Critical issues
+                        elif severity == "HIGH" and confidence == "MEDIUM":
+                            weighted_issues += 7.0
+                        elif severity == "HIGH" and confidence == "LOW":
+                            weighted_issues += 5.0
+                        elif severity == "MEDIUM" and confidence == "HIGH":
+                            weighted_issues += 4.0
+                        elif severity == "MEDIUM" and confidence == "MEDIUM":
+                            weighted_issues += 2.0
+                        elif severity == "MEDIUM" and confidence == "LOW":
+                            weighted_issues += 1.0
+                        elif severity == "LOW" and confidence == "HIGH":
+                            weighted_issues += 0.7
+                        elif severity == "LOW" and confidence == "MEDIUM":
+                            weighted_issues += 0.4
+                        else:  # LOW severity, LOW confidence
+                            weighted_issues += 0.2
                     
                     # Calculate issue density per 1000 lines
                     issue_density = (weighted_issues / total_loc) * 1000 if total_loc > 0 else 0
                     
-                    # Score calculation: 10 = no issues, 0 = high density
-                    # A moderate density (~5 weighted issues per 1000 LOC) scores around 5
+                    # More granular scoring scale
                     if len(issues) == 0:
                         score = 10.0  # Perfect score for no issues
                     else:
-                        # Exponential decay formula for more responsive scoring
-                        # This penalizes more for the first few issues, gradually leveling out
-                        score = 10.0 * math.exp(-0.2 * issue_density)
-                        score = max(0.0, min(10.0, score))  # Ensure score is between 0-10
+                        # Use a more granular scoring system with 10 distinct levels
+                        if issue_density <= 0.5:
+                            score = 9.5  # Almost perfect - very minor issues
+                        elif issue_density <= 1.0:
+                            score = 9.0  # Excellent - minimal issues
+                        elif issue_density <= 2.0:
+                            score = 8.5  # Very good - few minor issues
+                        elif issue_density <= 3.0:
+                            score = 8.0  # Good - some minor issues
+                        elif issue_density <= 5.0:
+                            score = 7.0  # Fairly good - noticeable but not serious issues
+                        elif issue_density <= 8.0:
+                            score = 6.0  # Acceptable - moderate issues present
+                        elif issue_density <= 12.0:
+                            score = 5.0  # Moderate concern - significant issues present
+                        elif issue_density <= 18.0:
+                            score = 4.0  # Concerning - many significant issues
+                        elif issue_density <= 25.0:
+                            score = 3.0  # Poor - serious security concerns
+                        elif issue_density <= 40.0:
+                            score = 2.0  # Very poor - major security vulnerabilities
+                        elif issue_density <= 60.0:
+                            score = 1.0  # Critical - severe security problems
+                        else:
+                            score = 0.0  # Extremely critical - immediate action required
                     
                     logger.info(
                         f"Bandit analysis: {len(issues)} issues found "
-                        f"({severity_counts['HIGH']}H, {severity_counts['MEDIUM']}M, {severity_counts['LOW']}L). "
+                        f"({severity_counts['HIGH']}H/{confidence_counts['HIGH']}HC, "
+                        f"{severity_counts['MEDIUM']}M/{confidence_counts['MEDIUM']}MC, "
+                        f"{severity_counts['LOW']}L/{confidence_counts['LOW']}LC). "
                         f"Density: {issue_density:.2f}/kloc. Score: {score:.2f}"
                     )
 
                     # Clear previous security suggestions before adding new ones
                     self.results["suggerimenti"].setdefault("sicurezza", [])
                     
-                    # Add targeted suggestions based on findings
+                    # Add more detailed suggestions based on findings
                     if severity_counts["HIGH"] > 0:
+                        high_priority = [issue_id for issue_id, count in issue_types.items() 
+                                        if any(issue.get("test_id") == issue_id and 
+                                            issue.get("issue_severity") == "HIGH" 
+                                            for issue in issues)]
+                        
+                        # Create more specific suggestions for common high-severity issues
+                        if high_priority:
+                            common_issues = {}
+                            for issue in issues:
+                                if issue.get("issue_severity") == "HIGH":
+                                    issue_type = issue.get("test_id")
+                                    issue_text = issue.get("test_name", "Unknown")
+                                    if issue_type:
+                                        common_issues.setdefault(issue_type, {"count": 0, "name": issue_text})
+                                        common_issues[issue_type]["count"] += 1
+                            
+                            # Add specific recommendations for top 3 high-severity issues
+                            top_issues = sorted(common_issues.items(), key=lambda x: x[1]["count"], reverse=True)[:3]
+                            for issue_id, data in top_issues:
+                                self.results["suggerimenti"]["sicurezza"].append(
+                                    f"Priorità alta: Risolvi le {data['count']} vulnerabilità di tipo '{data['name']}' (ID: {issue_id})."
+                                )
+                        
+                        # General suggestion for high severity issues
                         self.results["suggerimenti"]["sicurezza"].append(
                             f"Risolvi le {severity_counts['HIGH']} vulnerabilità ad alta severità identificate da Bandit."
                         )
+                    
                     if severity_counts["MEDIUM"] > 0:
                         self.results["suggerimenti"]["sicurezza"].append(
                             f"Rivedi le {severity_counts['MEDIUM']} vulnerabilità a media severità identificate da Bandit."
                         )
+                    
+                    # Generate focused suggestions for common security issues
+                    security_recommendations = {
+                        "B102": "Rimuovi i comandi 'exec' dal codice in quanto permettono l'esecuzione di codice arbitrario",
+                        "B103": "Imposta correttamente i permessi di creazione file per evitare vulnerabilità di sicurezza",
+                        "B104": "Limita l'uso di comandi hardcoded per prevenire iniezioni di comandi",
+                        "B105": "Rimuovi i password hardcoded dal codice e usa variabili d'ambiente o gestori di segreti",
+                        "B108": "Evita l'uso di 'assert' in codice di produzione poiché potrebbe essere rimosso dall'ottimizzatore",
+                        "B110": "Non utilizzare connessioni non sicure, passa a HTTPS/TLS",
+                        "B301": "Evita l'uso di 'pickle' che può portare a esecuzione di codice arbitrario",
+                        "B324": "Non utilizzare algoritmi hash insicuri (MD5/SHA1), usa alternative più sicure",
+                        "B506": "Fix YAML.load() vulnerabilities by using YAML.safe_load()",
+                        "B605": "Evita l'uso di subprocess con shell=True per prevenire iniezione di comandi",
+                        "B607": "Evita di usare subprocess con argomenti da input non sanitizzato"
+                    }
+                    
+                    # Add specific recommendations based on issues found
+                    for issue_id, recommendation in security_recommendations.items():
+                        if any(issue.get("test_id") == issue_id for issue in issues):
+                            count = sum(1 for issue in issues if issue.get("test_id") == issue_id)
+                            self.results["suggerimenti"]["sicurezza"].append(f"{recommendation} ({count} occorrenze).")
+                    
                     if len(issues) == 0:
                         # Add positive feedback if no issues found
                         self.results["suggerimenti"]["sicurezza"].append(
                             "Nessuna vulnerabilità rilevata da Bandit. Continua a mantenere questo standard."
                         )
+                    elif score >= 8.0:
+                        # Add positive feedback for good scores
+                        self.results["suggerimenti"]["sicurezza"].append(
+                            "Buon livello di sicurezza generale. Risolvi le vulnerabilità minori rimaste per un codice completamente sicuro."
+                        )
+
+                    # Add details about the analysis to the results
+                    self.results.setdefault("dettagli_sicurezza", {})
+                    self.results["dettagli_sicurezza"]["bandit_issues"] = len(issues)
+                    self.results["dettagli_sicurezza"]["high_severity"] = severity_counts["HIGH"]
+                    self.results["dettagli_sicurezza"]["medium_severity"] = severity_counts["MEDIUM"]
+                    self.results["dettagli_sicurezza"]["low_severity"] = severity_counts["LOW"]
+                    self.results["dettagli_sicurezza"]["issue_density"] = issue_density
 
                     return score
                     
@@ -2829,6 +3259,12 @@ class RepoAnalyzer:
                 # Handle error cases
                 if result.returncode > 1:
                     logger.warning(f"Bandit ha restituito un codice di errore: {result.returncode}. Stderr: {result.stderr}")
+                    # Try to provide more specific error information
+                    if "No such file or directory" in result.stderr:
+                        logger.warning("Bandit non ha trovato file da analizzare")
+                        self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                            "L'analisi di sicurezza ha riscontrato problemi nell'accesso ai file del repository."
+                        )
                     return 4.0  # Slightly below neutral on error
                 else:
                     logger.warning(f"Bandit non ha prodotto output o ha fallito silenziosamente (return code {result.returncode}).")
@@ -2836,12 +3272,21 @@ class RepoAnalyzer:
 
         except subprocess.TimeoutExpired:
             logger.error("Timeout durante l'esecuzione di Bandit (superati 120s).")
+            self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                "L'analisi di sicurezza è stata interrotta per timeout. Il repository potrebbe essere troppo grande o complesso."
+            )
             return 3.0  # Lower score on timeout
         except FileNotFoundError:
             logger.error("Comando 'bandit' non trovato. Assicurati che Bandit sia installato e nel PATH.")
+            self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                "Installa Bandit (pip install bandit) per abilitare l'analisi di sicurezza completa."
+            )
             return 5.0  # Neutral score if command not found
         except Exception as e:
             logger.error(f"Errore imprevisto durante l'esecuzione di Bandit: {e}", exc_info=True)
+            self.results["suggerimenti"].setdefault("sicurezza", []).append(
+                "Si è verificato un errore durante l'analisi di sicurezza. Verifica la configurazione dell'ambiente."
+            )
             return 2.0  # Low score on unexpected error
 
     def _check_dependencies_safety(self, path: str) -> Tuple[str, float]:
@@ -2856,85 +3301,257 @@ class RepoAnalyzer:
 
         effective_path = self.local_repo_path
         requirements_files = []
-        # Find common requirements files
+        
+        # Find common requirements files with expanded file types
+        dependency_files = {
+            "python": ["requirements.txt", "requirements-dev.txt", "dev-requirements.txt", "setup.py", 
+                    "pyproject.toml", "Pipfile", "Pipfile.lock", "constraints.txt", "requirements-prod.txt"],
+            "node": ["package.json", "package-lock.json", "yarn.lock", "npm-shrinkwrap.json"],
+            "ruby": ["Gemfile", "Gemfile.lock"],
+            "php": ["composer.json", "composer.lock"]
+        }
+        
+        # First look for Python dependency files
         for root, _, files in os.walk(effective_path):
             for file in files:
-                if file in ["requirements.txt", "requirements-dev.txt", "setup.py", "pyproject.toml"]:
+                if file in dependency_files["python"]:
                     # Prioritize requirements.txt if found
                     if file == "requirements.txt":
-                         requirements_files.insert(0, os.path.join(root, file))
+                        requirements_files.insert(0, os.path.join(root, file))
                     else:
-                         requirements_files.append(os.path.join(root, file))
+                        requirements_files.append(os.path.join(root, file))
         
         if not requirements_files:
-            logger.info("Nessun file di dipendenze (requirements.txt, setup.py, pyproject.toml) trovato.")
-            return "Nessun file dipendenze", 8.0 # Good score if no deps declared
+            logger.info("Nessun file di dipendenze Python (requirements.txt, setup.py, pyproject.toml) trovato.")
+            
+            # Check for other dependency systems and add a note in logs
+            for dep_type, file_list in dependency_files.items():
+                if dep_type == "python":
+                    continue
+                
+                for root, _, files in os.walk(effective_path):
+                    for file in files:
+                        if file in file_list:
+                            logger.info(f"Trovato file di dipendenze {dep_type} ({file}), ma Safety supporta solo dipendenze Python.")
+                            return f"Dipendenze {dep_type} non supportate", 5.0
+            
+            return "Nessun file dipendenze", 8.0  # Good score if no deps declared
 
-        # Analyze the first found requirements file (usually requirements.txt)
-        req_file_to_scan = requirements_files[0]
-        logger.info(f"Esecuzione di Safety su: {req_file_to_scan}")
+        # Analyze each requirements file and merge results
+        total_vulnerabilities = 0
+        high_severity_vulns = 0
+        medium_severity_vulns = 0
+        low_severity_vulns = 0
+        files_with_vulns = []
+        scan_errors = 0
+        files_analyzed = 0
+        vulnerability_details = []
         
-        try:
-            # Run safety using subprocess to capture output and handle errors
-            # Use --json for structured output
-            cmd = ["safety", "check", "-r", req_file_to_scan, "--json"]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=90, check=False)
+        for req_file_to_scan in requirements_files[:3]:  # Limit to first 3 files to avoid excessive scanning
+            logger.info(f"Esecuzione di Safety su: {req_file_to_scan}")
+            
+            try:
+                # Run safety using subprocess to capture output and handle errors
+                # Use --json for structured output and add severity level parameter
+                cmd = ["safety", "check", "-r", req_file_to_scan, "--json", "--full-report"]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=90, check=False)
 
-            if result.returncode == 0 and result.stdout:
-                 # Safety returns 0 even if vulnerabilities are found when using --json
-                 try:
-                     # Safety's JSON output is a list of lists/dicts, not a single JSON object
-                     # We need to parse it carefully line by line or find the JSON part
-                     # Let's assume the primary JSON output is the last line for simplicity
-                     # More robust parsing might be needed for complex outputs.
-                     json_output_str = result.stdout.strip().splitlines()[-1]
-                     vulnerabilities = json.loads(json_output_str)
-                     
-                     # The structure might be [[vuln1], [vuln2], ...] or similar
-                     # Let's count the number of vulnerability entries
-                     num_vulnerabilities = 0
-                     if isinstance(vulnerabilities, list):
-                         # Count non-empty lists/dicts within the main list
-                         num_vulnerabilities = sum(1 for item in vulnerabilities if item) 
-                     
-                     if num_vulnerabilities == 0:
-                         logger.info("Safety non ha trovato vulnerabilità nelle dipendenze.")
-                         return "Nessuna vulnerabilità trovata", 10.0
-                     else:
-                         logger.warning(f"Safety ha trovato {num_vulnerabilities} vulnerabilità nelle dipendenze.")
-                         # Score inversely based on number of vulnerabilities
-                         score = max(0.0, 10.0 - num_vulnerabilities) 
-                         self.results["suggerimenti"].setdefault("sicurezza", []).append(
-                             f"Aggiorna le dipendenze per risolvere le {num_vulnerabilities} vulnerabilità trovate da Safety."
-                         )
-                         return f"{num_vulnerabilities} vulnerabilità trovate", score
-                 except json.JSONDecodeError:
-                     logger.error(f"Errore nel parsing dell'output JSON di Safety: {result.stdout}")
-                     return "Errore parsing Safety", 3.0
-                 except IndexError:
-                      logger.error(f"Output JSON di Safety vuoto o non trovato: {result.stdout}")
-                      return "Output Safety vuoto", 4.0
+                if result.returncode == 0 and result.stdout:
+                    # Safety returns 0 even if vulnerabilities are found when using --json
+                    try:
+                        # Safety's JSON output handling with better parsing
+                        json_output_str = None
+                        
+                        # Find the JSON part in the output (could be wrapped in other text)
+                        for line in result.stdout.strip().splitlines():
+                            if line.startswith('[') and line.endswith(']'):
+                                json_output_str = line
+                                break
+                        
+                        # If no clear JSON line was found, try the last line as a fallback
+                        if not json_output_str and result.stdout.strip():
+                            json_output_str = result.stdout.strip().splitlines()[-1]
+                        
+                        if json_output_str:
+                            vulnerabilities = json.loads(json_output_str)
+                            
+                            # Parse vulnerability data with more detail
+                            file_vulns = 0
+                            
+                            if isinstance(vulnerabilities, list):
+                                for vuln in vulnerabilities:
+                                    if not vuln:
+                                        continue
+                                        
+                                    file_vulns += 1
+                                    
+                                    # Try to extract severity if available (may vary by Safety version)
+                                    severity = "unknown"
+                                    if len(vuln) > 4:  # Some versions include severity
+                                        severity_field = vuln[4] if isinstance(vuln, list) else vuln.get("severity", "unknown")
+                                        severity = str(severity_field).lower()
+                                    
+                                    # Count vulnerabilities by severity
+                                    if "high" in severity or "critical" in severity:
+                                        high_severity_vulns += 1
+                                    elif "medium" in severity or "moderate" in severity:
+                                        medium_severity_vulns += 1
+                                    else:
+                                        low_severity_vulns += 1
+                                    
+                                    # Extract package and vuln details for suggestions
+                                    if isinstance(vuln, list) and len(vuln) >= 3:
+                                        package_name = vuln[0]
+                                        affected_version = vuln[1]
+                                        vuln_id = vuln[2]
+                                        vulnerability_details.append({
+                                            "package": package_name,
+                                            "version": affected_version,
+                                            "id": vuln_id,
+                                            "severity": severity
+                                        })
+                                        
+                            if file_vulns > 0:
+                                files_with_vulns.append(os.path.basename(req_file_to_scan))
+                                total_vulnerabilities += file_vulns
+                                
+                            files_analyzed += 1
+                                
+                    except json.JSONDecodeError:
+                        logger.error(f"Errore nel parsing dell'output JSON di Safety: {result.stdout[:500]}")
+                        scan_errors += 1
+                    except IndexError:
+                        logger.error(f"Output JSON di Safety vuoto o non trovato: {result.stdout[:500]}")
+                        scan_errors += 1
+                    except Exception as e:
+                        logger.error(f"Errore nell'elaborazione dell'output di Safety: {e}")
+                        scan_errors += 1
 
-            elif result.returncode != 0:
-                 logger.warning(f"Safety ha restituito un codice di errore: {result.returncode}. Stderr: {result.stderr}")
-                 # Check stderr for common errors like missing file
-                 if "No such file or directory" in result.stderr:
-                      logger.error(f"File dipendenze non trovato da Safety: {req_file_to_scan}")
-                      return "File dipendenze non trovato", 2.0
-                 return f"Errore Safety (codice {result.returncode})", 2.0
-            else: # Return code 0 but no JSON output (shouldn't happen with --json)
-                 logger.warning(f"Safety non ha prodotto output JSON atteso. Output: {result.stdout}")
-                 return "Output Safety inatteso", 3.0
+                elif result.returncode != 0:
+                    logger.warning(f"Safety ha restituito un codice di errore: {result.returncode}. Stderr: {result.stderr}")
+                    # Check stderr for common errors like missing file
+                    if "No such file or directory" in result.stderr:
+                        logger.error(f"File dipendenze non trovato da Safety: {req_file_to_scan}")
+                        scan_errors += 1
+                    else:
+                        scan_errors += 1
 
-        except subprocess.TimeoutExpired:
-            logger.error("Timeout durante l'esecuzione di Safety (superati 90s).")
-            return "Timeout Safety", 1.0
-        except FileNotFoundError:
-             logger.error("Comando 'safety' non trovato. Assicurati che Safety sia installato e nel PATH.")
-             return "Richiede 'safety'", 5.0 # Neutral score if tool not found
-        except Exception as e:
-            logger.error(f"Errore imprevisto durante l'esecuzione di Safety: {e}", exc_info=True)
-            return "Errore Safety imprevisto", 0.0
+            except subprocess.TimeoutExpired:
+                logger.error(f"Timeout durante l'esecuzione di Safety su {req_file_to_scan} (superati 90s).")
+                scan_errors += 1
+            except FileNotFoundError:
+                logger.error("Comando 'safety' non trovato. Assicurati che Safety sia installato e nel PATH.")
+                return "Richiede 'safety'", 5.0  # Neutral score if tool not found
+            except Exception as e:
+                logger.error(f"Errore imprevisto durante l'esecuzione di Safety: {e}", exc_info=True)
+                scan_errors += 1
+        
+        # Calculate results based on all analyzed files
+        if files_analyzed == 0:
+            return "Errore in tutte le analisi", 2.0
+            
+        if scan_errors == len(requirements_files):
+            return f"Errori in {scan_errors}/{len(requirements_files)} analisi", 2.0
+            
+        if total_vulnerabilities == 0:
+            logger.info("Safety non ha trovato vulnerabilità nelle dipendenze.")
+            return "Nessuna vulnerabilità trovata", 10.0
+        else:
+            logger.warning(f"Safety ha trovato un totale di {total_vulnerabilities} vulnerabilità nelle dipendenze.")
+            
+            # More granular scoring based on number and severity of vulnerabilities
+            # High severity vulns have 3x impact, medium 1.5x, low 0.5x
+            weighted_score = (high_severity_vulns * 3) + (medium_severity_vulns * 1.5) + (low_severity_vulns * 0.5)
+            
+            # Adjust based on total number of files analyzed
+            if files_analyzed > 1:
+                weighted_score = weighted_score / files_analyzed
+            
+            # Convert to 0-10 scale with more granularity
+            if weighted_score == 0:
+                score = 10.0
+            elif weighted_score <= 0.5:
+                score = 9.5  # Minimal issues
+            elif weighted_score <= 1:
+                score = 9.0
+            elif weighted_score <= 2:
+                score = 8.0
+            elif weighted_score <= 3:
+                score = 7.0
+            elif weighted_score <= 4:
+                score = 6.0
+            elif weighted_score <= 6:
+                score = 5.0
+            elif weighted_score <= 8:
+                score = 4.0
+            elif weighted_score <= 10:
+                score = 3.0
+            elif weighted_score <= 15:
+                score = 2.0
+            elif weighted_score <= 20:
+                score = 1.0
+            else:
+                score = 0.0  # Critical security issues
+            
+            # Add detailed suggestions based on vulnerability findings
+            self.results["suggerimenti"].setdefault("sicurezza", [])
+            
+            # Clear any previous Safety-specific suggestions
+            self.results["suggerimenti"]["sicurezza"] = [
+                s for s in self.results["suggerimenti"]["sicurezza"] 
+                if "vulnerabilità trovate da Safety" not in s
+            ]
+            
+            # Basic suggestion
+            base_suggestion = f"Aggiorna le dipendenze per risolvere le {total_vulnerabilities} vulnerabilità trovate da Safety"
+            
+            # Add severity breakdown if available
+            if high_severity_vulns > 0 or medium_severity_vulns > 0:
+                severity_breakdown = []
+                if high_severity_vulns > 0:
+                    severity_breakdown.append(f"{high_severity_vulns} ad alta severità")
+                if medium_severity_vulns > 0:
+                    severity_breakdown.append(f"{medium_severity_vulns} a media severità")
+                if low_severity_vulns > 0:
+                    severity_breakdown.append(f"{low_severity_vulns} a bassa severità")
+                    
+                base_suggestion += f" ({', '.join(severity_breakdown)})"
+            
+            self.results["suggerimenti"]["sicurezza"].append(base_suggestion + ".")
+            
+            # Add file-specific info if multiple files have vulnerabilities
+            if len(files_with_vulns) > 1:
+                self.results["suggerimenti"]["sicurezza"].append(
+                    f"Vulnerabilità trovate nei file: {', '.join(files_with_vulns)}"
+                )
+                
+            # Add detailed suggestions for critical packages (up to 3)
+            critical_packages = [v for v in vulnerability_details 
+                                if "high" in v.get("severity", "").lower() or "critical" in v.get("severity", "").lower()]
+            
+            if critical_packages:
+                # Group by package and count vulnerabilities
+                package_vulns = {}
+                for v in critical_packages:
+                    package_name = v.get("package", "unknown")
+                    package_vulns.setdefault(package_name, 0)
+                    package_vulns[package_name] += 1
+                    
+                # Add suggestions for top 3 most vulnerable packages
+                top_packages = sorted(package_vulns.items(), key=lambda x: x[1], reverse=True)[:3]
+                for package, count in top_packages:
+                    self.results["suggerimenti"]["sicurezza"].append(
+                        f"Priorità alta: Aggiorna il pacchetto '{package}' che ha {count} vulnerabilità critiche."
+                    )
+            
+            # Store detailed vulnerability information for reporting
+            self.results.setdefault("dettagli_sicurezza", {})
+            self.results["dettagli_sicurezza"]["safety_vulnerabilities"] = total_vulnerabilities
+            self.results["dettagli_sicurezza"]["safety_high_severity"] = high_severity_vulns
+            self.results["dettagli_sicurezza"]["safety_medium_severity"] = medium_severity_vulns
+            self.results["dettagli_sicurezza"]["safety_low_severity"] = low_severity_vulns
+            
+            return f"{total_vulnerabilities} vulnerabilità trovate ({high_severity_vulns} critiche)", score
 
     def generate_report(self):
         """Genera il report con i punteggi utilizzando i nomi delle categorie mappati."""
@@ -2959,10 +3576,52 @@ class RepoAnalyzer:
             watchers = self.repo.subscribers_count
             created_at = self.repo.created_at
             months_active = max(1, (datetime.datetime.now() - created_at).days // 30)
+            
+            # Calculate basic engagement rate
             engagement_rate = (stars + forks + watchers) / months_active
-            return self._normalize_score(engagement_rate, 0, 50, 0, 10)
+            
+            # Calculate weighted engagement rate (stars carry more weight than watchers)
+            weighted_engagement_rate = (stars * 1.0 + forks * 1.2 + watchers * 0.8) / months_active
+            
+            # Calculate engagement ratio (engagement versus project age)
+            # Newer projects get a slight boost as it's harder to gain traction early
+            age_factor = max(1.0, 1.5 - (months_active / 24))  # Projects <= 24 months get a bonus
+            adjusted_rate = engagement_rate * age_factor
+            
+            # Log the specific metrics for transparency
+            logger.debug(f"Engagement metrics - Stars: {stars}, Forks: {forks}, Watchers: {watchers}")
+            logger.debug(f"Project age: {months_active} months, Raw rate: {engagement_rate:.2f}, Weighted: {weighted_engagement_rate:.2f}")
+            
+            # More granular scoring with multiple thresholds instead of linear normalization
+            if adjusted_rate >= 40:
+                return 10.0  # Exceptional engagement
+            elif adjusted_rate >= 30:
+                return 9.5   # Outstanding engagement
+            elif adjusted_rate >= 25:
+                return 9.0   # Excellent engagement
+            elif adjusted_rate >= 20:
+                return 8.5   # Very high engagement
+            elif adjusted_rate >= 15:
+                return 8.0   # High engagement
+            elif adjusted_rate >= 10:
+                return 7.0   # Good engagement
+            elif adjusted_rate >= 7:
+                return 6.0   # Above average engagement
+            elif adjusted_rate >= 5:
+                return 5.0   # Average engagement
+            elif adjusted_rate >= 3:
+                return 4.0   # Below average engagement
+            elif adjusted_rate >= 2:
+                return 3.0   # Low engagement
+            elif adjusted_rate >= 1:
+                return 2.0   # Very low engagement
+            elif adjusted_rate > 0:
+                return 1.0   # Minimal engagement
+            else:
+                return 0.0   # No engagement
+                
         except Exception as e:
-            logger.error(f"Errore nel calcolo del tasso di engagement: {e}")
+            logger.error(f"Errore nel calcolo del tasso di engagement: {e}", exc_info=True)
             return 0.0
 
     def _check_dockerfile_presence(self) -> bool:
@@ -2987,23 +3646,112 @@ class RepoAnalyzer:
                     discussions = self.repo.get_discussions()
                     has_discussions = True
                 except Exception:
+                    logger.debug("Discussions non disponibili o non supportate da PyGithub")
                     return 0.0  # Discussions not available or not supported by PyGithub version
             
             if not has_discussions:
+                logger.debug("Discussions non abilitate per questo repository")
                 return 0.0  # Discussions not enabled
             
             try:
                 discussions = self.repo.get_discussions()
+                all_discussions = []
                 recent_discussions = []
-                for d in discussions[:10]:  # Limit to avoid excessive API calls
-                    if (datetime.datetime.now(datetime.timezone.utc) - self._ensure_tz_aware(d.created_at)).days <= 30:
+                very_recent_discussions = []
+                active_discussions = []
+                answered_discussions = []
+                
+                # Analyze discussions with different time windows
+                now = datetime.datetime.now(datetime.timezone.utc)
+                
+                for d in discussions[:20]:  # Expanded limit for better analysis
+                    all_discussions.append(d)
+                    
+                    # Get creation date and ensure it's timezone aware
+                    created_at = self._ensure_tz_aware(d.created_at)
+                    days_since_creation = (now - created_at).days if created_at else 999
+                    
+                    # Get relevant attributes safely
+                    comments_count = getattr(d, "comments_count", 0)
+                    is_answered = getattr(d, "answered", False)
+                    
+                    # Categorize discussions
+                    if days_since_creation <= 30:
                         recent_discussions.append(d)
+                        
+                    if days_since_creation <= 7:
+                        very_recent_discussions.append(d)
+                    
+                    # Active discussions have comments or are recent
+                    if comments_count > 3 or days_since_creation <= 14:
+                        active_discussions.append(d)
+                    
+                    # Track answered discussions
+                    if is_answered:
+                        answered_discussions.append(d)
                 
-                total_comments = sum(getattr(d, "comments_count", 0) for d in recent_discussions)
+                # Calculate total comments in recent discussions
+                recent_comments = sum(getattr(d, "comments_count", 0) for d in recent_discussions)
+                very_recent_comments = sum(getattr(d, "comments_count", 0) for d in very_recent_discussions)
                 
-                # Normalize score: more discussions and comments => higher score
-                score = self._normalize_score(len(recent_discussions) + total_comments, 0, 50, 0, 10)
-                return score
+                # Enhanced metrics for discussions activity
+                total_discussions = len(all_discussions)
+                total_active_discussions = len(active_discussions)
+                total_recent_discussions = len(recent_discussions)
+                total_very_recent = len(very_recent_discussions)
+                total_answered = len(answered_discussions)
+                
+                # Log detailed metrics for better transparency
+                logger.debug(f"Discussions metrics - Total: {total_discussions}, " +
+                            f"Recent (30d): {total_recent_discussions}, " +
+                            f"Very recent (7d): {total_very_recent}, " + 
+                            f"Active: {total_active_discussions}, " +
+                            f"Answered: {total_answered}, " +
+                            f"Recent comments: {recent_comments}")
+                
+                # No discussions case
+                if total_discussions == 0:
+                    logger.debug("Discussions abilitate ma nessuna discussione trovata")
+                    return 0.0
+                    
+                # Calculate weighted activity score with more emphasis on recent activity
+                base_score = total_discussions * 0.5
+                recency_score = total_recent_discussions * 1.0
+                very_recent_score = total_very_recent * 2.0
+                activity_score = total_active_discussions * 1.5
+                answer_score = total_answered * 1.0
+                comments_score = recent_comments * 0.3 + very_recent_comments * 0.5
+                
+                weighted_score = base_score + recency_score + very_recent_score + activity_score + answer_score + comments_score
+                
+                # More granular scoring with multiple thresholds instead of linear normalization
+                if weighted_score >= 50:
+                    return 10.0  # Exceptional discussion activity
+                elif weighted_score >= 40:
+                    return 9.5   # Outstanding discussion activity
+                elif weighted_score >= 30:
+                    return 9.0   # Excellent discussion activity
+                elif weighted_score >= 25:
+                    return 8.5   # Very high discussion activity
+                elif weighted_score >= 20:
+                    return 8.0   # High discussion activity
+                elif weighted_score >= 15:
+                    return 7.0   # Good discussion activity
+                elif weighted_score >= 10:
+                    return 6.0   # Above average discussion activity
+                elif weighted_score >= 7:
+                    return 5.0   # Average discussion activity
+                elif weighted_score >= 5:
+                    return 4.0   # Below average discussion activity
+                elif weighted_score >= 3:
+                    return 3.0   # Low discussion activity
+                elif weighted_score >= 2:
+                    return 2.0   # Very low discussion activity
+                elif weighted_score > 0:
+                    return 1.0   # Minimal discussion activity
+                else:
+                    return 0.0   # No discussion activity
+                
             except Exception as e:
                 logger.error(f"Errore nell'accesso alle discussions: {e}", exc_info=True)
                 return 0.0
@@ -3101,6 +3849,12 @@ class RepoAnalyzer:
             return False
 
     def _check_semantic_versioning(self) -> Tuple[float, str]:
+        """
+        Verifica se il repository adotta Semantic Versioning nei tag e nelle release.
+        
+        Returns:
+            Tuple[float, str]: Punteggio (0-10) e descrizione dello stato di adozione SemVer
+        """
         try:
             # Get tags and releases
             tags = self._get_cached_data(
@@ -3113,80 +3867,224 @@ class RepoAnalyzer:
                 lambda: list(self.repo.get_releases()[:30])  # Limit to 30 most recent releases
             )
             
-            # Patterns for semantic versioning (MAJOR.MINOR.PATCH)
+            # Enhanced patterns for semantic versioning with more specific matching
+            # Strict SemVer: MAJOR.MINOR.PATCH with optional prerelease and build metadata
             semver_pattern = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$')
+            
+            # Partial SemVer: at least MAJOR.MINOR
             partial_semver_pattern = re.compile(r'^v?(\d+)\.(\d+)(?:\.(\d+))?')
             
-            # Check tags first
+            # Calendar versioning: YYYY.MM.DD or YY.MM.DD
+            calver_pattern = re.compile(r'^v?(?:20)?(\d{2})\.(\d{1,2})\.(\d{1,2})$')
+            
+            # Track version consistency to reward consistent patterns
+            consistent_versioning = True
+            version_types = set()
+            
+            # Check tags first as they're more reliable
             if tags:
                 semver_tags = 0
                 partial_semver_tags = 0
-                total_tags = min(len(tags), 10)  # Only check up to 10 tags
+                calver_tags = 0
+                total_tags = min(len(tags), 10)  # Only check up to 10 tags for performance
                 
+                # Look at the most recent tags first - more important for current practices
                 for tag in tags[:total_tags]:
                     tag_name = tag.name
                     
-                    # Check for strict SemVer compliance
+                    # Identify version format and track it
                     if semver_pattern.match(tag_name):
                         semver_tags += 1
-                    # Check for partial SemVer (at least MAJOR.MINOR)
+                        version_types.add("semver")
                     elif partial_semver_pattern.match(tag_name):
                         partial_semver_tags += 1
+                        version_types.add("partial")
+                    elif calver_pattern.match(tag_name):
+                        calver_tags += 1
+                        version_types.add("calver")
                 
-                # Calculate compliance percentage
+                # Calculate compliance percentages
                 strict_percent = (semver_tags / total_tags) * 100 if total_tags > 0 else 0
                 partial_percent = ((semver_tags + partial_semver_tags) / total_tags) * 100 if total_tags > 0 else 0
+                calver_percent = (calver_tags / total_tags) * 100 if total_tags > 0 else 0
                 
-                # Determine result based on compliance
-                if strict_percent >= 80:
-                    return 10, "SemVer completo adottato"
+                # Check if versioning is consistent (mainly one type)
+                consistent_versioning = len(version_types) <= 1 or (
+                    # Allow one dominant type with a few exceptions
+                    (semver_tags >= total_tags * 0.7) or
+                    (partial_semver_tags >= total_tags * 0.7) or
+                    (calver_tags >= total_tags * 0.7)
+                )
+                
+                # Enhanced granular scoring based on SemVer compliance
+                if strict_percent >= 90:
+                    base_score = 10.0  # Excellent: Nearly perfect SemVer compliance
+                    description = "SemVer completo adottato (eccellente)"
+                elif strict_percent >= 80:
+                    base_score = 9.5   # Very good: Strong SemVer compliance
+                    description = "SemVer completo adottato (ottimo)"
+                elif strict_percent >= 70:
+                    base_score = 9.0   # Good: Good SemVer compliance with some exceptions
+                    description = "SemVer completo adottato (buono)"
+                elif strict_percent >= 60:
+                    base_score = 8.5   # Above average: Mostly SemVer compliant
+                    description = "SemVer adottato con alcune eccezioni"
+                elif strict_percent >= 50:
+                    base_score = 8.0   # Fair: Half strict SemVer compliant
+                    description = "SemVer adottato in metà dei tag"
+                elif partial_percent >= 90:
+                    base_score = 7.5   # Good partial: Nearly perfect partial SemVer 
+                    description = "SemVer parziale (MAJOR.MINOR) adottato consistentemente"
                 elif partial_percent >= 80:
-                    return 7, "SemVer parziale (MAJOR.MINOR)"
+                    base_score = 7.0   # Decent partial: Strong partial SemVer
+                    description = "SemVer parziale (MAJOR.MINOR) adottato"
+                elif partial_percent >= 70:
+                    base_score = 6.5   # Above average partial
+                    description = "SemVer parziale adottato con alcune eccezioni"
+                elif partial_percent >= 60:
+                    base_score = 6.0   # Fair partial
+                    description = "SemVer parziale adottato nella maggioranza dei tag"
                 elif partial_percent >= 50:
-                    return 5, "SemVer parzialmente adottato"
-                elif partial_percent > 0:
-                    return 3, "SemVer usato occasionalmente"
+                    base_score = 5.5   # Moderate partial
+                    description = "SemVer parziale adottato in metà dei tag"
+                elif calver_percent >= 80:
+                    base_score = 6.0   # Good CalVer (alternative but consistent versioning)
+                    description = "Versioning basato su calendario (CalVer) adottato"
+                elif partial_percent >= 30:
+                    base_score = 4.0   # Poor: Some partial SemVer usage
+                    description = "SemVer parzialmente adottato (limitato)"
+                elif strict_percent > 0 or partial_percent > 0:
+                    base_score = 3.0   # Very poor: Occasional SemVer usage
+                    description = "SemVer usato occasionalmente"
                 else:
-                    return 0, "SemVer non utilizzato"
+                    base_score = 0.0   # None: No SemVer usage
+                    description = "SemVer non utilizzato"
+                
+                # Apply consistency bonus/penalty
+                if consistent_versioning and (strict_percent > 0 or partial_percent > 0 or calver_percent > 0):
+                    final_score = min(10.0, base_score + 0.5)  # Bonus for consistency
+                    if "adottato" in description and not "consistentemente" in description:
+                        description += " in modo consistente"
+                else:
+                    final_score = max(0.0, base_score - 0.5)  # Penalty for inconsistency
+                    if strict_percent > 0 or partial_percent > 0:
+                        description += " (inconsistente)"
+                
+                # Add specific suggestions to results
+                if strict_percent < 80 and strict_percent > 0:
+                    self.results["suggerimenti"].setdefault("documentazione", []).append(
+                        "Migliora l'adozione del Semantic Versioning utilizzando consistentemente il formato MAJOR.MINOR.PATCH per tutti i tag."
+                    )
+                elif partial_percent < 50 and strict_percent == 0:
+                    self.results["suggerimenti"].setdefault("documentazione", []).append(
+                        "Adotta il Semantic Versioning (MAJOR.MINOR.PATCH) per facilitare la gestione delle dipendenze e la chiarezza delle release."
+                    )
+                
+                return round(final_score, 1), description
             
             # If no tags, check releases
             elif releases:
                 semver_releases = 0
                 partial_semver_releases = 0
+                calver_releases = 0
                 total_releases = min(len(releases), 10)  # Only check up to 10 releases
                 
                 for release in releases[:total_releases]:
                     release_name = release.title or release.tag_name or ""
                     
-                    # Check for strict SemVer compliance
+                    # Identify version format and track it
                     if semver_pattern.match(release_name):
                         semver_releases += 1
-                    # Check for partial SemVer (at least MAJOR.MINOR)
+                        version_types.add("semver")
                     elif partial_semver_pattern.match(release_name):
                         partial_semver_releases += 1
+                        version_types.add("partial")
+                    elif calver_pattern.match(release_name):
+                        calver_releases += 1
+                        version_types.add("calver")
                 
-                # Calculate compliance percentage
+                # Calculate compliance percentages
                 strict_percent = (semver_releases / total_releases) * 100 if total_releases > 0 else 0
                 partial_percent = ((semver_releases + partial_semver_releases) / total_releases) * 100 if total_releases > 0 else 0
+                calver_percent = (calver_releases / total_releases) * 100 if total_releases > 0 else 0
                 
-                # Determine result based on compliance
-                if strict_percent >= 80:
-                    return 10, "SemVer completo nelle release"
+                # Check if versioning is consistent
+                consistent_versioning = len(version_types) <= 1 or (
+                    (semver_releases >= total_releases * 0.7) or
+                    (partial_semver_releases >= total_releases * 0.7) or
+                    (calver_releases >= total_releases * 0.7)
+                )
+                
+                # Similar scoring logic as for tags, but with slightly lower base values
+                # because releases might be named differently from their tag
+                if strict_percent >= 90:
+                    base_score = 9.5  # Excellent in releases
+                    description = "SemVer completo nelle release (eccellente)"
+                elif strict_percent >= 80:
+                    base_score = 9.0  # Very good in releases
+                    description = "SemVer completo nelle release (ottimo)"
+                elif strict_percent >= 70:
+                    base_score = 8.5  # Good in releases
+                    description = "SemVer completo nelle release (buono)"
+                elif strict_percent >= 60:
+                    base_score = 8.0  # Above average in releases
+                    description = "SemVer completo nella maggioranza delle release"
+                elif strict_percent >= 50:
+                    base_score = 7.5  # Fair in releases
+                    description = "SemVer completo in metà delle release"
                 elif partial_percent >= 80:
-                    return 7, "SemVer parziale nelle release"
+                    base_score = 6.5  # Good partial in releases
+                    description = "SemVer parziale nelle release"
+                elif partial_percent >= 60:
+                    base_score = 6.0  # Decent partial in releases
+                    description = "SemVer parziale nella maggioranza delle release"
                 elif partial_percent >= 50:
-                    return 5, "SemVer parzialmente adottato"
-                elif partial_percent > 0:
-                    return 3, "SemVer usato occasionalmente"
+                    base_score = 5.5  # Moderate partial in releases
+                    description = "SemVer parziale in metà delle release"
+                elif calver_percent >= 80:
+                    base_score = 6.0  # Good CalVer in releases
+                    description = "Versioning basato su calendario nelle release"
+                elif partial_percent >= 30:
+                    base_score = 3.5  # Poor in releases
+                    description = "SemVer parzialmente adottato nelle release (limitato)"
+                elif strict_percent > 0 or partial_percent > 0:
+                    base_score = 2.5  # Very poor in releases
+                    description = "SemVer usato occasionalmente nelle release"
                 else:
-                    return 0, "SemVer non utilizzato"
+                    base_score = 0.0  # None in releases
+                    description = "SemVer non utilizzato nelle release"
+                
+                # Apply consistency modifier
+                if consistent_versioning and (strict_percent > 0 or partial_percent > 0 or calver_percent > 0):
+                    final_score = min(10.0, base_score + 0.5)  # Bonus for consistency
+                    if "adottato" in description and not "consistentemente" in description:
+                        description += " in modo consistente"
+                else:
+                    final_score = max(0.0, base_score - 0.5)  # Penalty for inconsistency
+                    if strict_percent > 0 or partial_percent > 0:
+                        description += " (inconsistente)"
+                
+                # Add specific suggestions
+                if strict_percent < 80 and strict_percent > 0:
+                    self.results["suggerimenti"].setdefault("documentazione", []).append(
+                        "Migliora l'adozione del Semantic Versioning nelle release utilizzando il formato MAJOR.MINOR.PATCH."
+                    )
+                elif partial_percent < 50 and strict_percent == 0:
+                    self.results["suggerimenti"].setdefault("documentazione", []).append(
+                        "Adotta il Semantic Versioning (MAJOR.MINOR.PATCH) nelle release per facilitare la gestione delle dipendenze."
+                    )
+                
+                return round(final_score, 1), description
             
             # No tags or releases found
-            return 0, "Nessun tag o release trovato"
+            self.results["suggerimenti"].setdefault("documentazione", []).append(
+                "Considera di creare tag e release utilizzando il Semantic Versioning (MAJOR.MINOR.PATCH)."
+            )
+            return 0.0, "Nessun tag o release trovato"
             
         except Exception as e:
-            logger.warning(f"Errore nella verifica del Semantic Versioning: {e}")
-            return (0.0, "Non implementato")  # temporary stub
+            logger.warning(f"Errore nella verifica del Semantic Versioning: {e}", exc_info=True)
+            return 0.0, "Errore nell'analisi del versioning"
 
     def _check_license_osi_approved(self) -> Tuple[bool, str]:
         try:
@@ -3391,20 +4289,143 @@ class RepoAnalyzer:
 
     def _check_contributor_distribution(self) -> float:
         """
-        Analizza la distribuzione dei contributi.
+        Analizza la distribuzione dei contributi per valutare il "bus factor" del repository.
+        
+        Calcola diverse metriche di distribuzione:
+        - Quanto lavoro è concentrato sui top contributor
+        - Indice Gini adattato per misurare la diseguaglianza tra contributori
+        - Numero effettivo di contributori attivi
+        
+        Returns:
+            float: Punteggio da 0 (distribuzione pessima) a 10 (distribuzione ottimale)
         """
         try:
-            contributors = list(self.repo.get_contributors())
-            if not contributors:
+            contributors = self._get_cached_data(
+                "all_contributors",
+                lambda: list(self.repo.get_contributors()[:100])  # Limita a 100 contributori per performance
+            )
+            
+            if not contributors or len(contributors) == 0:
+                logger.info("Nessun contributore trovato")
                 return 0.0
-            # Esempio semplice: rapporto tra commits del top contributor e totale
-            top_contributor_commits = contributors[0].contributions
-            total_commits = sum(c.contributions for c in contributors)
-            ratio = (top_contributor_commits / total_commits) if total_commits else 1
-            # Punteggio migliore quando la distribuzione è più omogenea (ratio basso)
-            score = 10 * (1 - ratio)
-            return max(0.0, score)
-        except Exception:
+                
+            # Estrai i contributi per ogni contributore
+            contributions = [c.contributions for c in contributors if c.contributions > 0]
+            contributions.sort(reverse=True)  # Ordina in modo decrescente
+            
+            total_commits = sum(contributions)
+            if total_commits == 0:
+                logger.info("Nessun commit trovato")
+                return 0.0
+                
+            # Numero totale di contributori con almeno un commit
+            num_contributors = len(contributions)
+            
+            # 1. Metrica: rapporto tra i commit del contributore principale e il totale
+            top_contributor_ratio = contributions[0] / total_commits
+            
+            # 2. Metrica: concentrazione nei top 20% contributori (principio di Pareto)
+            top_20_percent_idx = max(1, int(num_contributors * 0.2))
+            top_20_percent_commits = sum(contributions[:top_20_percent_idx])
+            top_20_percent_ratio = top_20_percent_commits / total_commits
+            
+            # 3. Metrica: calcolo di un indice Gini adattato (0=distribuito equamente, 1=un solo contributore)
+            # Ordina i contributi in modo crescente per il calcolo del Gini
+            sorted_contrib = sorted(contributions)
+            cum_contrib = [sum(sorted_contrib[:i+1]) for i in range(len(sorted_contrib))]
+            lorenz_points = [x / cum_contrib[-1] for x in cum_contrib]
+            gini = 1 - sum((lorenz_points[i-1] + lorenz_points[i]) / num_contributors 
+                        for i in range(1, num_contributors))
+                        
+            # 4. Metrica: "contributori effettivi" basato sull'indice di Shannon
+            # Trasforma i contributi in probabilità
+            probs = [c / total_commits for c in contributions]
+            shannon = -sum(p * math.log(p) for p in probs if p > 0)
+            effective_contributors = math.exp(shannon)
+            
+            # 5. Metrica: "bus factor" approssimativo 
+            # Quanti contributori principali servono per raggiungere il 50% dei commit
+            cumulative = 0
+            bus_factor = 0
+            for contrib in contributions:
+                cumulative += contrib
+                bus_factor += 1
+                if cumulative / total_commits >= 0.5:
+                    break
+            
+            # Log delle metriche per debugging
+            logger.debug(f"Statistiche distribuzione: contributori={num_contributors}, " +
+                        f"top_ratio={top_contributor_ratio:.2f}, top20%_ratio={top_20_percent_ratio:.2f}, " +
+                        f"gini={gini:.2f}, effettivi={effective_contributors:.1f}, bus_factor={bus_factor}")
+            
+            # Calcolo punteggio complessivo con pesi diversi per le metriche
+            # Un punteggio più alto rappresenta una distribuzione più sana
+            
+            # 1. Score basato sul rapporto del top contributor (meglio se più basso)
+            top_contrib_score = 10 * (1 - top_contributor_ratio)
+            
+            # 2. Score basato sul rapporto del top 20% (meglio se più vicino a 0.5)
+            # Obiettivo: 20% contributori → ~50% contributi (ideale per progetti sani)
+            pareto_score = 10 * (1 - abs(top_20_percent_ratio - 0.6))
+            
+            # 3. Score basato sull'indice Gini (meglio se più basso)
+            gini_score = 10 * (1 - gini)
+            
+            # 4. Score basato sui contributori effettivi relativo al totale
+            if num_contributors >= 5:
+                # Idealmente il numero di contributori effettivi è almeno 50% del totale
+                effective_ratio = effective_contributors / num_contributors
+                effective_score = 10 * min(1, effective_ratio / 0.5)
+            else:
+                # Per progetti piccoli
+                effective_score = 10 * min(1, effective_contributors / 2.5)
+            
+            # 5. Score basato sul bus factor (più alto = meglio)
+            bus_factor_score = min(10, bus_factor * 2)
+            
+            # Combina i punteggi con pesi appropriati
+            # Enfatizza il bus factor e i contributori effettivi
+            weights = [0.15, 0.15, 0.2, 0.25, 0.25]
+            combined_score = (
+                weights[0] * top_contrib_score +
+                weights[1] * pareto_score +
+                weights[2] * gini_score +
+                weights[3] * effective_score +
+                weights[4] * bus_factor_score
+            )
+            
+            # Aggiunge suggerimenti in base al punteggio
+            if combined_score < 3:
+                self.results["suggerimenti"].setdefault("distribuzione", []).append(
+                    "La maggior parte del lavoro è svolto da un singolo contributore. Aumenta il 'bus factor' "
+                    "incoraggiando altri a contribuire e documentando la conoscenza del codice."
+                )
+            elif combined_score < 5:
+                self.results["suggerimenti"].setdefault("distribuzione", []).append(
+                    "La distribuzione dei contributi è fortemente centralizzata. Considera di assegnare "
+                    "responsabilità specifiche ad altri contributori per diversificare la conoscenza del codice."
+                )
+            elif combined_score < 7:
+                self.results["suggerimenti"].setdefault("distribuzione", []).append(
+                    "La distribuzione dei contributi è moderatamente centralizzata. Continua ad allargare "
+                    "la base di contributori attivi per una maggiore resilienza del progetto."
+                )
+                
+            # Aggiungi dettagli alla sezione risultati per reporting
+            self.results.setdefault("metriche_distribuzione", {})
+            self.results["metriche_distribuzione"] = {
+                "top_contributor_ratio": round(top_contributor_ratio * 100, 1),
+                "top_20_percent_ratio": round(top_20_percent_ratio * 100, 1),
+                "gini_index": round(gini, 2),
+                "effective_contributors": round(effective_contributors, 1),
+                "bus_factor": bus_factor,
+                "total_contributors": num_contributors
+            }
+            
+            return round(max(0.0, min(10.0, combined_score)), 2)
+            
+        except Exception as e:
+            logger.error(f"Errore nell'analisi della distribuzione dei contributi: {e}", exc_info=True)
             return 0.0
 
     def _check_dependencies_freshness(self) -> float:
