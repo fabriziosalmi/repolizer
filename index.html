@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Repolizer Report Top 10</title> <!-- Updated Title -->
+    <title>Repolizer</title> <!-- Updated Title -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://unpkg.com/@popperjs/core@2" defer></script>
@@ -52,10 +52,10 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <!-- Header -->
         <header class="text-center mb-16 fade-in">
-            <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl mb-4">Repolizer Top 10</h1>
+            <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl mb-4">Repolizer Arena</h1>
         </header>
 
-        <!-- Top 10 Rankings Section -->
+        <!-- Top 100 Rankings Section -->
         <div id="rankingsSection" class="mb-12"> <!-- Added ID for clarity -->
             <div id="rankings" class="space-y-8">
                 <div class="fade-in">
@@ -64,7 +64,7 @@
 
                 <!-- Overall Score Ranking -->
                 <div class="bg-white rounded-2xl shadow-lg p-8 fade-in">
-                    <h3 class="text-2xl font-semibold mb-4">Top 10 - Punteggio Totale</h3>
+                    <h3 class="text-2xl font-semibold mb-4">Top 100</h3>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead>
                             <tr>
@@ -110,6 +110,7 @@
             }
         }
 
+        // Modify the loadLatestReports function to store the source filename 
         async function loadLatestReports() {
             try {
                 const response = await fetch('/latest_reports');
@@ -150,6 +151,9 @@
                              throw new Error(`HTTP error loading report ${reportInfo.filename}! status: ${reportResponse.status}`);
                         }
                         const reportData = await reportResponse.json();
+
+                        // Store the source filename with the report data
+                        reportData._sourceFilename = reportInfo.filename;
 
                         // Ensure punteggio_totale exists (robust check)
                         if (typeof reportData.punteggio_totale !== 'number' && reportData.punteggi) {
@@ -290,10 +294,64 @@
                          console.error("No current report data available for download.");
                      }
                 };
+                
+                // Add View HTML button next to the download button
+                const htmlReportPath = getHtmlReportPath(reportData);
+                const viewButton = document.createElement('a');
+                viewButton.classList.add('detail-view-html-button'); // Add a specific class for identification
+                viewButton.href = htmlReportPath;
+                viewButton.target = '_blank';
+                viewButton.rel = 'noopener noreferrer';
+                viewButton.setAttribute('aria-label', `Visualizza il report HTML per ${reportData.nome_repository || 'repository'}`);
+                viewButton.className = 'inline-flex ml-2 items-center px-3 py-2 border border-green-500 text-sm font-medium rounded-md text-green-600 bg-white hover:bg-green-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200';
+                viewButton.innerHTML = `
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Visualizza HTML
+                `;
+                
+                // Add the view button after the download button
+                newButton.parentNode.appendChild(viewButton);
             } else {
                 console.warn("Detail view download button not found.");
             }
 
+            // Call updateViewButtons to handle special HTML paths
+            setTimeout(() => {
+                // Wait a tiny bit for the DOM to update
+                document.querySelectorAll('.detail-view-html-button').forEach(btn => {
+                    const href = btn.getAttribute('href');
+                    if (href.includes('_*.html') || href.startsWith('reports/?repo=')) {
+                        btn.addEventListener('click', function(event) {
+                            event.preventDefault();
+                            
+                            // Show loading state
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = `
+                                <svg class="animate-spin w-4 h-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Caricamento...
+                            `;
+                            
+                            findMatchingHtmlReport(href)
+                                .then(matchedPath => {
+                                    window.open(matchedPath, '_blank');
+                                })
+                                .catch(error => {
+                                    console.error("Error finding HTML report:", error);
+                                    alert("Could not find a matching HTML report");
+                                })
+                                .finally(() => {
+                                    btn.innerHTML = originalText;
+                                });
+                        });
+                    }
+                });
+            }, 100);
         }
 
         // Modified setTotalScoreColors to accept elements
@@ -624,8 +682,8 @@
                 (b.punteggio_totale || 0) - (a.punteggio_totale || 0) // Default to 0 if score missing/invalid
             );
 
-            // Get top 10
-            const topReports = sortedReports.slice(0, 10);
+            // Get top 100
+            const topReports = sortedReports.slice(0, 100);
 
             const overallRankingTable = document.getElementById('overallRanking');
             if (!overallRankingTable) return; // Exit if table not found
@@ -695,16 +753,31 @@
                     `;
                 }).join('');
 
-                // Download button HTML (no inline JS)
-                const downloadButtonHTML = `
-                    <button aria-label="Scarica report JSON per ${report.nome_repository.replace(/"/g, '"')}"
-                            title="Scarica report JSON"
-                            class="download-json-button inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-indigo-500 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
-                        <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                        </svg>
-                        JSON
-                    </button>
+                // Generate HTML report path
+                const htmlReportPath = getHtmlReportPath(report);
+
+                // Download button and View Report button HTML
+                const actionsHTML = `
+                    <div class="flex flex-wrap gap-2 justify-end">
+                        <button aria-label="Scarica report JSON per ${report.nome_repository.replace(/"/g, '"')}"
+                                title="Scarica report JSON"
+                                class="download-json-button inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-indigo-500 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+                            <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            JSON
+                        </button>
+                        <a href="${htmlReportPath}" target="_blank" rel="noopener noreferrer"
+                           aria-label="Visualizza report HTML per ${report.nome_repository.replace(/"/g, '"')}"
+                           title="Visualizza report HTML"
+                           class="view-html-button inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-green-500 text-green-600 hover:bg-green-600 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1">
+                            <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            View
+                        </a>
+                    </div>
                 `;
 
                 row.innerHTML = `
@@ -717,7 +790,7 @@
                         <div class="flex items-center">
                              <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center bg-gray-100 rounded-full mr-3">
                                 <svg class="h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.272.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.397.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.807 5.624-5.479 5.921.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                                 </svg>
                             </div>
                             <div class="min-w-0 flex-1"> <!-- Allow text to wrap -->
@@ -737,7 +810,7 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right">
-                        ${downloadButtonHTML}
+                        ${actionsHTML}
                     </td>
                 `;
 
@@ -776,6 +849,9 @@
                 arrow: true,
                  allowHTML: true
             });
+
+            // After populating all rows and tooltips
+            updateViewButtons();
         }
 
         function populateCategoryRankings() {
@@ -845,7 +921,8 @@
                                     const scoreClass = getScoreColorClass(score);
                                     // Find the original report index in the main allReports array
                                     const originalIndex = allReports.findIndex(r => r.nome_repository === report.nome_repository && r.data_analisi === report.data_analisi);
-
+                                    const htmlReportPath = getHtmlReportPath(report);
+                                    
                                     return `
                                     <tr class="hover:bg-gray-50 cursor-pointer category-rank-row" data-report-index="${originalIndex >= 0 ? originalIndex : ''}"> <!-- Store original index -->
                                         <td class="px-4 py-3 whitespace-nowrap">
@@ -856,10 +933,18 @@
                                         <td class="px-4 py-3 whitespace-normal text-sm font-medium text-gray-900 hover:text-indigo-600 break-words min-w-[150px]"> <!-- Allow wrap, min width -->
                                             ${report.nome_repository}
                                         </td>
-                                        <td class="px-4 py-3 whitespace-nowrap text-right"> <!-- Right aligned -->
+                                        <td class="px-4 py-3 whitespace-nowrap text-right flex items-center justify-end gap-2">
                                             <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium ${scoreClass}" style="min-width: 50px;">
                                                 ${score.toFixed(2)}
                                             </span>
+                                            <a href="${htmlReportPath}" target="_blank" rel="noopener noreferrer" 
+                                               class="view-btn" title="Visualizza report HTML"
+                                               onclick="event.stopPropagation()">
+                                                <svg class="w-4 h-4 text-green-600 hover:text-green-800" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </a>
                                         </td>
                                     </tr>
                                     `;
@@ -888,6 +973,9 @@
 
                 categoryRankingsContainer.appendChild(categorySection);
             });
+
+            // After populating all categories
+            updateViewButtons();
         }
 
         // --- Download Function (accepts raw JSON string) ---
@@ -933,6 +1021,264 @@
             return 'bg-red-100 text-red-800';
         }
 
+        // Function to generate the HTML report path based on report data
+        function getHtmlReportPath(report) {
+            if (!report || !report.nome_repository) return '#';
+            
+            try {
+                // First try to find the exact filename in our loaded data
+                // Look for the JSON filename in our allReports array's source paths
+                for (const loadedReport of allReports) {
+                    // Find the matching report by repository name and date
+                    if (loadedReport.nome_repository === report.nome_repository && 
+                        loadedReport.data_analisi === report.data_analisi) {
+                        
+                        // If we have the original source filename, use it
+                        if (loadedReport._sourceFilename && loadedReport._sourceFilename.endsWith('.json')) {
+                            // Convert JSON path to HTML path
+                            return loadedReport._sourceFilename.replace('.json', '.html');
+                        }
+                    }
+                }
+                
+                // If we couldn't find a direct match, try to construct the filename from the data_analisi
+                if (report.data_analisi) {
+                    const formattedDate = formatDateForFilename(report.data_analisi);
+                    if (formattedDate) {
+                        return `reports/report_${formattedDate}.html`;
+                    }
+                }
+                
+                // If all else fails, use a special format that will be handled by our click handler
+                return `reports/?repo=${encodeURIComponent(report.nome_repository)}`;
+                
+            } catch (error) {
+                console.error("Error generating HTML report path:", error, report);
+                return `reports/?repo=${encodeURIComponent(report.nome_repository)}`;
+            }
+        }
+        
+        // Helper function to format a date string for the filename
+        function formatDateForFilename(dateStr) {
+            try {
+                // Extract date components from the string
+                let match;
+                let year, month, day, hour, minute, second;
+                
+                // Try YYYY-MM-DD HH:MM:SS format (like 2025-04-08 10:08:29)
+                if (match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/)) {
+                    [, year, month, day, hour, minute, second] = match;
+                } 
+                // Try DD/MM/YYYY HH:MM:SS format
+                else if (match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/)) {
+                    [, day, month, year, hour, minute, second] = match;
+                }
+                // If no format matches, return empty string
+                else {
+                    return '';
+                }
+                
+                // Format as YYYYMMDD_HHMMSS
+                return `${year}${month}${day}_${hour}${minute}${second}`;
+            } catch (error) {
+                console.error("Error formatting date for filename:", error, dateStr);
+                return '';
+            }
+        }
+
+        // Modified findMatchingHtmlReport function to handle the new format
+        function findMatchingHtmlReport(wildcardPath) {
+            return new Promise((resolve, reject) => {
+                // Extract repo name from the path
+                let repoName = null;
+                
+                if (wildcardPath.startsWith('reports/?repo=')) {
+                    const params = new URLSearchParams(wildcardPath.substring(wildcardPath.indexOf('?')));
+                    repoName = params.get('repo');
+                }
+                
+                if (!repoName) {
+                    reject("Invalid repository path");
+                    return;
+                }
+                
+                // First check if we have an exact match in our loaded reports
+                for (const report of allReports) {
+                    if (report && report.nome_repository === repoName) {
+                        // Check if we have the source filename
+                        if (report._sourceFilename && report._sourceFilename.endsWith('.json')) {
+                            const htmlPath = report._sourceFilename.replace('.json', '.html');
+                            
+                            // Check if this HTML file exists
+                            fetch(htmlPath, { method: 'HEAD' })
+                                .then(response => {
+                                    if (response.ok) {
+                                        resolve(htmlPath);
+                                    } else {
+                                        throw new Error("HTML file not found");
+                                    }
+                                })
+                                .catch(() => {
+                                    requestReportsList(repoName).then(resolve).catch(reject);
+                                });
+                            return;
+                        }
+                        
+                        // Try using the formatted date
+                        if (report.data_analisi) {
+                            const formattedDate = formatDateForFilename(report.data_analisi);
+                            if (formattedDate) {
+                                const htmlPath = `reports/report_${formattedDate}.html`;
+                                
+                                // Check if this file exists
+                                fetch(htmlPath, { method: 'HEAD' })
+                                    .then(response => {
+                                        if (response.ok) {
+                                            resolve(htmlPath); 
+                                        } else {
+                                            throw new Error("HTML file not found");
+                                        }
+                                    })
+                                    .catch(() => {
+                                        requestReportsList(repoName).then(resolve).catch(reject);
+                                    });
+                                return;
+                            }
+                        }
+                    }
+                }
+                
+                // If we didn't find a match in loaded reports, request the list
+                requestReportsList(repoName).then(resolve).catch(reject);
+            });
+        }
+        
+        // Function to request the list of reports and find the best match
+        function requestReportsList(repoName) {
+            return new Promise((resolve, reject) => {
+                fetch('/latest_reports')
+                    .then(response => response.json())
+                    .then(reports => {
+                        // Filter for HTML reports
+                        const htmlReports = reports.filter(r => 
+                            r.filename && r.filename.endsWith('.html')
+                        ).map(r => r.filename);
+                        
+                        console.log(`Searching for HTML report for repo ${repoName}`);
+                        console.log("Available HTML reports:", htmlReports);
+                        
+                        if (htmlReports.length > 0) {
+                            // Try to find a matching report
+                            const findPromises = htmlReports.map(htmlPath => {
+                                const jsonPath = htmlPath.replace('.html', '.json');
+                                return fetch(jsonPath)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        return {
+                                            path: htmlPath,
+                                            match: data.nome_repository === repoName
+                                        };
+                                    })
+                                    .catch(() => ({ path: htmlPath, match: false }));
+                            });
+                            
+                            Promise.all(findPromises)
+                                .then(results => {
+                                    const match = results.find(r => r.match);
+                                    if (match) {
+                                        resolve(match.path);
+                                    } else {
+                                        // If no match, return the first report as a fallback
+                                        resolve(htmlReports[0]);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error("Error checking JSON files:", error);
+                                    // Return the first HTML report as a fallback
+                                    resolve(htmlReports[0]);
+                                });
+                        } else {
+                            reject("No HTML reports found");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching reports list:", error);
+                        reject(error);
+                    });
+            });
+        }
+
+        // Update the view HTML button click handler for main rankings
+        function updateViewButtons() {
+            document.querySelectorAll('.view-html-button').forEach(btn => {
+                const originalHref = btn.getAttribute('href');
+                
+                // Only modify special paths
+                if (originalHref.includes('_*.html') || originalHref.startsWith('reports/?repo=')) {
+                    btn.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        
+                        // Show loading state
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = `
+                            <svg class="animate-spin w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Loading...
+                        `;
+                        
+                        // Try to find a matching HTML report
+                        findMatchingHtmlReport(originalHref)
+                            .then(matchedPath => {
+                                console.log("Found matching report:", matchedPath);
+                                window.open(matchedPath, '_blank');
+                            })
+                            .catch(error => {
+                                console.error("Error finding HTML report:", error);
+                                alert("Could not find a matching HTML report");
+                            })
+                            .finally(() => {
+                                btn.innerHTML = originalText;
+                            });
+                    });
+                }
+            });
+            
+            // Also update view buttons in category rankings
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                const originalHref = btn.getAttribute('href');
+                
+                if (originalHref.includes('_*.html') || originalHref.startsWith('reports/?repo=')) {
+                    btn.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        
+                        // Show loading state with just the spinner for small buttons
+                        const originalHTML = btn.innerHTML;
+                        btn.innerHTML = `
+                            <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        `;
+                        
+                        findMatchingHtmlReport(originalHref)
+                            .then(matchedPath => {
+                                window.open(matchedPath, '_blank');
+                            })
+                            .catch(error => {
+                                console.error("Error finding HTML report:", error);
+                                alert("Could not find a matching HTML report");
+                            })
+                            .finally(() => {
+                                btn.innerHTML = originalHTML;
+                            });
+                    });
+                }
+            });
+        }
 
         // --- DOMContentLoaded Listener ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -954,7 +1300,7 @@
     <footer class="mt-16 pt-8 border-t border-gray-200">
         <div class="flex justify-center gap-4 mb-8">
             <a href="https://github.com/fabriziosalmi/repolizer" target="_blank" rel="noopener noreferrer" aria-label="Visualizza il codice sorgente su GitHub" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200 ease-in-out gap-2">
-                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.026 2.747-1.026.546 1.379.201 2.397.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" /></svg>
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.745.069-.729.069-.729 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.026 2.747-1.026.546 1.379.201 2.397.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" /></svg>
                 Codice sorgente
             </a>
         </div>
