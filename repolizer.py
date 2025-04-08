@@ -114,142 +114,61 @@ class RepoAnalyzer:
     """Classe per analizzare repository GitHub."""
     
     def __init__(self, repo_name: str, config_file: str = CONFIG_FILE, clone_repo: bool = False):
-        """Inizializza l'analizzatore di repository.
-
-        Args:
-            repo_name: Nome del repository nel formato 'username/repository'
-            config_file: Percorso del file di configurazione
-            clone_repo: Clona il repository localmente per analisi più approfondite (default: False)
-        """
         self.repo_name = repo_name
         self.config_file = config_file
-        self.config = self._load_config()
-        self.console = Console()
         self.clone_repo = clone_repo
-        self.local_repo_path = None  # path al repo clonato
-
-        # Inizializza l'oggetto Github con o senza token
-        if GITHUB_TOKEN:
-            self.github = Github(GITHUB_TOKEN, per_page=100)
-            self.console.print("[green]Token GitHub trovato. Utilizzando limiti API aumentati.[/green]")
-        else:
-            self.github = Github(per_page=100)
-            self.console.print("[yellow]Attenzione: Token GitHub non trovato. Le richieste API potrebbero essere limitate.[/yellow]")
-            self.console.print("[yellow]Crea un file .env con GITHUB_TOKEN=your_token per aumentare i limiti API.[/yellow]")
-        
-        # Ottieni il repository
-        self.repo = self._get_repository()
-        self.results = {}
-        
-        # Lista delle licenze approvate OSI (Open Source Initiative)
-        self.osi_approved_licenses = [
-            # Popular OSI-approved licenses
-            "mit", "apache-2.0", "gpl-3.0", "gpl-2.0", "bsd-3-clause", "bsd-2-clause", 
-            "lgpl-3.0", "lgpl-2.1", "mpl-2.0", "agpl-3.0", "unlicense", "artistic-2.0",
-            "apache license 2.0", "gnu general public license v3", "gnu gpl v3",
-            "gnu general public license v2", "gnu gpl v2", "gnu lgpl v3", "gnu lgpl v2.1",
-            "mozilla public license 2.0", "gnu affero general public license v3",
-            "bsd 3-clause", "bsd 2-clause", "isc license", "isc", 
-            "boost software license", "boost", "eclipse public license", "epl-2.0",
-            "educational community license", "ecl-2.0", "cecill", "ms-pl", "ms-rl",
-            "postgresql license", "zlib license", "zlib", "wtfpl", "eupl-1.2",
-            "bsl-1.0", "ncsa", "ofl-1.1", "cc0-1.0"
-        ]
-        
-        # Cache per ridurre le chiamate API
         self._cache = {}
-        
-        # Verifica i limiti API
-        self._check_api_limits()
+        self.results = {}
+        import json
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                self.config = json.load(f)
+        except Exception as e:
+            self.config = {}
+            logger.error(f"Error loading config: {e}")
 
     def __enter__(self):
-        """Context manager entry: Clona il repository se necessario."""
-        if self.clone_repo and self.repo:
-            try:
-                self.local_repo_path = tempfile.mkdtemp()
-                clone_url = self.repo.clone_url
-                subprocess.run(["git", "clone", "--depth", "1", clone_url, self.local_repo_path], check=True, capture_output=True, text=True)  # clone con depth 1
-            except subprocess.CalledProcessError as e:
-                print(f"Errore durante il clone del repository: {e}")
-                self.local_repo_path = None
+        # ...existing code...
         return self
-
+    
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit: Elimina il repository clonato."""
-        if self.local_repo_path:
-            try:
-                shutil.rmtree(self.local_repo_path)
-            except OSError as e:
-                print(f"Errore nella rimozione della directory temporanea: {e}")
+        # ...existing code...
+        return False
 
     def _load_config(self) -> Dict:
-        """Carica la configurazione dal file JSON.
-
-        Returns:
-            Dizionario con la configurazione
-        """
+        # ...existing code...
+        import json
         try:
-            with open(self.config_file, "r", encoding="utf-8") as f:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"Errore nel caricamento del file di configurazione: {e}")
-            return {"parametri": {}}
+            logger.error(f"Error loading config: {e}")
+            return {}
             
     def _save_report_json(self, report_data: Dict, report_dir: str = "reports") -> str:
-        """Salva il report JSON in un file con nome basato sul repository e data/ora.
-        
-        Args:
-            report_data: Dati del report da salvare
-            report_dir: Directory dove salvare i report (default: "reports")
-            
-        Returns:
-            Percorso del file JSON creato
-        """
+        import os, json, datetime
         try:
-            # Crea la directory se non esiste
             os.makedirs(report_dir, exist_ok=True)
-            
-            # Genera nome file con nome repo e timestamp
-            repo_name = report_data.get("repo_name", "report").replace("/", "_")
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            json_file = os.path.join(report_dir, f"{repo_name}_{timestamp}.json")
-            
-            # Salva il report
-            with open(json_file, "w", encoding="utf-8") as f:
-                json.dump(report_data, f, indent=2)
-                
-            return json_file
+            filename = f"{self.repo_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            file_path = os.path.join(report_dir, filename)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(report_data, f, indent=4)
+            return file_path
         except Exception as e:
-            logger.error(f"Errore nel salvataggio del report JSON: {e}")
+            logger.error(f"Error saving JSON report: {e}")
             return ""
             
     def _save_report_html(self, html_content: str, report_data: Dict, report_dir: str = "reports") -> str:
-        """Salva il report HTML in un file con nome basato sul repository e data/ora.
-        
-        Args:
-            html_content: Contenuto HTML del report
-            report_data: Dati del report per generare il nome
-            report_dir: Directory dove salvare i report (default: "reports")
-            
-        Returns:
-            Percorso del file HTML creato
-        """
+        import os, datetime
         try:
-            # Crea la directory se non esiste
             os.makedirs(report_dir, exist_ok=True)
-            
-            # Genera nome file con nome repo e timestamp
-            repo_name = report_data.get("repo_name", "report").replace("/", "_")
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            html_file = os.path.join(report_dir, f"{repo_name}_{timestamp}.html")
-            
-            # Salva il report
-            with open(html_file, "w", encoding="utf-8") as f:
+            filename = f"{self.repo_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            file_path = os.path.join(report_dir, filename)
+            with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
-                
-            return html_file
+            return file_path
         except Exception as e:
-            logger.error(f"Errore nel salvataggio del report HTML: {e}")
+            logger.error(f"Error saving HTML report: {e}")
             return ""
 
     def _check_api_limits(self) -> None:
@@ -671,9 +590,9 @@ class RepoAnalyzer:
             return 0.0
 
     def _ensure_tz_aware(self, dt: Optional[datetime.datetime]) -> Optional[datetime.datetime]:
-        """Ensure a datetime object is timezone-aware (UTC)."""
         if dt and dt.tzinfo is None:
-            return dt.replace(tzinfo=datetime.timezone.utc)
+            import pytz
+            return dt.replace(tzinfo=pytz.UTC)
         return dt
 
     def _fetch_issues_data(self):
@@ -2611,19 +2530,16 @@ class RepoAnalyzer:
                         valore = "Errore verifica CI/CD"
                         punteggio = 0
                 
+                # Inside the _analyze_parameter method, under the "integrazione" category
                 elif nome_param == "build_tool_standard":
-                    # Verifica la presenza di strumenti di build standard
-                    description, score = self._check_build_tools_standard()
-                    valore = description
-                    punteggio = score
+                    tools_description, tools_score = self._check_build_tools_standard()
+                    valore = tools_description
+                    punteggio = tools_score
                     
-                    if punteggio == 0:
-                        self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Aggiungi strumenti di build standard per il linguaggio del tuo progetto (es. Maven/Gradle per Java, npm/yarn per JavaScript)."
-                        )
-                    elif punteggio < 5:
-                        self.results["suggerimenti"].setdefault(categoria, []).append(
-                            "Considera l'utilizzo di altri strumenti di build standard per facilitare la compilazione e il deployment."
+                    if punteggio < 5:
+                        self.results["suggerimenti"].setdefault("integrazione", []).append(
+                            "Considera l'utilizzo di strumenti di build standard per il linguaggio utilizzato, "
+                            "come Maven/Gradle per Java, npm/yarn per JavaScript, o pip/setuptools per Python."
                         )
 
                 elif nome_param in ["test_coverage", "sicurezza_ci"]:
