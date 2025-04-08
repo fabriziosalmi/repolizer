@@ -654,6 +654,7 @@
             // Create ranking tables for each category
             const categoryRankingsContainer = document.getElementById('categoryRankings');
             categoryRankingsContainer.innerHTML = '';
+            categoryRankingsContainer.classList.add('grid', 'grid-cols-1', 'md:grid-cols-2', 'gap-6');
             
             // Process each category
             categories.forEach(category => {
