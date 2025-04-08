@@ -89,113 +89,6 @@
             <br>
         </div> <!-- End Rankings Section -->
 
-        <!-- Report Detail View (Initially Hidden) -->
-        <div id="reportDetailView" class="max-w-7xl mx-auto py-12 hidden"> <!-- Removed redundant container classes, added hidden -->
-            <hr class="my-12 border-gray-300"> <!-- Separator -->
-            <h2 class="text-3xl font-semibold mb-8 text-center fade-in">Dettaglio Report</h2>
-
-            <!-- Header Section -->
-            <section aria-labelledby="report-heading" class="mb-12 fade-in">
-                 <div class="bg-white rounded-2xl shadow-lg p-8">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <h3 id="repo-name" class="text-2xl font-bold text-gray-900">Nome Repository</h3>
-                            <p class="mt-1 text-sm text-gray-500">
-                                <a id="repo-url" href="#" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 break-all transition-colors">URL Repository</a>
-                            </p>
-                        </div>
-                        <div class="text-left md:text-right mt-4 md:mt-0 flex-shrink-0">
-                             <p id="data-analisi" class="text-sm text-gray-500 mb-2">Data Analisi</p>
-                             <button aria-label="Scarica il report in formato JSON" title="Scarica JSON" class="inline-flex items-center px-4 py-2 border border-indigo-600 text-sm font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50 transition-colors">
-                                <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                </svg>
-                                Scarica JSON
-                            </button>
-                         </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Score Overview -->
-            <section aria-labelledby="score-overview-heading" class="mb-12 fade-in">
-                <div class="bg-white rounded-2xl shadow-lg p-8">
-                    <h3 id="score-overview-heading" class="text-2xl font-semibold mb-6 text-center">Punteggio Totale</h3>
-                    <div class="flex flex-col items-center">
-                        <div id="total-score" class="text-6xl font-bold mb-4">
-                            <span id="punteggio-totale">0.0</span>/10
-                        </div>
-                        <div class="w-full max-w-md bg-gray-200 rounded-full h-4 overflow-hidden">
-                            <div id="score-progress-bar" class="h-4 rounded-full transition-all duration-500 ease-out" style="width: 0%;"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Charts Section -->
-            <section aria-labelledby="charts-heading" class="mb-12 grid grid-cols-1 md:grid-cols-2 gap-8 fade-in">
-                <div class="bg-white rounded-2xl shadow-lg p-6">
-                    <h4 class="text-xl font-semibold mb-4 text-center">Vista Radar Categorie</h4>
-                    <div class="chart-container">
-                        <canvas id="radarChart"></canvas>
-                    </div>
-                </div>
-                <div class="bg-white rounded-2xl shadow-lg p-6">
-                    <h4 class="text-xl font-semibold mb-4 text-center">Punteggi per Categoria</h4>
-                    <div class="chart-container category-chart-container"> <!-- Used specific class -->
-                        <canvas id="categoryChart"></canvas>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Category Details Section -->
-            <section aria-labelledby="category-details-heading" class="mb-12 fade-in">
-                 <h3 id="category-details-heading" class="text-3xl font-semibold mb-6 text-center">Dettagli per Categoria</h3>
-                 <div id="categoryDetails" class="space-y-6">
-                     <!-- Category details will be populated here by JS -->
-                     <p class="text-center py-8 text-gray-500">Seleziona un report dalla classifica per vedere i dettagli.</p>
-                 </div>
-            </section>
-
-            <!-- Template for category details -->
-            <template id="categoryTemplate">
-                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                    <button class="category-toggle-button w-full flex justify-between items-center p-6 text-left bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-t-2xl" aria-expanded="true">
-                        <h4 class="category-name text-lg font-semibold text-gray-800 categories-title-fixed">NOME CATEGORIA</h4>
-                        <svg class="category-arrow w-6 h-6 text-gray-600 transform transition-transform duration-300" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="category-content p-6 border-t border-gray-200">
-                        <div class="mb-6">
-                            <h5 class="text-md font-semibold mb-3 text-gray-700">Parametri Valutati</h5>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parametro</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valore</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Descrizione</th> <!-- Hide on small screens -->
-                                        </tr>
-                                    </thead>
-                                    <tbody class="parameters-list bg-white divide-y divide-gray-200">
-                                        <!-- Parameter rows added by JS -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div>
-                            <h5 class="text-md font-semibold mb-3 text-gray-700">Suggerimenti</h5>
-                            <ul class="suggestions-list space-y-3">
-                                <!-- Suggestion list items added by JS -->
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </template>
-        </div> <!-- End Report Detail View -->
-
     </div> <!-- Closing main max-w-7xl container -->
 
     <script>
@@ -921,7 +814,7 @@
                 const sortedByCategory = [...allReports]
                     .filter(r => r && r.punteggi && typeof r.punteggi[category] === 'number') // Ensure report, punteggi, and specific score exist and are numbers
                     .sort((a, b) => b.punteggi[category] - a.punteggi[category])
-                    .slice(0, 5); // Show Top 5 per category to save space
+                    .slice(0, 10); // Show Top 10 per category to save space
 
                 if (sortedByCategory.length === 0) return; // Skip if no reports have this category score
 
@@ -934,7 +827,7 @@
                 categorySection.innerHTML = `
                     <h3 class="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
                         ${categoryIcon}
-                        <span>Top 5 - ${categoryName}</span>
+                        <span>Top 10 - ${categoryName}</span>
                     </h3>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
