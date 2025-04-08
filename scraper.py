@@ -17,6 +17,10 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from typing import Optional, Dict, Any, Set, List, Tuple
 
+import nltk  # Added nltk import
+from nltk.stem import SnowballStemmer
+from thefuzz import fuzz
+
 # --- Configuration ---
 
 # Load environment variables from .env file if it exists
@@ -57,7 +61,7 @@ DEFAULT_PER_PAGE = 30
 GITHUB_API_BASE_URL = "https://api.github.com"
 
 # Expanded list of Italian words for language detection (lowercase)
-ITALIAN_WORDS = set([
+ITALIAN_GITHUB_WORDS = set([
     "ciao", "buongiorno", "progetto", "documentazione", "utilizzo",
     "installazione", "configurazione", "esempio", "questo", "quello",
     "come", "italiano", "italiana", "sviluppo", "funzionalità", "istruzioni",
@@ -66,21 +70,123 @@ ITALIAN_WORDS = set([
     "versione", "aggiornamento", "interfaccia", "utente", "dati",
     "scaricare", "implementazione", "comunità", "supporto", "problema",
     "guida", "requisiti", "avanzato", "base", "note", "rilascio",
+    "software", "hardware", "rete", "server", "database", "sistema",
+    "informazioni", "sicurezza", "accesso", "password", "account",
+    "errore", "warning", "notifica", "risolvere", "soluzione",
+    "gestione", "processo", "modello", "design", "architettura",
+    "analisi", "test", "validazione", "controllo", "ottimizzazione",
+    "miglioramento", "performance", "qualità", "efficienza",
+    "risultato", "obiettivo", "pianificazione", "programmazione",
+    "monitoraggio", "reporting", "comunicazione", "collaborazione",
+    "team", "management", "risorse", "budget", "costo", "tempo",
+    "rischio", "opportunità", "innovazione", "tecnologia",
+    "digitale", "online", "offline", "web", "mobile", "cloud",
+    "algoritmo", "intelligenza", "artificiale", "robotica", "automazione", "virtuale", "realtà", "aumentata",
+    "esperienza", "interazione", "grafica",
+    "contenuto", "testo", "immagine", "video", "audio",
+    "documento", "file", "cartella", "repository", "commit", "branch",
+    "pull", "request", "issue", "wiki", "readme", "changelog",
+    "build", "deploy", "script", "programma",
+    "API", "SDK", "framework", "plugin", "modulo", "componente",
+    "servizio", "processo", "thread", "mutex", "semaphore",
+    "buffer", "socket", "http", "https", "ssl", "tls",
+    "url", "domain",
+    "database", "sql", "nosql", "cache", "coda", "messaggio", "evento",
+    "front-end", "back-end", "full-stack", "devops", "sre",
+    "agile", "scrum", "kanban",
+    "software", "libero", "opensource", "aperto",
+    "manuale", "tutorial", "esempio", "uso", "pratica",
+    "schema", "anti-schema", "rifattorizzazione", "debug",
+    "profilazione", "log",
+    "autenticazione", "autorizzazione", "crittografia",
+    "sicurezza", "informatica", "vulnerabilità", "exploit", "patch",
+    "test", "unitari", "integrazione", "end-to-end",
+    "copertura", "report", "analisi", "statica", "dinamica",
+    "integrazione", "continua", "delivery", "deployment",
+    "controllo", "versione", "fork", "clone", "push", "tirare", "unire",
+    "risolto", "in corso", "da fare", "bloccato", "richiesta",
+    "discussione", "suggerimento", "opinione", "feedback", "domanda",
+    "risposta", "soluzione", "approccio", "metodo", "tecnica",
+    "utilità",
+    "tecnica", "wiki",
+    "supporto",
+    "bug", "tracker", "segnalazione", "problemi",
+    "funzionalità",
+    "comunicazione", "email", "incontro", "conferenza", "webinar", "presentazione",
+    "laboratorio", "programmazione", "sfida", "concorso",
+    "personale", "secondario",
+    "avvio", "azienda", "società", "consulenza", "servizi",
+    "calcolo", "distribuito",
+    "scienza", "dati", "grandi dati",
+    "elaborazione", "linguaggio", "naturale", "visione", "artificiale",
+    "realtà", "estesa", "immersiva", "ologrammi",
+    "interfacce", "cervello-computer", "impianti",
+    "città", "case", "reti", "agricoltura",
+    "obiettivi", "sviluppo", "sostenibile", "agenda", "mondiali",
+    "economia", "circolare", "lineare", "modello", "transizione",
+    "energia", "rinnovabile", "solare", "eolico", "idroelettrico",
+    "biomassa", "geotermico", "nucleare", "fusione", "fissione",
+    "ambiente", "cambiamento", "climatico", "emissioni", "gas",
+    "effetto", "serra", "riscaldamento", "globale", "inquinamento",
+    "acqua", "aria", "suolo", "rifiuti", "riciclo", "riuso", "riduzione",
+    "biodiversità", "conservazione", "specie", "estinzione", "ecosistema",
+    "salute", "benessere", "medicina", "prevenzione", "cura", "malattia",
+    "alimentazione", "sana", "biologica", "vegetariana", "vegana",
+    "km0", "locale", "stagionale", "filiera", "corta", "equo", "solidale",
+    "lavoro", "digitale", "remoto", "smart", "flessibile", "autonomo",
+    "formazione", "apprendimento", "competenza", "abilità", "talento",
+    "innovazione", "sociale", "tecnologica", "culturale", "artistica",
+    "istruzione", "scuola", "università", "ricerca", "dottorato",
+    "comunità", "locale", "globale", "inclusiva", "partecipativa",
+    "cittadinanza", "attiva", "responsabile", "consapevole",
+    "democrazia", "partecipativa", "diretta", "trasparenza", "accountability",
+    "etica", "integrità", "responsabilità", "sostenibilità",
+    "finanza", "etica", "sociale", "alternativa", "cooperativa", "impact", "investing",
+    "impresa", "sociale", "cooperativa", "benefit", "startup",
+    "cultura", "arte", "musica", "cinema", "teatro", "letteratura",
+    "sport", "tempo", "libero", "turismo", "sostenibile", "responsabile"
 ])
 
 # Expanded Italian cities and regions for location detection (lowercase)
 ITALIAN_LOCATIONS = set([
-    "italia", "italy", "milano", "milan", "rome", "roma", "napoli", "naples",
-    "torino", "turin", "florence", "firenze", "bologna", "palermo", "genova",
-    "genoa", "sicilia", "sicily", "sardegna", "sardinia", "toscana", "tuscany",
-    "lazio", "lombardia", "lombardy", "veneto", "piemonte", "piedmont",
-    "catania", "bari", "verona", "padova", "padua", "trieste", "cagliari",
-    "brescia", "parma", "modena", "pisa", "siena", "perugia", "puglia", "apulia",
+    "italia", "milano", "roma", "napoli",
+    "torino", "firenze", "bologna", "palermo", "genova",
+    "sicilia", "sardegna", "toscana",
+    "lazio", "lombardia", "veneto", "piemonte",
+    "catania", "bari", "verona", "padova", "trieste", "cagliari",
+    "brescia", "parma", "modena", "pisa", "siena", "perugia", "puglia",
     "calabria", "campania", "liguria", "abruzzo", "umbria", "marche",
-    "emilia-romagna", "friuli", "trentino", "alto adige", "south tyrol",
-    "valle d'aosta", "aosta valley", ".it" # Adding .it TLD as a location hint
+    "emilia-romagna", "friuli", "trentino", "alto adige",
+    "valle d'aosta", ".it",
+    "l'aquila", "ancona", "potenza", "catanzaro", "aosta", "bolzano",
+    "trento", "udine", "gorizia", "pordenone", "trieste", "venezia",
+    "vicenza", "treviso", "rovigo", "belluno", "vercelli", "biella",
+    "alessandria", "asti", "cuneo", "novara", "verbano-cusio-ossola",
+    "massa", "carrara", "lucca", "livorno", "arezzo", "grosseto",
+    "prato", "pistoia", "pesaro", "urbino", "macerata", "fermo",
+    "ascoli piceno", "viterbo", "rieti", "latina", "frosinone",
+    "caserta", "avellino", "benevento", "salerno", "matera", "foggia",
+    "taranto", "brindisi", "lecce", "barletta-andria-trani", "cosenza",
+    "crotone", "reggio calabria", "vibo valentia", "sassari", "nuoro",
+    "oristano", "sud sardegna", "centro italia", "nord italia", "sud italia",
+    "isole", "appennini", "alpi", "adriatico", "tirreno", "ionio",
+    "lago maggiore", "lago di como", "lago di garda", "italia settentrionale",
+    "italia centrale", "italia meridionale", "siciliana", "sardo",
+    "adriatica", "tirrenica", "ionica", "padana", "pianura padana",
+    "costiera", "appenninica", "alpina", "mediterraneo", "mediterranea",
+    "veneto", "friuli venezia giulia", "siciliane", "sarde",
+    "comune", "provincia", "regione", "stato", "nazione"
 ])
 
+# Download nltk resources (only needs to be done once)
+try:
+    nltk.data.find("tokenizers/punkt")
+except LookupError:
+    nltk.download('punkt')
+try:
+    nltk.data.find("stemmers/snowball")
+except LookupError:
+    nltk.download('snowball')
 
 # --- Scraper Class ---
 
@@ -94,6 +200,8 @@ class GitHubRepoScraper:
         max_workers: int = DEFAULT_MAX_WORKERS,
         repos_file: Path = DEFAULT_REPOS_FILE,
         cache_file: Path = DEFAULT_CACHE_FILE,
+        fuzzy_match_threshold: int = 80,
+        location_bias: float = 0.9
     ):
         self.base_url = GITHUB_API_BASE_URL
         self.headers = {
@@ -110,8 +218,11 @@ class GitHubRepoScraper:
         self.cache_duration = timedelta(hours=cache_duration_hours)
         self.repos_file = repos_file
         self.cache_file = cache_file
+        self.fuzzy_match_threshold = fuzzy_match_threshold
+        self.location_bias = location_bias # Bias towards location matches if user is known to be Italian
 
         self.session = self._setup_session()
+        self.stemmer = SnowballStemmer("italian")
 
         self._cache_lock = threading.Lock()
         self._repos_set_lock = threading.Lock()
@@ -201,7 +312,7 @@ class GitHubRepoScraper:
                 # Skip non-serializable objects like MagicMock (adds test compatibility)
                 if hasattr(entry, '__dict__') and hasattr(entry, '__class__') and entry.__class__.__name__ == 'MagicMock':
                     continue
-                    
+
                 # Add serializable entries only
                 try:
                     # Test JSON serializability
@@ -210,21 +321,21 @@ class GitHubRepoScraper:
                 except (TypeError, OverflowError):
                     # Skip non-serializable entries
                     continue
-                    
+
             # Ensure the directory exists
             os.makedirs(os.path.dirname(self.cache_file), exist_ok=True)
-            
+
             # Write the cache to file
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(cache_copy, f, indent=2)  # Add indent for readability
-            
+
             # Use try-except when logging to prevent issues with closed file handles
             try:
                 logger.info(f"Successfully saved cache with {len(cache_copy)} entries to {self.cache_file}")
             except (ValueError, IOError):
                 # Fallback to print if logging fails
                 print(f"Successfully saved cache with {len(cache_copy)} entries to {self.cache_file}")
-                
+
         except Exception as e:
             try:
                 logger.error(f"Could not save cache to {self.cache_file}: {e}")
@@ -326,16 +437,17 @@ class GitHubRepoScraper:
             return None
 
     def _check_text_for_italian(self, text: Optional[str]) -> bool:
-        """Checks if a given text contains Italian keywords."""
+        """Checks if a given text contains Italian keywords using stemming and fuzzy matching."""
         if not text:
             return False
         text_lower = text.lower()
-        # Use intersection for potentially faster check if ITALIAN_WORDS is large
-        # word_matches = ITALIAN_WORDS.intersection(text_lower.split())
-        # return len(word_matches) > 0
-
-        # Simple substring check might be sufficient and faster for reasonable keyword list size
-        return any(word in text_lower for word in ITALIAN_WORDS)
+        words = nltk.word_tokenize(text_lower)  # Split into words properly
+        stemmed_words = [self.stemmer.stem(word) for word in words]  # Stem each word
+        for word in stemmed_words:
+            for italian_word in ITALIAN_GITHUB_WORDS:
+                if fuzz.ratio(word, italian_word) >= self.fuzzy_match_threshold:
+                    return True  # Fuzzy match found
+        return False
 
     def _check_location_for_italian(self, location: Optional[str]) -> bool:
         """Checks if a given location string matches known Italian locations."""
@@ -356,7 +468,7 @@ class GitHubRepoScraper:
         description = owner_info.get("description", "") # For orgs
         blog = owner_info.get("blog", "") # Website/blog
 
-        # 1. Check location explicitly
+        # 1. Check location explicitly (HIGH PRIORITY)
         if self._check_location_for_italian(location):
             return True, f"Location match ({location})"
 
@@ -416,7 +528,7 @@ class GitHubRepoScraper:
 
             content_lower = content.lower()
             # Simple heuristic: count occurrences of specific Italian words
-            italian_word_count = sum(1 for word in ITALIAN_WORDS if word in content_lower)
+            italian_word_count = sum(1 for word in ITALIAN_GITHUB_WORDS if word in content_lower)
 
             # Adjust threshold as needed - maybe relative to file size?
             # For now, a simple count.
@@ -496,10 +608,7 @@ class GitHubRepoScraper:
         # 4. Final Check: Repository Language (Less reliable for 'Italian' itself)
         language = repo.get("language", "")
         if language and language.lower() == "italian":
-            # This is less common; GitHub's language detection is based on code, not docs.
-            # Can be noisy (e.g., config files using Italian words). Use with caution.
-            # logger.info(f"Found Italian repo: {full_name} (Reason: Language reported as Italian - low confidence)")
-            # return full_name
+
              logger.debug(f"Repo {full_name} language reported as Italian, but not flagged by other checks.")
 
 
@@ -508,107 +617,107 @@ class GitHubRepoScraper:
         return None
 
     def search_repos(
-        self,
-        base_queries: List[str],
-        additional_query: Optional[str] = None,
-        per_page: int = DEFAULT_PER_PAGE,
-        max_pages: int = DEFAULT_MAX_PAGES
-    ) -> List[str]:
-        """
-        Searches GitHub repositories using multiple queries and processes results concurrently.
-        """
-        new_repos_found: List[str] = []
-        processed_repo_names: Set[str] = set() # Track processed repos within this run to avoid duplicates across queries
+            self,
+            base_queries: List[str],
+            additional_query: Optional[str] = None,
+            per_page: int = DEFAULT_PER_PAGE,
+            max_pages: int = DEFAULT_MAX_PAGES
+        ) -> List[str]:
+            """
+            Searches GitHub repositories using multiple queries and processes results concurrently.
+            """
+            new_repos_found: List[str] = []
+            processed_repo_names: Set[str] = set() # Track processed repos within this run to avoid duplicates across queries
 
-        search_queries = list(base_queries) # Copy base queries
-        if additional_query:
-            search_queries.append(additional_query)
+            search_queries = list(base_queries) # Copy base queries
+            if additional_query:
+                search_queries.append(additional_query)
 
-        total_items_processed = 0
+            total_items_processed = 0
 
-        for search_query in search_queries:
-            logger.info(f"--- Starting search for query: '{search_query}' ---")
-            page = 1
-            items_in_query = 0
-            while page <= max_pages:
-                params = {
-                    "q": search_query,
-                    "sort": "updated", # Sort by updated to potentially find more active/recent repos
-                    "order": "desc",
-                    "per_page": per_page,
-                    "page": page
-                }
-                search_url = f"{self.base_url}/search/repositories"
-                logger.info(f"Fetching page {page} for query '{search_query}' (max: {max_pages})")
-                response_data = self._get_with_cache(search_url, params=params)
+            for search_query in search_queries:
+                logger.info(f"--- Starting search for query: '{search_query}' ---")
+                page = 1
+                items_in_query = 0
+                while page <= max_pages:
+                    params = {
+                        "q": search_query,
+                        "sort": "updated", # Sort by updated to potentially find more active/recent repos
+                        "order": "desc",
+                        "per_page": per_page,
+                        "page": page
+                    }
+                    search_url = f"{self.base_url}/search/repositories"
+                    logger.info(f"Fetching page {page} for query '{search_query}' (max: {max_pages})")
+                    response_data = self._get_with_cache(search_url, params=params)
 
-                if response_data is None: # Handle API errors or cached 404s
-                    logger.warning(f"Failed to fetch page {page} for query '{search_query}'. Stopping query.")
-                    break
+                    if response_data is None: # Handle API errors or cached 404s
+                        logger.warning(f"Failed to fetch page {page} for query '{search_query}'. Stopping query.")
+                        break
 
-                repos_data = response_data.get("items")
-                if not isinstance(repos_data, list):
-                    logger.error(f"Unexpected API response format for query '{search_query}', page {page}. 'items' not found or not a list.")
-                    break # Stop processing this query if response is malformed
+                    repos_data = response_data.get("items")
+                    if not isinstance(repos_data, list):
+                        logger.error(f"Unexpected API response format for query '{search_query}', page {page}. 'items' not found or not a list.")
+                        break # Stop processing this query if response is malformed
 
-                if not repos_data:
-                    logger.info(f"No more results found for query '{search_query}' on page {page}.")
-                    break # No more items on this page or subsequent pages
+                    if not repos_data:
+                        logger.info(f"No more results found for query '{search_query}' on page {page}.")
+                        break # No more items on this page or subsequent pages
 
-                total_count = response_data.get('total_count', 'N/A')
-                logger.info(f"Processing {len(repos_data)} repositories from page {page} (Total results for query: {total_count})")
-                items_in_query += len(repos_data)
+                    total_count = response_data.get('total_count', 'N/A')
+                    logger.info(f"Processing {len(repos_data)} repositories from page {page} (Total results for query: {total_count})")
+                    items_in_query += len(repos_data)
 
-                page_new_repos: List[str] = []
-                futures: Dict[concurrent.futures.Future, str] = {}
+                    page_new_repos: List[str] = []
+                    futures: Dict[concurrent.futures.Future, str] = {}
 
-                # Process repositories in parallel using ThreadPoolExecutor
-                with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="RepoWorker") as executor:
-                    for repo in repos_data:
-                        if isinstance(repo, dict) and repo.get("full_name"):
-                            repo_name = repo["full_name"]
-                            if repo_name not in processed_repo_names: # Avoid re-processing if seen in another query/page
-                                future = executor.submit(self._process_repo, repo)
-                                futures[future] = repo_name # Store future to repo_name mapping
+                    # Process repositories in parallel using ThreadPoolExecutor
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="RepoWorker") as executor:
+                        for repo in repos_data:
+                            if isinstance(repo, dict) and repo.get("full_name"):
+                                repo_name = repo["full_name"]
+                                if repo_name not in processed_repo_names: # Avoid re-processing if seen in another query/page
+                                    future = executor.submit(self._process_repo, repo)
+                                    futures[future] = repo_name # Store future to repo_name mapping
+                                else:
+                                    logger.debug(f"Skipping {repo_name} as it was already processed in this run.")
                             else:
-                                logger.debug(f"Skipping {repo_name} as it was already processed in this run.")
-                        else:
-                            logger.warning(f"Invalid repo data structure found on page {page} for query '{search_query}'.")
+                                logger.warning(f"Invalid repo data structure found on page {page} for query '{search_query}'.")
 
-                    for future in concurrent.futures.as_completed(futures):
-                        repo_name = futures[future]
-                        try:
-                            result = future.result()
-                            if result: # result is the full_name if Italian, else None
-                                if result not in processed_repo_names:
-                                    page_new_repos.append(result)
-                                    processed_repo_names.add(result) # Mark as processed
-                        except Exception as exc:
-                            logger.error(f"Error processing repo {repo_name}: {exc}", exc_info=True)
+                        for future in concurrent.futures.as_completed(futures):
+                            repo_name = futures[future]
+                            try:
+                                result = future.result()
+                                if result: # result is the full_name if Italian, else None
+                                    if result not in processed_repo_names:
+                                        page_new_repos.append(result)
+                                        processed_repo_names.add(result) # Mark as processed
+                            except Exception as exc:
+                                logger.error(f"Error processing repo {repo_name}: {exc}", exc_info=True)
 
-                if page_new_repos:
-                    logger.info(f"Found {len(page_new_repos)} new Italian repositories on page {page}.")
-                    new_repos_found.extend(page_new_repos)
-                else:
-                    logger.info(f"No new Italian repositories found on page {page}.")
+                    if page_new_repos:
+                        logger.info(f"Found {len(page_new_repos)} new Italian repositories on page {page}.")
+                        new_repos_found.extend(page_new_repos)
+                    else:
+                        logger.info(f"No new Italian repositories found on page {page}.")
 
-                # GitHub search API has a limit of 1000 results (around 34 pages of 30 results)
-                if page * per_page >= 1000:
-                    logger.warning(f"Reached GitHub search API limit of 1000 results for query '{search_query}'. Stopping query.")
-                    break
+                    # GitHub search API has a limit of 1000 results (around 34 pages of 30 results)
+                    if page * per_page >= 1000:
+                        logger.warning(f"Reached GitHub search API limit of 1000 results for query '{search_query}'. Stopping query.")
+                        break
 
-                page += 1
-                # Optional: Add a small delay between pages if hitting secondary rate limits often
-                # time.sleep(1)
+                    page += 1
+                    # Optional: Add a small delay between pages if hitting secondary rate limits often
+                    # time.sleep(1)
 
-            logger.info(f"--- Finished search for query: '{search_query}'. Processed {items_in_query} items. ---")
+                logger.info(f"--- Finished search for query: '{search_query}'. Processed {items_in_query} items. ---")
 
-            # Save cache periodically after each query finishes
-            self._save_cache()
+                # Save cache periodically after each query finishes
+                self._save_cache()
 
-        total_items_processed = len(processed_repo_names) # This count reflects unique repos processed
-        logger.info(f"Finished all searches. Total unique repositories processed in this run: {total_items_processed}")
-        return new_repos_found
+            total_items_processed = len(processed_repo_names) # This count reflects unique repos processed
+            logger.info(f"Finished all searches. Total unique repositories processed in this run: {total_items_processed}")
+            return new_repos_found
 
     def save_repos(self, new_repos: List[str]):
         """Appends newly found and unique repository names to the repos file."""
@@ -697,7 +806,24 @@ def main():
         action="store_true",
         help="Enable DEBUG level logging."
     )
-
+    parser.add_argument(
+        "--fuzzy-threshold",
+        type=int,
+        help="Fuzzy matching threshold (0-100).",
+        default=80
+    )
+    parser.add_argument(
+        "--location-bias",
+        type=float,
+        help="Weight given to location matches",
+        default=0.9
+    )
+    parser.add_argument(
+        "--target-user",
+        type=str,
+        help="Target user or org's repo",
+        default=None
+    )
     args = parser.parse_args()
 
     # --- Configure Logging Level & File Handler Path ---
@@ -743,20 +869,27 @@ def main():
             cache_duration_hours=args.cache_hours,
             max_workers=args.workers,
             repos_file=args.repos_file,
-            cache_file=args.cache_file
+            cache_file=args.cache_file,
+            fuzzy_match_threshold=args.fuzzy_threshold,
+            location_bias=args.location_bias
+
         )
 
         # Define base search queries known to yield relevant results
-        base_search_queries = [
-            "location:italy",
-            "location:italia",
-            'language:"jupyter notebook" location:italy', # Example combo
-            "topic:italy",
-            "topic:italia",
-            # Add more specific or broad queries as needed
-            # "stars:>50 location:milan",
-            # '".it" in:readme,description' # Search for .it TLD in text
-        ]
+        base_search_queries = []
+        if args.target_user:
+            base_search_queries = [f"user:{args.target_user} -fork:true"]
+        else:
+            base_search_queries = [
+                "location:italy -fork:true",
+                "location:italia -fork:true",
+                'language:"jupyter notebook" location:italy -fork:true', # Example combo
+                "topic:italy -fork:true",
+                "topic:italia -fork:true",
+                # Add more specific or broad queries as needed
+                # "stars:>50 location:milan",
+                # '".it" in:readme,description' # Search for .it TLD in text
+            ]
 
         new_italian_repos = scraper.search_repos(
             base_queries=base_search_queries,

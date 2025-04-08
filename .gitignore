@@ -37,3 +37,4 @@ reports/*
 *.log
 repolizer.log
 repos.txt
+cache.json
