@@ -3,6 +3,7 @@ import os
 import unittest
 import tempfile
 import json
+import pytest
 from unittest.mock import MagicMock, patch
 from repolizer import RepoAnalyzer
 
@@ -441,7 +442,9 @@ class TestPerformance(TestRepoAnalyzer):
                         f"Analysis took too long: {execution_time:.2f} seconds")
 
 if __name__ == '__main__':
-    unittest.main()
-    # Run the tests
-    # This will execute all the test cases defined in the class
-    # and print the results to the console.
+    # Instead of using unittest.main(), use pytest for nicer output
+    # This will keep the unittest structure but use pytest's runner
+    import sys
+    # Pass all arguments after the script name to pytest
+    pytest_args = ["-v", __file__] + sys.argv[1:]
+    sys.exit(pytest.main(pytest_args))
