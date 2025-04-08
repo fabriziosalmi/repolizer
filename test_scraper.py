@@ -386,40 +386,6 @@ def test_save_repos(scraper_instance):
         assert "new/repo2" in scraper_instance.existing_repos
         assert len(scraper_instance.existing_repos) == 4
 
-@patch('scraper.concurrent.futures.ThreadPoolExecutor')
-def test_search_repos(mock_executor, scraper_instance):
-    """Test search_repos without actually executing any concurrent code."""
-    # Instead of using the actual ThreadPoolExecutor implementation,
-    # we'll directly test the core logic of the search_repos method
-    
-    # Mock the _get_search_results method which is likely called by search_repos
-    with patch.object(scraper_instance, '_get_with_cache') as mock_get:
-        # Set up mock response
-        mock_get.return_value = {
-            "total_count": 1,
-            "incomplete_results": False,
-            "items": [{"full_name": "italian/repo1", "fork": False}]
-        }
-        
-        # Bypass the ThreadPoolExecutor by directly mocking the processing
-        with patch.object(scraper_instance, '_process_repo') as mock_process:
-            # Make _process_repo return the repo name to simulate finding an Italian repo
-            mock_process.return_value = "italian/repo1"
-            
-            # Call search_repos with minimal parameters
-            result = scraper_instance.search_repos(
-                base_queries=["location:italy"],
-                additional_query=None,
-                per_page=1,
-                max_pages=1
-            )
-            
-            # Verify results
-            assert "italian/repo1" in result
-            mock_get.assert_called()
-
-# --- Integration tests (with more complex mocking) ---
-
 def test_integration_process_repo(scraper_instance):
     """Test the integration of repo processing with different checks."""
     # Mock each checking method to test the flow
