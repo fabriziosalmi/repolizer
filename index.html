@@ -116,6 +116,7 @@
                         
                         // Ensure punteggio_totale exists
                         if (!reportData.punteggio_totale && reportData.punteggi) {
+                            // Calculate total score if not present
                             const scores = Object.values(reportData.punteggi);
                             if (scores.length > 0) {
                                 const sum = scores.reduce((a, b) => a + b, 0);
@@ -741,6 +742,7 @@
                 alert('Si è verificato un errore durante il download del report.');
             }
         }
+        window.downloadSpecificReport = downloadSpecificReport;
 
         function getScoreColorClass(score) {
             if (score >= 7) return 'bg-green-100 text-green-800';
@@ -757,6 +759,7 @@
             downloadAnchor.click();
             downloadAnchor.remove();
         }
+        window.downloadJSON = downloadJSON;
 
         document.addEventListener('DOMContentLoaded', () => {
             loadLatestReports(); // Load and process all the latest reports.
