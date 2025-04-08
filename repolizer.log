@@ -526,3 +526,514 @@
 2025-04-08 09:40:10,456 - repolizer - INFO - Successfully appended 441 new repositories to /Users/fab/GitHub/repolizer/repos.txt
 2025-04-08 09:40:10,456 - repolizer - INFO - --- Repolizer finished in 21.48 seconds ---
 2025-04-08 09:40:10,489 - repolizer - INFO - Successfully saved cache with 18 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:43:50,719 - repolizer - INFO - --- Starting Repolizer ---
+2025-04-08 09:43:50,719 - repolizer - INFO - Using repos file: /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:43:50,719 - repolizer - INFO - Using cache file: /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:43:50,719 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 09:43:50,728 - repolizer - INFO - Loaded 18 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 09:43:50,728 - repolizer - INFO - Loaded 460 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:43:50,729 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 09:43:50,729 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 10)
+2025-04-08 09:43:50,729 - repolizer - INFO - Processing 50 repositories from page 1 (Total results for query: 66)
+2025-04-08 09:43:50,729 - repolizer - INFO - Found Italian repo: Hamid701/Rentelligence-AI (Reason: Italian keyword in description)
+2025-04-08 09:43:50,729 - repolizer - INFO - Found 1 new Italian repositories on page 1.
+2025-04-08 09:43:50,729 - repolizer - INFO - Fetching page 2 for query 'location:italy' (max: 10)
+2025-04-08 09:43:50,730 - repolizer - INFO - Processing 16 repositories from page 2 (Total results for query: 66)
+2025-04-08 09:43:50,730 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:43:50,730 - repolizer - INFO - Fetching page 3 for query 'location:italy' (max: 10)
+2025-04-08 09:43:50,730 - repolizer - INFO - No more results found for query 'location:italy' on page 3.
+2025-04-08 09:43:50,730 - repolizer - INFO - --- Finished search for query: 'location:italy'. Processed 66 items. ---
+2025-04-08 09:43:50,759 - repolizer - INFO - Successfully saved cache with 18 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:43:50,759 - repolizer - INFO - --- Starting search for query: 'location:italia' ---
+2025-04-08 09:43:50,759 - repolizer - INFO - Fetching page 1 for query 'location:italia' (max: 10)
+2025-04-08 09:43:50,759 - repolizer - INFO - Processing 2 repositories from page 1 (Total results for query: 2)
+2025-04-08 09:43:50,759 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:43:50,759 - repolizer - INFO - Fetching page 2 for query 'location:italia' (max: 10)
+2025-04-08 09:43:50,759 - repolizer - INFO - No more results found for query 'location:italia' on page 2.
+2025-04-08 09:43:50,759 - repolizer - INFO - --- Finished search for query: 'location:italia'. Processed 2 items. ---
+2025-04-08 09:43:50,789 - repolizer - INFO - Successfully saved cache with 18 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:43:50,789 - repolizer - INFO - --- Starting search for query: 'language:"jupyter notebook" location:italy' ---
+2025-04-08 09:43:50,789 - repolizer - INFO - Fetching page 1 for query 'language:"jupyter notebook" location:italy' (max: 10)
+2025-04-08 09:43:50,789 - repolizer - INFO - Processing 19 repositories from page 1 (Total results for query: 19)
+2025-04-08 09:43:50,789 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:43:50,789 - repolizer - INFO - Fetching page 2 for query 'language:"jupyter notebook" location:italy' (max: 10)
+2025-04-08 09:43:50,789 - repolizer - INFO - No more results found for query 'language:"jupyter notebook" location:italy' on page 2.
+2025-04-08 09:43:50,789 - repolizer - INFO - --- Finished search for query: 'language:"jupyter notebook" location:italy'. Processed 19 items. ---
+2025-04-08 09:43:50,819 - repolizer - INFO - Successfully saved cache with 18 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:43:50,819 - repolizer - INFO - --- Starting search for query: 'topic:italy' ---
+2025-04-08 09:43:50,819 - repolizer - INFO - Fetching page 1 for query 'topic:italy' (max: 10)
+2025-04-08 09:43:50,819 - repolizer - INFO - Processing 50 repositories from page 1 (Total results for query: 281)
+2025-04-08 09:43:50,819 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:43:50,819 - repolizer - INFO - Fetching page 2 for query 'topic:italy' (max: 10)
+2025-04-08 09:43:50,819 - repolizer - INFO - Processing 50 repositories from page 2 (Total results for query: 281)
+2025-04-08 09:43:50,820 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:43:50,820 - repolizer - INFO - Fetching page 3 for query 'topic:italy' (max: 10)
+2025-04-08 09:43:50,820 - repolizer - INFO - Processing 50 repositories from page 3 (Total results for query: 281)
+2025-04-08 09:43:50,820 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:43:50,820 - repolizer - INFO - Fetching page 4 for query 'topic:italy' (max: 10)
+2025-04-08 09:43:50,821 - repolizer - INFO - Processing 50 repositories from page 4 (Total results for query: 281)
+2025-04-08 09:43:50,821 - repolizer - INFO - No new Italian repositories found on page 4.
+2025-04-08 09:43:50,821 - repolizer - INFO - Fetching page 5 for query 'topic:italy' (max: 10)
+2025-04-08 09:43:50,821 - repolizer - INFO - Processing 50 repositories from page 5 (Total results for query: 281)
+2025-04-08 09:43:50,822 - repolizer - INFO - No new Italian repositories found on page 5.
+2025-04-08 09:43:50,822 - repolizer - INFO - Fetching page 6 for query 'topic:italy' (max: 10)
+2025-04-08 09:43:50,822 - repolizer - INFO - Processing 31 repositories from page 6 (Total results for query: 281)
+2025-04-08 09:43:50,822 - repolizer - INFO - No new Italian repositories found on page 6.
+2025-04-08 09:43:50,822 - repolizer - INFO - Fetching page 7 for query 'topic:italy' (max: 10)
+2025-04-08 09:43:50,822 - repolizer - INFO - No more results found for query 'topic:italy' on page 7.
+2025-04-08 09:43:50,822 - repolizer - INFO - --- Finished search for query: 'topic:italy'. Processed 281 items. ---
+2025-04-08 09:43:50,851 - repolizer - INFO - Successfully saved cache with 18 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:43:50,851 - repolizer - INFO - --- Starting search for query: 'topic:italia' ---
+2025-04-08 09:43:50,851 - repolizer - INFO - Fetching page 1 for query 'topic:italia' (max: 10)
+2025-04-08 09:43:50,851 - repolizer - INFO - Processing 50 repositories from page 1 (Total results for query: 123)
+2025-04-08 09:43:50,852 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:43:50,852 - repolizer - INFO - Fetching page 2 for query 'topic:italia' (max: 10)
+2025-04-08 09:43:50,852 - repolizer - INFO - Processing 50 repositories from page 2 (Total results for query: 123)
+2025-04-08 09:43:50,852 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:43:50,852 - repolizer - INFO - Fetching page 3 for query 'topic:italia' (max: 10)
+2025-04-08 09:43:50,852 - repolizer - INFO - Processing 23 repositories from page 3 (Total results for query: 123)
+2025-04-08 09:43:50,853 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:43:50,853 - repolizer - INFO - Fetching page 4 for query 'topic:italia' (max: 10)
+2025-04-08 09:43:50,853 - repolizer - INFO - No more results found for query 'topic:italia' on page 4.
+2025-04-08 09:43:50,853 - repolizer - INFO - --- Finished search for query: 'topic:italia'. Processed 123 items. ---
+2025-04-08 09:43:50,882 - repolizer - INFO - Successfully saved cache with 18 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:43:50,882 - repolizer - INFO - Finished all searches. Total unique repositories processed in this run: 1
+2025-04-08 09:43:50,882 - repolizer - INFO - Search complete. Found 1 potentially new Italian repositories.
+2025-04-08 09:43:50,882 - repolizer - INFO - Successfully appended 1 new repositories to /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:43:50,882 - repolizer - INFO - --- Repolizer finished in 0.16 seconds ---
+2025-04-08 09:43:50,912 - repolizer - INFO - Successfully saved cache with 18 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:04,105 - repolizer - INFO - --- Starting Repolizer ---
+2025-04-08 09:44:04,105 - repolizer - INFO - Using repos file: /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:44:04,105 - repolizer - INFO - Using cache file: /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:04,105 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 09:44:04,114 - repolizer - INFO - Loaded 18 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 09:44:04,114 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:44:04,114 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 09:44:04,114 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 40)
+2025-04-08 09:44:06,141 - repolizer - INFO - Processing 66 repositories from page 1 (Total results for query: 66)
+2025-04-08 09:44:06,144 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:06,145 - repolizer - INFO - Fetching page 2 for query 'location:italy' (max: 40)
+2025-04-08 09:44:06,426 - repolizer - INFO - No more results found for query 'location:italy' on page 2.
+2025-04-08 09:44:06,426 - repolizer - INFO - --- Finished search for query: 'location:italy'. Processed 66 items. ---
+2025-04-08 09:44:06,487 - repolizer - INFO - Successfully saved cache with 20 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:06,487 - repolizer - INFO - --- Starting search for query: 'location:italia' ---
+2025-04-08 09:44:06,487 - repolizer - INFO - Fetching page 1 for query 'location:italia' (max: 40)
+2025-04-08 09:44:07,050 - repolizer - INFO - Processing 2 repositories from page 1 (Total results for query: 2)
+2025-04-08 09:44:07,051 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:07,052 - repolizer - INFO - Fetching page 2 for query 'location:italia' (max: 40)
+2025-04-08 09:44:07,356 - repolizer - INFO - No more results found for query 'location:italia' on page 2.
+2025-04-08 09:44:07,356 - repolizer - INFO - --- Finished search for query: 'location:italia'. Processed 2 items. ---
+2025-04-08 09:44:07,415 - repolizer - INFO - Successfully saved cache with 22 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:07,416 - repolizer - INFO - --- Starting search for query: 'language:"jupyter notebook" location:italy' ---
+2025-04-08 09:44:07,416 - repolizer - INFO - Fetching page 1 for query 'language:"jupyter notebook" location:italy' (max: 40)
+2025-04-08 09:44:08,177 - repolizer - INFO - Processing 19 repositories from page 1 (Total results for query: 19)
+2025-04-08 09:44:08,179 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:08,179 - repolizer - INFO - Fetching page 2 for query 'language:"jupyter notebook" location:italy' (max: 40)
+2025-04-08 09:44:08,584 - repolizer - INFO - No more results found for query 'language:"jupyter notebook" location:italy' on page 2.
+2025-04-08 09:44:08,584 - repolizer - INFO - --- Finished search for query: 'language:"jupyter notebook" location:italy'. Processed 19 items. ---
+2025-04-08 09:44:08,641 - repolizer - INFO - Successfully saved cache with 24 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:08,641 - repolizer - INFO - --- Starting search for query: 'topic:italy' ---
+2025-04-08 09:44:08,641 - repolizer - INFO - Fetching page 1 for query 'topic:italy' (max: 40)
+2025-04-08 09:44:12,586 - repolizer - INFO - Processing 100 repositories from page 1 (Total results for query: 281)
+2025-04-08 09:44:12,589 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:12,589 - repolizer - INFO - Fetching page 2 for query 'topic:italy' (max: 40)
+2025-04-08 09:44:14,531 - repolizer - INFO - Processing 100 repositories from page 2 (Total results for query: 281)
+2025-04-08 09:44:14,540 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:44:14,540 - repolizer - INFO - Fetching page 3 for query 'topic:italy' (max: 40)
+2025-04-08 09:44:17,629 - repolizer - INFO - Processing 81 repositories from page 3 (Total results for query: 281)
+2025-04-08 09:44:17,632 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:44:17,632 - repolizer - INFO - Fetching page 4 for query 'topic:italy' (max: 40)
+2025-04-08 09:44:17,928 - repolizer - INFO - No more results found for query 'topic:italy' on page 4.
+2025-04-08 09:44:17,928 - repolizer - INFO - --- Finished search for query: 'topic:italy'. Processed 281 items. ---
+2025-04-08 09:44:18,006 - repolizer - INFO - Successfully saved cache with 28 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:18,006 - repolizer - INFO - --- Starting search for query: 'topic:italia' ---
+2025-04-08 09:44:18,006 - repolizer - INFO - Fetching page 1 for query 'topic:italia' (max: 40)
+2025-04-08 09:44:21,288 - repolizer - INFO - Processing 100 repositories from page 1 (Total results for query: 123)
+2025-04-08 09:44:21,292 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:21,292 - repolizer - INFO - Fetching page 2 for query 'topic:italia' (max: 40)
+2025-04-08 09:44:22,106 - repolizer - INFO - Processing 23 repositories from page 2 (Total results for query: 123)
+2025-04-08 09:44:22,108 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:44:22,108 - repolizer - INFO - Fetching page 3 for query 'topic:italia' (max: 40)
+2025-04-08 09:44:22,408 - repolizer - INFO - No more results found for query 'topic:italia' on page 3.
+2025-04-08 09:44:22,409 - repolizer - INFO - --- Finished search for query: 'topic:italia'. Processed 123 items. ---
+2025-04-08 09:44:22,500 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:22,500 - repolizer - INFO - Finished all searches. Total unique repositories processed in this run: 0
+2025-04-08 09:44:22,500 - repolizer - INFO - Search complete. Found 0 potentially new Italian repositories.
+2025-04-08 09:44:22,500 - repolizer - INFO - No new unique repositories found to save.
+2025-04-08 09:44:22,500 - repolizer - INFO - --- Repolizer finished in 18.40 seconds ---
+2025-04-08 09:44:22,558 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:39,538 - repolizer - INFO - --- Starting Repolizer ---
+2025-04-08 09:44:39,538 - repolizer - INFO - Using repos file: /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:44:39,538 - repolizer - INFO - Using cache file: /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:39,538 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 09:44:39,556 - repolizer - INFO - Loaded 31 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 09:44:39,556 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:44:39,556 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 09:44:39,556 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1000)
+2025-04-08 09:44:39,556 - repolizer - INFO - Processing 66 repositories from page 1 (Total results for query: 66)
+2025-04-08 09:44:39,557 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:39,558 - repolizer - INFO - Fetching page 2 for query 'location:italy' (max: 1000)
+2025-04-08 09:44:39,558 - repolizer - INFO - No more results found for query 'location:italy' on page 2.
+2025-04-08 09:44:39,558 - repolizer - INFO - --- Finished search for query: 'location:italy'. Processed 66 items. ---
+2025-04-08 09:44:39,614 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:39,615 - repolizer - INFO - --- Starting search for query: 'location:italia' ---
+2025-04-08 09:44:39,615 - repolizer - INFO - Fetching page 1 for query 'location:italia' (max: 1000)
+2025-04-08 09:44:39,615 - repolizer - INFO - Processing 2 repositories from page 1 (Total results for query: 2)
+2025-04-08 09:44:39,615 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:39,615 - repolizer - INFO - Fetching page 2 for query 'location:italia' (max: 1000)
+2025-04-08 09:44:39,615 - repolizer - INFO - No more results found for query 'location:italia' on page 2.
+2025-04-08 09:44:39,615 - repolizer - INFO - --- Finished search for query: 'location:italia'. Processed 2 items. ---
+2025-04-08 09:44:39,671 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:39,671 - repolizer - INFO - --- Starting search for query: 'language:"jupyter notebook" location:italy' ---
+2025-04-08 09:44:39,671 - repolizer - INFO - Fetching page 1 for query 'language:"jupyter notebook" location:italy' (max: 1000)
+2025-04-08 09:44:39,671 - repolizer - INFO - Processing 19 repositories from page 1 (Total results for query: 19)
+2025-04-08 09:44:39,672 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:39,672 - repolizer - INFO - Fetching page 2 for query 'language:"jupyter notebook" location:italy' (max: 1000)
+2025-04-08 09:44:39,672 - repolizer - INFO - No more results found for query 'language:"jupyter notebook" location:italy' on page 2.
+2025-04-08 09:44:39,672 - repolizer - INFO - --- Finished search for query: 'language:"jupyter notebook" location:italy'. Processed 19 items. ---
+2025-04-08 09:44:39,728 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:39,728 - repolizer - INFO - --- Starting search for query: 'topic:italy' ---
+2025-04-08 09:44:39,728 - repolizer - INFO - Fetching page 1 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:39,728 - repolizer - INFO - Processing 100 repositories from page 1 (Total results for query: 281)
+2025-04-08 09:44:39,730 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:39,730 - repolizer - INFO - Fetching page 2 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:39,730 - repolizer - INFO - Processing 100 repositories from page 2 (Total results for query: 281)
+2025-04-08 09:44:39,731 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:44:39,731 - repolizer - INFO - Fetching page 3 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:39,731 - repolizer - INFO - Processing 81 repositories from page 3 (Total results for query: 281)
+2025-04-08 09:44:39,732 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:44:39,732 - repolizer - INFO - Fetching page 4 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:39,732 - repolizer - INFO - No more results found for query 'topic:italy' on page 4.
+2025-04-08 09:44:39,732 - repolizer - INFO - --- Finished search for query: 'topic:italy'. Processed 281 items. ---
+2025-04-08 09:44:39,789 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:39,789 - repolizer - INFO - --- Starting search for query: 'topic:italia' ---
+2025-04-08 09:44:39,789 - repolizer - INFO - Fetching page 1 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:39,789 - repolizer - INFO - Processing 100 repositories from page 1 (Total results for query: 123)
+2025-04-08 09:44:39,791 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:39,791 - repolizer - INFO - Fetching page 2 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:39,791 - repolizer - INFO - Processing 23 repositories from page 2 (Total results for query: 123)
+2025-04-08 09:44:39,792 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:44:39,792 - repolizer - INFO - Fetching page 3 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:39,792 - repolizer - INFO - No more results found for query 'topic:italia' on page 3.
+2025-04-08 09:44:39,792 - repolizer - INFO - --- Finished search for query: 'topic:italia'. Processed 123 items. ---
+2025-04-08 09:44:39,847 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:39,848 - repolizer - INFO - Finished all searches. Total unique repositories processed in this run: 0
+2025-04-08 09:44:39,848 - repolizer - INFO - Search complete. Found 0 potentially new Italian repositories.
+2025-04-08 09:44:39,848 - repolizer - INFO - No new unique repositories found to save.
+2025-04-08 09:44:39,848 - repolizer - INFO - --- Repolizer finished in 0.31 seconds ---
+2025-04-08 09:44:39,905 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:43,836 - repolizer - INFO - --- Starting Repolizer ---
+2025-04-08 09:44:43,836 - repolizer - INFO - Using repos file: /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:44:43,836 - repolizer - INFO - Using cache file: /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:43,836 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 09:44:43,853 - repolizer - INFO - Loaded 31 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 09:44:43,853 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:44:43,854 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 09:44:43,854 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1000)
+2025-04-08 09:44:43,854 - repolizer - INFO - Processing 66 repositories from page 1 (Total results for query: 66)
+2025-04-08 09:44:43,854 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:43,854 - repolizer - INFO - Fetching page 2 for query 'location:italy' (max: 1000)
+2025-04-08 09:44:43,854 - repolizer - INFO - No more results found for query 'location:italy' on page 2.
+2025-04-08 09:44:43,854 - repolizer - INFO - --- Finished search for query: 'location:italy'. Processed 66 items. ---
+2025-04-08 09:44:43,911 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:43,911 - repolizer - INFO - --- Starting search for query: 'location:italia' ---
+2025-04-08 09:44:43,911 - repolizer - INFO - Fetching page 1 for query 'location:italia' (max: 1000)
+2025-04-08 09:44:43,911 - repolizer - INFO - Processing 2 repositories from page 1 (Total results for query: 2)
+2025-04-08 09:44:43,911 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:43,911 - repolizer - INFO - Fetching page 2 for query 'location:italia' (max: 1000)
+2025-04-08 09:44:43,911 - repolizer - INFO - No more results found for query 'location:italia' on page 2.
+2025-04-08 09:44:43,911 - repolizer - INFO - --- Finished search for query: 'location:italia'. Processed 2 items. ---
+2025-04-08 09:44:43,968 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:43,968 - repolizer - INFO - --- Starting search for query: 'language:"jupyter notebook" location:italy' ---
+2025-04-08 09:44:43,968 - repolizer - INFO - Fetching page 1 for query 'language:"jupyter notebook" location:italy' (max: 1000)
+2025-04-08 09:44:43,968 - repolizer - INFO - Processing 19 repositories from page 1 (Total results for query: 19)
+2025-04-08 09:44:43,969 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:43,969 - repolizer - INFO - Fetching page 2 for query 'language:"jupyter notebook" location:italy' (max: 1000)
+2025-04-08 09:44:43,969 - repolizer - INFO - No more results found for query 'language:"jupyter notebook" location:italy' on page 2.
+2025-04-08 09:44:43,969 - repolizer - INFO - --- Finished search for query: 'language:"jupyter notebook" location:italy'. Processed 19 items. ---
+2025-04-08 09:44:44,025 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:44,025 - repolizer - INFO - --- Starting search for query: 'topic:italy' ---
+2025-04-08 09:44:44,025 - repolizer - INFO - Fetching page 1 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:44,025 - repolizer - INFO - Processing 100 repositories from page 1 (Total results for query: 281)
+2025-04-08 09:44:44,026 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:44,026 - repolizer - INFO - Fetching page 2 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:44,026 - repolizer - INFO - Processing 100 repositories from page 2 (Total results for query: 281)
+2025-04-08 09:44:44,027 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:44:44,027 - repolizer - INFO - Fetching page 3 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:44,027 - repolizer - INFO - Processing 81 repositories from page 3 (Total results for query: 281)
+2025-04-08 09:44:44,027 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:44:44,027 - repolizer - INFO - Fetching page 4 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:44,027 - repolizer - INFO - No more results found for query 'topic:italy' on page 4.
+2025-04-08 09:44:44,027 - repolizer - INFO - --- Finished search for query: 'topic:italy'. Processed 281 items. ---
+2025-04-08 09:44:44,084 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:44,084 - repolizer - INFO - --- Starting search for query: 'topic:italia' ---
+2025-04-08 09:44:44,084 - repolizer - INFO - Fetching page 1 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:44,084 - repolizer - INFO - Processing 100 repositories from page 1 (Total results for query: 123)
+2025-04-08 09:44:44,085 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:44,085 - repolizer - INFO - Fetching page 2 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:44,085 - repolizer - INFO - Processing 23 repositories from page 2 (Total results for query: 123)
+2025-04-08 09:44:44,085 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:44:44,085 - repolizer - INFO - Fetching page 3 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:44,085 - repolizer - INFO - No more results found for query 'topic:italia' on page 3.
+2025-04-08 09:44:44,085 - repolizer - INFO - --- Finished search for query: 'topic:italia'. Processed 123 items. ---
+2025-04-08 09:44:44,141 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:44,141 - repolizer - INFO - Finished all searches. Total unique repositories processed in this run: 0
+2025-04-08 09:44:44,141 - repolizer - INFO - Search complete. Found 0 potentially new Italian repositories.
+2025-04-08 09:44:44,141 - repolizer - INFO - No new unique repositories found to save.
+2025-04-08 09:44:44,141 - repolizer - INFO - --- Repolizer finished in 0.31 seconds ---
+2025-04-08 09:44:44,199 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:48,156 - repolizer - INFO - --- Starting Repolizer ---
+2025-04-08 09:44:48,156 - repolizer - INFO - Using repos file: /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:44:48,156 - repolizer - INFO - Using cache file: /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:48,157 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 09:44:48,173 - repolizer - INFO - Loaded 31 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 09:44:48,174 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:44:48,174 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 09:44:48,174 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1000)
+2025-04-08 09:44:48,174 - repolizer - INFO - Processing 66 repositories from page 1 (Total results for query: 66)
+2025-04-08 09:44:48,174 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:48,175 - repolizer - INFO - Fetching page 2 for query 'location:italy' (max: 1000)
+2025-04-08 09:44:48,175 - repolizer - INFO - No more results found for query 'location:italy' on page 2.
+2025-04-08 09:44:48,175 - repolizer - INFO - --- Finished search for query: 'location:italy'. Processed 66 items. ---
+2025-04-08 09:44:48,231 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:48,232 - repolizer - INFO - --- Starting search for query: 'location:italia' ---
+2025-04-08 09:44:48,232 - repolizer - INFO - Fetching page 1 for query 'location:italia' (max: 1000)
+2025-04-08 09:44:48,232 - repolizer - INFO - Processing 2 repositories from page 1 (Total results for query: 2)
+2025-04-08 09:44:48,232 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:48,232 - repolizer - INFO - Fetching page 2 for query 'location:italia' (max: 1000)
+2025-04-08 09:44:48,232 - repolizer - INFO - No more results found for query 'location:italia' on page 2.
+2025-04-08 09:44:48,232 - repolizer - INFO - --- Finished search for query: 'location:italia'. Processed 2 items. ---
+2025-04-08 09:44:48,290 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:48,290 - repolizer - INFO - --- Starting search for query: 'language:"jupyter notebook" location:italy' ---
+2025-04-08 09:44:48,290 - repolizer - INFO - Fetching page 1 for query 'language:"jupyter notebook" location:italy' (max: 1000)
+2025-04-08 09:44:48,290 - repolizer - INFO - Processing 19 repositories from page 1 (Total results for query: 19)
+2025-04-08 09:44:48,290 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:48,290 - repolizer - INFO - Fetching page 2 for query 'language:"jupyter notebook" location:italy' (max: 1000)
+2025-04-08 09:44:48,290 - repolizer - INFO - No more results found for query 'language:"jupyter notebook" location:italy' on page 2.
+2025-04-08 09:44:48,290 - repolizer - INFO - --- Finished search for query: 'language:"jupyter notebook" location:italy'. Processed 19 items. ---
+2025-04-08 09:44:48,346 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:48,346 - repolizer - INFO - --- Starting search for query: 'topic:italy' ---
+2025-04-08 09:44:48,346 - repolizer - INFO - Fetching page 1 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:48,346 - repolizer - INFO - Processing 100 repositories from page 1 (Total results for query: 281)
+2025-04-08 09:44:48,347 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:48,347 - repolizer - INFO - Fetching page 2 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:48,347 - repolizer - INFO - Processing 100 repositories from page 2 (Total results for query: 281)
+2025-04-08 09:44:48,348 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:44:48,348 - repolizer - INFO - Fetching page 3 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:48,348 - repolizer - INFO - Processing 81 repositories from page 3 (Total results for query: 281)
+2025-04-08 09:44:48,348 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:44:48,348 - repolizer - INFO - Fetching page 4 for query 'topic:italy' (max: 1000)
+2025-04-08 09:44:48,348 - repolizer - INFO - No more results found for query 'topic:italy' on page 4.
+2025-04-08 09:44:48,348 - repolizer - INFO - --- Finished search for query: 'topic:italy'. Processed 281 items. ---
+2025-04-08 09:44:48,405 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:48,405 - repolizer - INFO - --- Starting search for query: 'topic:italia' ---
+2025-04-08 09:44:48,405 - repolizer - INFO - Fetching page 1 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:48,405 - repolizer - INFO - Processing 100 repositories from page 1 (Total results for query: 123)
+2025-04-08 09:44:48,406 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:44:48,406 - repolizer - INFO - Fetching page 2 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:48,406 - repolizer - INFO - Processing 23 repositories from page 2 (Total results for query: 123)
+2025-04-08 09:44:48,406 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:44:48,406 - repolizer - INFO - Fetching page 3 for query 'topic:italia' (max: 1000)
+2025-04-08 09:44:48,406 - repolizer - INFO - No more results found for query 'topic:italia' on page 3.
+2025-04-08 09:44:48,406 - repolizer - INFO - --- Finished search for query: 'topic:italia'. Processed 123 items. ---
+2025-04-08 09:44:48,463 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:44:48,463 - repolizer - INFO - Finished all searches. Total unique repositories processed in this run: 0
+2025-04-08 09:44:48,463 - repolizer - INFO - Search complete. Found 0 potentially new Italian repositories.
+2025-04-08 09:44:48,463 - repolizer - INFO - No new unique repositories found to save.
+2025-04-08 09:44:48,463 - repolizer - INFO - --- Repolizer finished in 0.31 seconds ---
+2025-04-08 09:44:48,522 - repolizer - INFO - Successfully saved cache with 31 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:00,208 - repolizer - INFO - --- Starting Repolizer ---
+2025-04-08 09:45:00,208 - repolizer - INFO - Using repos file: /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:45:00,208 - repolizer - INFO - Using cache file: /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:00,208 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 09:45:00,226 - repolizer - INFO - Loaded 31 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 09:45:00,226 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:45:00,226 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 09:45:00,226 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 10)
+2025-04-08 09:45:01,240 - repolizer - INFO - Processing 30 repositories from page 1 (Total results for query: 66)
+2025-04-08 09:45:01,241 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:01,241 - repolizer - INFO - Fetching page 2 for query 'location:italy' (max: 10)
+2025-04-08 09:45:02,167 - repolizer - INFO - Processing 30 repositories from page 2 (Total results for query: 66)
+2025-04-08 09:45:02,168 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:45:02,168 - repolizer - INFO - Fetching page 3 for query 'location:italy' (max: 10)
+2025-04-08 09:45:02,604 - repolizer - INFO - Processing 6 repositories from page 3 (Total results for query: 66)
+2025-04-08 09:45:02,605 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:45:02,606 - repolizer - INFO - Fetching page 4 for query 'location:italy' (max: 10)
+2025-04-08 09:45:02,938 - repolizer - INFO - No more results found for query 'location:italy' on page 4.
+2025-04-08 09:45:02,938 - repolizer - INFO - --- Finished search for query: 'location:italy'. Processed 66 items. ---
+2025-04-08 09:45:03,032 - repolizer - INFO - Successfully saved cache with 35 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:03,032 - repolizer - INFO - --- Starting search for query: 'location:italia' ---
+2025-04-08 09:45:03,032 - repolizer - INFO - Fetching page 1 for query 'location:italia' (max: 10)
+2025-04-08 09:45:03,676 - repolizer - INFO - Processing 2 repositories from page 1 (Total results for query: 2)
+2025-04-08 09:45:03,677 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:03,677 - repolizer - INFO - Fetching page 2 for query 'location:italia' (max: 10)
+2025-04-08 09:45:04,088 - repolizer - INFO - No more results found for query 'location:italia' on page 2.
+2025-04-08 09:45:04,088 - repolizer - INFO - --- Finished search for query: 'location:italia'. Processed 2 items. ---
+2025-04-08 09:45:04,182 - repolizer - INFO - Successfully saved cache with 37 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:04,182 - repolizer - INFO - --- Starting search for query: 'language:"jupyter notebook" location:italy' ---
+2025-04-08 09:45:04,182 - repolizer - INFO - Fetching page 1 for query 'language:"jupyter notebook" location:italy' (max: 10)
+2025-04-08 09:45:04,804 - repolizer - INFO - Processing 19 repositories from page 1 (Total results for query: 19)
+2025-04-08 09:45:04,805 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:04,805 - repolizer - INFO - Fetching page 2 for query 'language:"jupyter notebook" location:italy' (max: 10)
+2025-04-08 09:45:05,113 - repolizer - WARNING - GitHub API rate limit low: 9 requests remaining.
+2025-04-08 09:45:05,113 - repolizer - INFO - No more results found for query 'language:"jupyter notebook" location:italy' on page 2.
+2025-04-08 09:45:05,114 - repolizer - INFO - --- Finished search for query: 'language:"jupyter notebook" location:italy'. Processed 19 items. ---
+2025-04-08 09:45:05,210 - repolizer - INFO - Successfully saved cache with 39 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:05,211 - repolizer - INFO - --- Starting search for query: 'topic:italy' ---
+2025-04-08 09:45:05,211 - repolizer - INFO - Fetching page 1 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:06,341 - repolizer - WARNING - GitHub API rate limit low: 8 requests remaining.
+2025-04-08 09:45:06,343 - repolizer - INFO - Processing 30 repositories from page 1 (Total results for query: 281)
+2025-04-08 09:45:06,344 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:06,345 - repolizer - INFO - Fetching page 2 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:07,448 - repolizer - INFO - Processing 30 repositories from page 2 (Total results for query: 281)
+2025-04-08 09:45:07,450 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:45:07,450 - repolizer - INFO - Fetching page 3 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:08,699 - repolizer - INFO - Processing 30 repositories from page 3 (Total results for query: 281)
+2025-04-08 09:45:08,701 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:45:08,701 - repolizer - INFO - Fetching page 4 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:10,133 - repolizer - INFO - Processing 30 repositories from page 4 (Total results for query: 281)
+2025-04-08 09:45:10,135 - repolizer - INFO - No new Italian repositories found on page 4.
+2025-04-08 09:45:10,135 - repolizer - INFO - Fetching page 5 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:11,259 - repolizer - INFO - Processing 30 repositories from page 5 (Total results for query: 281)
+2025-04-08 09:45:11,260 - repolizer - INFO - No new Italian repositories found on page 5.
+2025-04-08 09:45:11,261 - repolizer - INFO - Fetching page 6 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:12,898 - repolizer - INFO - Processing 30 repositories from page 6 (Total results for query: 281)
+2025-04-08 09:45:12,900 - repolizer - INFO - No new Italian repositories found on page 6.
+2025-04-08 09:45:12,900 - repolizer - INFO - Fetching page 7 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:13,818 - repolizer - INFO - Processing 30 repositories from page 7 (Total results for query: 281)
+2025-04-08 09:45:13,819 - repolizer - INFO - No new Italian repositories found on page 7.
+2025-04-08 09:45:13,820 - repolizer - INFO - Fetching page 8 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:14,945 - repolizer - INFO - Processing 30 repositories from page 8 (Total results for query: 281)
+2025-04-08 09:45:14,947 - repolizer - INFO - No new Italian repositories found on page 8.
+2025-04-08 09:45:14,947 - repolizer - INFO - Fetching page 9 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:16,381 - repolizer - INFO - Processing 30 repositories from page 9 (Total results for query: 281)
+2025-04-08 09:45:16,383 - repolizer - INFO - No new Italian repositories found on page 9.
+2025-04-08 09:45:16,383 - repolizer - INFO - Fetching page 10 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:17,196 - repolizer - INFO - Processing 11 repositories from page 10 (Total results for query: 281)
+2025-04-08 09:45:17,198 - repolizer - INFO - No new Italian repositories found on page 10.
+2025-04-08 09:45:17,198 - repolizer - INFO - --- Finished search for query: 'topic:italy'. Processed 281 items. ---
+2025-04-08 09:45:17,308 - repolizer - INFO - Successfully saved cache with 49 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:17,308 - repolizer - INFO - --- Starting search for query: 'topic:italia' ---
+2025-04-08 09:45:17,308 - repolizer - INFO - Fetching page 1 for query 'topic:italia' (max: 10)
+2025-04-08 09:45:18,526 - repolizer - INFO - Processing 30 repositories from page 1 (Total results for query: 123)
+2025-04-08 09:45:18,527 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:18,527 - repolizer - INFO - Fetching page 2 for query 'topic:italia' (max: 10)
+2025-04-08 09:45:19,644 - repolizer - INFO - Processing 30 repositories from page 2 (Total results for query: 123)
+2025-04-08 09:45:19,646 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:45:19,646 - repolizer - INFO - Fetching page 3 for query 'topic:italia' (max: 10)
+2025-04-08 09:45:20,883 - repolizer - INFO - Processing 30 repositories from page 3 (Total results for query: 123)
+2025-04-08 09:45:20,885 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:45:20,885 - repolizer - INFO - Fetching page 4 for query 'topic:italia' (max: 10)
+2025-04-08 09:45:22,317 - repolizer - INFO - Processing 30 repositories from page 4 (Total results for query: 123)
+2025-04-08 09:45:22,319 - repolizer - INFO - No new Italian repositories found on page 4.
+2025-04-08 09:45:22,319 - repolizer - INFO - Fetching page 5 for query 'topic:italia' (max: 10)
+2025-04-08 09:45:22,723 - repolizer - INFO - Processing 3 repositories from page 5 (Total results for query: 123)
+2025-04-08 09:45:22,724 - repolizer - INFO - No new Italian repositories found on page 5.
+2025-04-08 09:45:22,725 - repolizer - INFO - Fetching page 6 for query 'topic:italia' (max: 10)
+2025-04-08 09:45:23,132 - repolizer - INFO - No more results found for query 'topic:italia' on page 6.
+2025-04-08 09:45:23,133 - repolizer - INFO - --- Finished search for query: 'topic:italia'. Processed 123 items. ---
+2025-04-08 09:45:23,254 - repolizer - INFO - Successfully saved cache with 55 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:23,254 - repolizer - INFO - Finished all searches. Total unique repositories processed in this run: 0
+2025-04-08 09:45:23,254 - repolizer - INFO - Search complete. Found 0 potentially new Italian repositories.
+2025-04-08 09:45:23,254 - repolizer - INFO - No new unique repositories found to save.
+2025-04-08 09:45:23,254 - repolizer - INFO - --- Repolizer finished in 23.05 seconds ---
+2025-04-08 09:45:23,340 - repolizer - INFO - Successfully saved cache with 55 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:59,634 - repolizer - INFO - --- Starting Repolizer ---
+2025-04-08 09:45:59,634 - repolizer - INFO - Using repos file: /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:45:59,634 - repolizer - INFO - Using cache file: /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:59,634 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 09:45:59,660 - repolizer - INFO - Loaded 55 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 09:45:59,660 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 09:45:59,660 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 09:45:59,660 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 10)
+2025-04-08 09:45:59,660 - repolizer - INFO - Processing 30 repositories from page 1 (Total results for query: 66)
+2025-04-08 09:45:59,661 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:59,661 - repolizer - INFO - Fetching page 2 for query 'location:italy' (max: 10)
+2025-04-08 09:45:59,661 - repolizer - INFO - Processing 30 repositories from page 2 (Total results for query: 66)
+2025-04-08 09:45:59,662 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:45:59,662 - repolizer - INFO - Fetching page 3 for query 'location:italy' (max: 10)
+2025-04-08 09:45:59,662 - repolizer - INFO - Processing 6 repositories from page 3 (Total results for query: 66)
+2025-04-08 09:45:59,662 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:45:59,662 - repolizer - INFO - Fetching page 4 for query 'location:italy' (max: 10)
+2025-04-08 09:45:59,662 - repolizer - INFO - No more results found for query 'location:italy' on page 4.
+2025-04-08 09:45:59,662 - repolizer - INFO - --- Finished search for query: 'location:italy'. Processed 66 items. ---
+2025-04-08 09:45:59,746 - repolizer - INFO - Successfully saved cache with 55 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:59,746 - repolizer - INFO - --- Starting search for query: 'location:italia' ---
+2025-04-08 09:45:59,746 - repolizer - INFO - Fetching page 1 for query 'location:italia' (max: 10)
+2025-04-08 09:45:59,746 - repolizer - INFO - Processing 2 repositories from page 1 (Total results for query: 2)
+2025-04-08 09:45:59,746 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:59,746 - repolizer - INFO - Fetching page 2 for query 'location:italia' (max: 10)
+2025-04-08 09:45:59,746 - repolizer - INFO - No more results found for query 'location:italia' on page 2.
+2025-04-08 09:45:59,746 - repolizer - INFO - --- Finished search for query: 'location:italia'. Processed 2 items. ---
+2025-04-08 09:45:59,830 - repolizer - INFO - Successfully saved cache with 55 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:59,830 - repolizer - INFO - --- Starting search for query: 'language:"jupyter notebook" location:italy' ---
+2025-04-08 09:45:59,830 - repolizer - INFO - Fetching page 1 for query 'language:"jupyter notebook" location:italy' (max: 10)
+2025-04-08 09:45:59,830 - repolizer - INFO - Processing 19 repositories from page 1 (Total results for query: 19)
+2025-04-08 09:45:59,831 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:59,831 - repolizer - INFO - Fetching page 2 for query 'language:"jupyter notebook" location:italy' (max: 10)
+2025-04-08 09:45:59,831 - repolizer - INFO - No more results found for query 'language:"jupyter notebook" location:italy' on page 2.
+2025-04-08 09:45:59,831 - repolizer - INFO - --- Finished search for query: 'language:"jupyter notebook" location:italy'. Processed 19 items. ---
+2025-04-08 09:45:59,913 - repolizer - INFO - Successfully saved cache with 55 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:45:59,913 - repolizer - INFO - --- Starting search for query: 'topic:italy' ---
+2025-04-08 09:45:59,913 - repolizer - INFO - Fetching page 1 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,914 - repolizer - INFO - Processing 30 repositories from page 1 (Total results for query: 281)
+2025-04-08 09:45:59,914 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:45:59,914 - repolizer - INFO - Fetching page 2 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,914 - repolizer - INFO - Processing 30 repositories from page 2 (Total results for query: 281)
+2025-04-08 09:45:59,915 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:45:59,915 - repolizer - INFO - Fetching page 3 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,915 - repolizer - INFO - Processing 30 repositories from page 3 (Total results for query: 281)
+2025-04-08 09:45:59,915 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:45:59,915 - repolizer - INFO - Fetching page 4 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,915 - repolizer - INFO - Processing 30 repositories from page 4 (Total results for query: 281)
+2025-04-08 09:45:59,916 - repolizer - INFO - No new Italian repositories found on page 4.
+2025-04-08 09:45:59,916 - repolizer - INFO - Fetching page 5 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,916 - repolizer - INFO - Processing 30 repositories from page 5 (Total results for query: 281)
+2025-04-08 09:45:59,916 - repolizer - INFO - No new Italian repositories found on page 5.
+2025-04-08 09:45:59,916 - repolizer - INFO - Fetching page 6 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,916 - repolizer - INFO - Processing 30 repositories from page 6 (Total results for query: 281)
+2025-04-08 09:45:59,917 - repolizer - INFO - No new Italian repositories found on page 6.
+2025-04-08 09:45:59,917 - repolizer - INFO - Fetching page 7 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,917 - repolizer - INFO - Processing 30 repositories from page 7 (Total results for query: 281)
+2025-04-08 09:45:59,917 - repolizer - INFO - No new Italian repositories found on page 7.
+2025-04-08 09:45:59,917 - repolizer - INFO - Fetching page 8 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,917 - repolizer - INFO - Processing 30 repositories from page 8 (Total results for query: 281)
+2025-04-08 09:45:59,917 - repolizer - INFO - No new Italian repositories found on page 8.
+2025-04-08 09:45:59,917 - repolizer - INFO - Fetching page 9 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,917 - repolizer - INFO - Processing 30 repositories from page 9 (Total results for query: 281)
+2025-04-08 09:45:59,918 - repolizer - INFO - No new Italian repositories found on page 9.
+2025-04-08 09:45:59,918 - repolizer - INFO - Fetching page 10 for query 'topic:italy' (max: 10)
+2025-04-08 09:45:59,918 - repolizer - INFO - Processing 11 repositories from page 10 (Total results for query: 281)
+2025-04-08 09:45:59,918 - repolizer - INFO - No new Italian repositories found on page 10.
+2025-04-08 09:45:59,918 - repolizer - INFO - --- Finished search for query: 'topic:italy'. Processed 281 items. ---
+2025-04-08 09:46:00,012 - repolizer - INFO - Successfully saved cache with 55 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:46:00,012 - repolizer - INFO - --- Starting search for query: 'topic:italia' ---
+2025-04-08 09:46:00,012 - repolizer - INFO - Fetching page 1 for query 'topic:italia' (max: 10)
+2025-04-08 09:46:00,012 - repolizer - INFO - Processing 30 repositories from page 1 (Total results for query: 123)
+2025-04-08 09:46:00,013 - repolizer - INFO - No new Italian repositories found on page 1.
+2025-04-08 09:46:00,013 - repolizer - INFO - Fetching page 2 for query 'topic:italia' (max: 10)
+2025-04-08 09:46:00,013 - repolizer - INFO - Processing 30 repositories from page 2 (Total results for query: 123)
+2025-04-08 09:46:00,013 - repolizer - INFO - No new Italian repositories found on page 2.
+2025-04-08 09:46:00,013 - repolizer - INFO - Fetching page 3 for query 'topic:italia' (max: 10)
+2025-04-08 09:46:00,013 - repolizer - INFO - Processing 30 repositories from page 3 (Total results for query: 123)
+2025-04-08 09:46:00,014 - repolizer - INFO - No new Italian repositories found on page 3.
+2025-04-08 09:46:00,014 - repolizer - INFO - Fetching page 4 for query 'topic:italia' (max: 10)
+2025-04-08 09:46:00,014 - repolizer - INFO - Processing 30 repositories from page 4 (Total results for query: 123)
+2025-04-08 09:46:00,014 - repolizer - INFO - No new Italian repositories found on page 4.
+2025-04-08 09:46:00,014 - repolizer - INFO - Fetching page 5 for query 'topic:italia' (max: 10)
+2025-04-08 09:46:00,014 - repolizer - INFO - Processing 3 repositories from page 5 (Total results for query: 123)
+2025-04-08 09:46:00,014 - repolizer - INFO - No new Italian repositories found on page 5.
+2025-04-08 09:46:00,014 - repolizer - INFO - Fetching page 6 for query 'topic:italia' (max: 10)
+2025-04-08 09:46:00,014 - repolizer - INFO - No more results found for query 'topic:italia' on page 6.
+2025-04-08 09:46:00,014 - repolizer - INFO - --- Finished search for query: 'topic:italia'. Processed 123 items. ---
+2025-04-08 09:46:00,099 - repolizer - INFO - Successfully saved cache with 55 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:46:00,099 - repolizer - INFO - --- Starting search for query: 'topic:ai location:italy' ---
+2025-04-08 09:46:00,099 - repolizer - INFO - Fetching page 1 for query 'topic:ai location:italy' (max: 10)
+2025-04-08 09:46:00,510 - repolizer - INFO - No more results found for query 'topic:ai location:italy' on page 1.
+2025-04-08 09:46:00,511 - repolizer - INFO - --- Finished search for query: 'topic:ai location:italy'. Processed 0 items. ---
+2025-04-08 09:46:00,633 - repolizer - INFO - Successfully saved cache with 56 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 09:46:00,633 - repolizer - INFO - Finished all searches. Total unique repositories processed in this run: 0
+2025-04-08 09:46:00,633 - repolizer - INFO - Search complete. Found 0 potentially new Italian repositories.
+2025-04-08 09:46:00,633 - repolizer - INFO - No new unique repositories found to save.
+2025-04-08 09:46:00,633 - repolizer - INFO - --- Repolizer finished in 1.00 seconds ---
+2025-04-08 09:46:00,718 - repolizer - INFO - Successfully saved cache with 56 entries to /Users/fab/GitHub/repolizer/cache.json
