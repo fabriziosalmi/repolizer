@@ -119,6 +119,10 @@ class RepoAnalyzer:
         self.clone_repo = clone_repo
         self._cache = {}
         self.results = {}
+        self.repo = None  # Initialize repo to None
+        self.local_repo_path = None  # Initialize local_repo_path
+        self.github = None  # Initialize github connection
+        self.console = Console()  # Initialize rich console
         import json
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
@@ -128,11 +132,69 @@ class RepoAnalyzer:
             logger.error(f"Error loading config: {e}")
 
     def __enter__(self):
-        # ...existing code...
+        # Initialize GitHub API connection
+        if not GITHUB_TOKEN:
+            print("GITHUB_TOKEN non trovato. Imposta il token nelle variabili d'ambiente.")
+            return None
+            
+        self.github = Github(GITHUB_TOKEN)
+        
+        # Get the repository from GitHub API
+        self.repo = self._get_repository()
+        if not self.repo:
+            return None
+            
+        # Clone repository if requested
+        if self.clone_repo and self.repo:
+            try:
+                # Create a temporary directory for the clone
+                temp_dir = tempfile.mkdtemp(prefix="repolizer_")
+                
+                print(f"Clonazione del repository in corso in: {temp_dir}")
+                clone_url = self.repo.clone_url
+                # Replace HTTPS URL with authenticated URL
+                if GITHUB_TOKEN and clone_url.startswith("https://"):
+                    clone_url = f"https://{GITHUB_TOKEN}@{clone_url[8:]}"
+                    
+                subprocess.run(["git", "clone", clone_url, temp_dir], check=True, 
+                              stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                
+                self.local_repo_path = temp_dir
+                print(f"Repository clonato con successo.")
+            except subprocess.CalledProcessError as e:
+                print(f"Errore nella clonazione del repository: {e.stderr.decode() if e.stderr else str(e)}")
+                if self.local_repo_path and os.path.exists(self.local_repo_path):
+                    shutil.rmtree(self.local_repo_path, ignore_errors=True)
+                self.local_repo_path = None
+            except Exception as e:
+                print(f"Errore nella clonazione del repository: {e}")
+                if self.local_repo_path and os.path.exists(self.local_repo_path):
+                    shutil.rmtree(self.local_repo_path, ignore_errors=True)
+                self.local_repo_path = None
+                
+        # Configura l'elenco delle licenze OSI approvate
+        self.osi_approved_licenses = [
+            "mit", "apache-2.0", "gpl-3.0", "gpl-2.0", "bsd-3-clause", 
+            "lgpl-3.0", "mpl-2.0", "agpl-3.0", "unlicense", "bsd-2-clause",
+            "lgpl-2.1", "cc0-1.0", "epl-2.0", "apache", "bsd", "gpl", "lgpl",
+            "mozilla", "eclipse", "artistic", "zlib", "isc", "boost",
+            "wtfpl", "cc-by-4.0", "cc-by-sa-4.0"
+        ]
+        
+        # Check API rate limits and show info
+        self._check_api_limits()
+            
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # ...existing code...
+        # Clean up temporary cloned repository if exists
+        if self.local_repo_path and os.path.exists(self.local_repo_path):
+            try:
+                shutil.rmtree(self.local_repo_path, ignore_errors=True)
+                print(f"Repository temporaneo rimosso: {self.local_repo_path}")
+            except Exception as e:
+                print(f"Attenzione: Impossibile rimuovere la directory temporanea {self.local_repo_path}: {e}")
+                
         return False
 
     def _load_config(self) -> Dict:
