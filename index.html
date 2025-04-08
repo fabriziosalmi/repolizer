@@ -391,7 +391,7 @@
                                 titleColor: '#1F2937', bodyColor: '#1F2937', // gray-800
                                 borderColor: '#E5E7EB', borderWidth: 1, // gray-200
                                 padding: 12, displayColors: false, // Only show point color itself
-                                callbacks: { label: (context) => `Punteggio: ${context.raw.toFixed(2)}/10` }
+                                callbacks: { label: (context) => `Punteggio: ${context.raw.toFixed(2)}` }
                             }
                         },
                         elements: { line: { tension: 0.1 } }
@@ -439,7 +439,7 @@
                                 titleColor: '#1F2937', bodyColor: '#1F2937', // gray-800
                                 borderColor: '#E5E7EB', borderWidth: 1, // gray-200
                                 padding: 12, displayColors: false,
-                                callbacks: { label: (context) => `Punteggio: ${context.raw.toFixed(2)}/10` }
+                                callbacks: { label: (context) => `Punteggio: ${context.raw.toFixed(2)}` }
                             }
                         },
                         layout: { padding: { left: 10, right: 20, top: 10, bottom: 10 } }, // Added top/bottom padding
@@ -516,7 +516,7 @@
                      let scoreClass = 'bg-gray-100 text-gray-500'; // Default N/A style
                      if (typeof info.punteggio === 'number' && !info.score_is_na) {
                         const formattedScore = Number.isInteger(info.punteggio) ? info.punteggio : parseFloat(info.punteggio).toFixed(2);
-                        scoreDisplay = `${formattedScore}/10`;
+                        scoreDisplay = `${formattedScore}`;
                          scoreClass = getScoreClass(info.punteggio); // Get color class based on actual score
                      }
 
@@ -684,7 +684,7 @@
                     const categoryClass = getScoreColorClass(numScore);
                     const icon = categoryIcons[category] || categoryIcons.default || ''; // Fallback icon
                     const categoryName = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    const tippyContent = `${categoryName}: ${numScore.toFixed(1)}/10`.replace(/"/g, '"'); // Escape quotes
+                    const tippyContent = `${categoryName}: ${numScore.toFixed(1)}`.replace(/"/g, '"'); // Escape quotes
 
                     return `
                         <div class="flex items-center gap-1 px-2 py-0.5 rounded ${categoryClass}" data-tippy-content="${tippyContent}">
@@ -732,7 +732,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center"> <!-- Center score -->
                         <span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium ${scoreClass}" style="min-width: 60px;">
-                            ${report.punteggio_totale.toFixed(2)}/10
+                            ${report.punteggio_totale.toFixed(2)}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right">
@@ -857,7 +857,7 @@
                                         </td>
                                         <td class="px-4 py-3 whitespace-nowrap text-right"> <!-- Right aligned -->
                                             <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium ${scoreClass}" style="min-width: 50px;">
-                                                ${score.toFixed(2)}/10
+                                                ${score.toFixed(2)}
                                             </span>
                                         </td>
                                     </tr>
