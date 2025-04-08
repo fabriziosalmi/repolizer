@@ -361,12 +361,9 @@
                 populateRankings();
                 populateCategoryRankings();
 
-                // Show the first report's details and make the detail section visible
-                if (allReports.length > 0 && detailView) {
-                    detailView.classList.remove('hidden'); // Make detail view visible
-                    populatePage(allReports[0]); // Populate with the first report
-                } else if (detailView) {
-                    detailView.classList.add('hidden'); // Keep hidden if somehow no reports remain
+                // Don't automatically show the first report's details
+                if (detailView) {
+                    detailView.classList.add('hidden'); // Keep detail view hidden
                 }
 
             } catch (error) {
@@ -987,10 +984,9 @@
                      cell.addEventListener('click', function() {
                         const detailView = document.getElementById('reportDetailView');
                         if (!detailView) return;
-                        // Don't hide/show, just populate and scroll
-                        populatePage(report); // Pass the correct report object
-                        // Scroll detail view into viewport smoothly
-                        detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        // We don't want to show the detail view
+                        // populatePage(report);
+                        // detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
                      });
                  });
 
@@ -1127,23 +1123,12 @@
                          if (reportIndex !== '' && allReports[reportIndex]) {
                             const detailView = document.getElementById('reportDetailView');
                             if (!detailView) return;
-                            // Don't hide/show, just populate and scroll
-                            populatePage(allReports[reportIndex]);
-                            detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            // We don't want to show the detail view
+                            // populatePage(allReports[reportIndex]);
+                            // detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
                          } else {
                             console.warn("Could not find report for category ranking row using index:", reportIndex);
-                            // Fallback: try to find by name (less reliable if duplicates exist)
-                            const repoNameInRow = row.querySelector('td:nth-child(2)').textContent.trim();
-                            const fallbackReport = allReports.find(r => r.nome_repository === repoNameInRow);
-                             if (fallbackReport) {
-                                const detailView = document.getElementById('reportDetailView');
-                                if (detailView) {
-                                     populatePage(fallbackReport);
-                                     detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }
-                             } else {
-                                console.error("Fallback search by name also failed for:", repoNameInRow);
-                             }
+                            // Fallback search functionality also removed
                          }
                      });
                  });
