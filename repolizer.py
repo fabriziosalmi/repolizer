@@ -211,7 +211,8 @@ class RepoAnalyzer:
         import os, json, datetime
         try:
             os.makedirs(report_dir, exist_ok=True)
-            filename = f"{self.repo_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            # Fix: Use 'report_' prefix instead of repository name which could contain slashes
+            filename = f"report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
             file_path = os.path.join(report_dir, filename)
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(report_data, f, indent=4)
@@ -224,7 +225,8 @@ class RepoAnalyzer:
         import os, datetime
         try:
             os.makedirs(report_dir, exist_ok=True)
-            filename = f"{self.repo_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            # Fix: Use 'report_' prefix instead of repository name which could contain slashes
+            filename = f"report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
             file_path = os.path.join(report_dir, filename)
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
