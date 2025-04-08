@@ -1037,3 +1037,1511 @@
 2025-04-08 09:46:00,633 - repolizer - INFO - No new unique repositories found to save.
 2025-04-08 09:46:00,633 - repolizer - INFO - --- Repolizer finished in 1.00 seconds ---
 2025-04-08 09:46:00,718 - repolizer - INFO - Successfully saved cache with 56 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:16:05,413 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:05,414 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:05,587 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:05,589 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:05,589 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:05,591 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:05,592 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:05,731 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:05,733 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:05,733 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:05,735 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:05,735 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:05,872 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:05,873 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:05,873 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:05,875 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:05,876 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:06,013 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:06,015 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:06,015 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:06,020 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:06,157 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:06,159 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:06,159 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:06,161 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:06,161 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:06,300 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:06,301 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:06,301 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:06,304 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:06,304 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:06,442 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:06,443 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:06,443 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:06,446 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:06,582 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:06,583 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:06,584 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:06,586 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:06,586 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:06,725 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:06,727 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:06,727 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:06,727 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:06,727 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:06,868 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:06,869 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:06,869 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:06,870 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:06,870 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,009 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:07,010 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,010 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,011 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:07,011 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,150 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:07,152 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,152 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,152 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:07,152 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,291 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:07,293 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,293 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,297 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:07,297 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,435 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:07,437 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,437 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,440 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:07,440 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,442 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,442 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,442 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:07,442 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,443 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,443 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,444 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:07,444 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,445 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,445 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,447 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,587 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:07,589 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,589 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,591 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:16:07,591 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:16:07,731 - repolizer - INFO - Complessità media della directory: 13.10
+2025-04-08 23:16:07,733 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:16:07,733 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:16:07,734 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:07,735 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbdgm5fsz/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:07,735 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbdgm5fsz/test_repos.txt
+2025-04-08 23:16:07,735 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:16:07,765 - repolizer - INFO - Loaded 56 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:16:07,765 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpdz5hu4c2/repos.txt
+2025-04-08 23:16:07,766 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:16:07,767 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:16:07,767 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpkusv6y9i/cache.json (2 expired/invalid).
+2025-04-08 23:16:07,767 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:16:07,768 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:07,768 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpklu88exd/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:07,768 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpklu88exd/test_repos.txt
+2025-04-08 23:16:07,769 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpklu88exd/test_cache.json
+2025-04-08 23:16:07,807 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:07,807 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvkuv3etp/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:07,807 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvkuv3etp/test_repos.txt
+2025-04-08 23:16:07,808 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:07,808 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn4ykxadm/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:07,808 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn4ykxadm/test_repos.txt
+2025-04-08 23:16:07,809 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:07,809 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp7gxorylk/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:07,809 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp7gxorylk/test_repos.txt
+2025-04-08 23:16:07,810 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:07,810 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpq1e33_9v/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:07,810 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpq1e33_9v/test_repos.txt
+2025-04-08 23:16:07,811 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:07,811 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp54mcp5n8/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:07,811 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp54mcp5n8/test_repos.txt
+2025-04-08 23:16:07,812 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:16:07,812 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:16:09,819 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:16:09,820 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:16:11,828 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:11,828 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbn8n207d/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:11,828 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbn8n207d/test_repos.txt
+2025-04-08 23:16:11,829 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-08 23:16:11,833 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:11,834 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpov94ohnj/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:11,834 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpov94ohnj/test_repos.txt
+2025-04-08 23:16:11,835 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-08 23:16:11,839 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:11,840 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpkx7grx9b/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:11,840 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpkx7grx9b/test_repos.txt
+2025-04-08 23:16:11,844 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:11,844 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6oojtlee/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:11,844 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6oojtlee/test_repos.txt
+2025-04-08 23:16:11,847 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:11,847 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcb2to4_4/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:11,847 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcb2to4_4/test_repos.txt
+2025-04-08 23:16:11,849 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcb2to4_4/test_repos.txt
+2025-04-08 23:16:11,852 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:16:11,852 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0ftgj22e/test_cache.json (0 expired/invalid).
+2025-04-08 23:16:11,852 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0ftgj22e/test_repos.txt
+2025-04-08 23:16:11,888 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 23:16:11,888 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1)
+2025-04-08 23:16:11,888 - repolizer - INFO - Processing 1 repositories from page 1 (Total results for query: 1)
+2025-04-08 23:18:04,875 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0ftgj22e/test_cache.json
+2025-04-08 23:18:04,875 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcb2to4_4/test_cache.json
+2025-04-08 23:18:04,875 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6oojtlee/test_cache.json
+2025-04-08 23:18:04,875 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpkx7grx9b/test_cache.json
+2025-04-08 23:18:04,875 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpov94ohnj/test_cache.json
+2025-04-08 23:18:04,876 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbn8n207d/test_cache.json
+2025-04-08 23:18:04,876 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp54mcp5n8/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:18:04,876 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpq1e33_9v/test_cache.json
+2025-04-08 23:18:04,877 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp7gxorylk/test_cache.json
+2025-04-08 23:18:04,877 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn4ykxadm/test_cache.json
+2025-04-08 23:18:04,877 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvkuv3etp/test_cache.json
+2025-04-08 23:18:04,877 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpklu88exd/test_cache.json
+2025-04-08 23:18:04,877 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpkusv6y9i/cache.json
+2025-04-08 23:18:04,937 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbdgm5fsz/test_cache.json
+2025-04-08 23:19:03,497 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:03,498 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:03,644 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:03,646 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:03,646 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:03,648 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:03,648 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:03,788 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:03,789 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:03,789 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:03,791 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:03,791 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:03,929 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:03,930 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:03,930 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:03,933 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:03,933 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:04,071 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:04,072 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:04,072 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:04,077 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:04,215 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:04,216 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:04,217 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:04,219 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:04,219 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:04,356 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:04,358 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:04,358 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:04,360 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:04,360 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:04,498 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:04,499 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:04,499 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:04,501 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:04,640 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:04,642 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:04,642 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:04,645 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:04,645 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:04,780 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:04,782 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:04,782 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:04,782 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:04,782 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:04,916 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:04,918 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:04,918 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:04,918 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:04,918 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,055 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:05,057 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,057 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,057 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:05,057 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,194 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:05,196 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,196 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,196 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:05,196 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,332 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:05,334 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,334 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,338 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:05,339 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,473 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:05,475 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,475 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,478 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:05,478 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,480 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,480 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,480 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:05,480 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,481 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,481 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,482 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:05,482 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,483 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,483 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,485 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,621 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:05,623 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,623 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,625 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:19:05,625 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:19:05,759 - repolizer - INFO - Complessità media della directory: 13.14
+2025-04-08 23:19:05,760 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:19:05,760 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:19:05,762 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:05,762 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpserkkc_4/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:05,762 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpserkkc_4/test_repos.txt
+2025-04-08 23:19:05,763 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:19:05,785 - repolizer - ERROR - Failed to decode JSON from cache file /Users/fab/GitHub/repolizer/cache.json: Expecting property name enclosed in double quotes: line 115330 column 13 (char 8058371)
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 163, in _load_cache
+    cache_data = json.load(f)
+                 ^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/decoder.py", line 354, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 115330 column 13 (char 8058371)
+2025-04-08 23:19:05,785 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_dokhfs1/repos.txt
+2025-04-08 23:19:05,786 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:19:05,787 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:19:05,787 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpich35w0f/cache.json (2 expired/invalid).
+2025-04-08 23:19:05,787 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:19:05,788 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:05,788 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpw9dedg4y/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:05,788 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpw9dedg4y/test_repos.txt
+2025-04-08 23:19:05,789 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpw9dedg4y/test_cache.json
+2025-04-08 23:19:05,824 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:05,824 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwnn7_ngh/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:05,824 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwnn7_ngh/test_repos.txt
+2025-04-08 23:19:05,825 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:05,825 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpck2w6fku/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:05,825 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpck2w6fku/test_repos.txt
+2025-04-08 23:19:05,826 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:05,826 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpp8f642yf/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:05,826 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpp8f642yf/test_repos.txt
+2025-04-08 23:19:05,826 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:05,826 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpzdfrhvpc/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:05,826 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpzdfrhvpc/test_repos.txt
+2025-04-08 23:19:05,827 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:05,827 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwq7x1moh/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:05,827 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwq7x1moh/test_repos.txt
+2025-04-08 23:19:05,828 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:19:05,828 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:19:07,835 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:19:07,836 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:19:09,844 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:09,845 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3w59tdah/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:09,845 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3w59tdah/test_repos.txt
+2025-04-08 23:19:09,846 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-08 23:19:09,849 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:09,850 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5c1vck1f/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:09,850 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5c1vck1f/test_repos.txt
+2025-04-08 23:19:09,851 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-08 23:19:09,854 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:09,854 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvnl7bipb/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:09,855 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvnl7bipb/test_repos.txt
+2025-04-08 23:19:09,859 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:09,859 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpg5436a7s/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:09,859 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpg5436a7s/test_repos.txt
+2025-04-08 23:19:09,863 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:09,863 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpgoxf5fsi/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:09,863 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpgoxf5fsi/test_repos.txt
+2025-04-08 23:19:09,865 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpgoxf5fsi/test_repos.txt
+2025-04-08 23:19:09,868 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:19:09,868 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8c3wayoq/test_cache.json (0 expired/invalid).
+2025-04-08 23:19:09,868 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8c3wayoq/test_repos.txt
+2025-04-08 23:19:09,893 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 23:19:09,893 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1)
+2025-04-08 23:19:09,893 - repolizer - INFO - Processing 1 repositories from page 1 (Total results for query: 1)
+2025-04-08 23:20:28,894 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8c3wayoq/test_cache.json
+2025-04-08 23:20:28,894 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpgoxf5fsi/test_cache.json
+2025-04-08 23:20:28,894 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpg5436a7s/test_cache.json
+2025-04-08 23:20:28,895 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvnl7bipb/test_cache.json
+2025-04-08 23:20:28,895 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5c1vck1f/test_cache.json
+2025-04-08 23:20:28,895 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3w59tdah/test_cache.json
+2025-04-08 23:20:28,895 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwq7x1moh/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:20:28,895 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpzdfrhvpc/test_cache.json
+2025-04-08 23:20:28,895 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpp8f642yf/test_cache.json
+2025-04-08 23:20:28,896 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpck2w6fku/test_cache.json
+2025-04-08 23:20:28,896 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwnn7_ngh/test_cache.json
+2025-04-08 23:20:28,896 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpw9dedg4y/test_cache.json
+2025-04-08 23:20:28,896 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpich35w0f/cache.json
+2025-04-08 23:20:28,896 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:20:28,896 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpserkkc_4/test_cache.json
+2025-04-08 23:20:30,286 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:30,287 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:30,430 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:30,432 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:30,432 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:30,435 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:30,435 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:30,578 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:30,580 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:30,580 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:30,582 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:30,582 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:30,720 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:30,722 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:30,722 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:30,724 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:30,724 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:30,862 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:30,863 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:30,863 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:30,868 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:31,005 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:31,007 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:31,007 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:31,010 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:31,010 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:31,148 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:31,149 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:31,149 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:31,151 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:31,152 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:31,290 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:31,291 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:31,291 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:31,293 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:31,431 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:31,432 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:31,432 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:31,435 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:31,435 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:31,574 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:31,575 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:31,575 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:31,576 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:31,576 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:31,710 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:31,712 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:31,712 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:31,712 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:31,712 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:31,848 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:31,849 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:31,850 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:31,850 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:31,850 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:31,985 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:31,986 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:31,986 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:31,987 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:31,987 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:32,124 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:32,126 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:32,126 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:32,131 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:32,131 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:32,270 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:32,271 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:32,271 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:32,274 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:32,274 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:32,275 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:32,275 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:32,276 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:32,276 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:32,277 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:32,277 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:32,277 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:32,277 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:32,279 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:32,279 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:32,280 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:32,418 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:32,420 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:32,420 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:32,422 - repolizer - ERROR - Errore nel recupero dei dati per last_commit: '>' not supported between instances of 'MagicMock' and 'int'
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 301, in _get_cached_data
+    result = fetch_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/GitHub/repolizer/repolizer.py", line 1690, in <lambda>
+    lambda: self.repo.get_commits()[0] if self.repo and self.repo.get_commits().totalCount > 0 else None
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'MagicMock' and 'int'
+2025-04-08 23:20:32,422 - repolizer - WARNING - Nessun commit trovato nel repository.
+2025-04-08 23:20:32,562 - repolizer - INFO - Complessità media della directory: 13.11
+2025-04-08 23:20:32,564 - repolizer - INFO - Salvataggio dello storico nel file di configurazione è disabilitato.
+2025-04-08 23:20:32,564 - repolizer - WARNING - Bandit richiede il clone del repository (--clone). Salta l'analisi.
+2025-04-08 23:20:32,566 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:32,566 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpniyh1iv5/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:32,566 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpniyh1iv5/test_repos.txt
+2025-04-08 23:20:32,567 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:20:32,567 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:20:32,567 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpb3w_7on6/repos.txt
+2025-04-08 23:20:32,568 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:20:32,568 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:20:32,568 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyxpu6zl0/cache.json (2 expired/invalid).
+2025-04-08 23:20:32,568 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:20:32,569 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:32,569 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyp76r_pm/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:32,569 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyp76r_pm/test_repos.txt
+2025-04-08 23:20:32,570 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyp76r_pm/test_cache.json
+2025-04-08 23:20:32,606 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:32,606 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl965z0w6/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:32,606 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl965z0w6/test_repos.txt
+2025-04-08 23:20:32,607 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:32,607 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpmgxweghd/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:32,608 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpmgxweghd/test_repos.txt
+2025-04-08 23:20:32,608 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:32,608 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpavto22w9/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:32,608 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpavto22w9/test_repos.txt
+2025-04-08 23:20:32,609 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:32,610 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpfnkof84n/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:32,610 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpfnkof84n/test_repos.txt
+2025-04-08 23:20:32,611 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:32,611 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2htowga7/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:32,611 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2htowga7/test_repos.txt
+2025-04-08 23:20:32,611 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:20:32,611 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:20:34,619 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:20:34,619 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:20:36,657 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:36,657 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd_nu9_bd/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:36,657 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd_nu9_bd/test_repos.txt
+2025-04-08 23:20:36,658 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-08 23:20:36,659 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:36,659 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5n5cdy6z/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:36,659 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5n5cdy6z/test_repos.txt
+2025-04-08 23:20:36,659 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-08 23:20:36,660 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:36,660 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpmzrqa30b/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:36,660 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpmzrqa30b/test_repos.txt
+2025-04-08 23:20:36,662 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:36,662 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppdh8dxoq/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:36,662 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppdh8dxoq/test_repos.txt
+2025-04-08 23:20:36,664 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:36,664 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn0o6bc5l/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:36,664 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn0o6bc5l/test_repos.txt
+2025-04-08 23:20:36,686 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn0o6bc5l/test_repos.txt
+2025-04-08 23:20:36,687 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:20:36,687 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0lmzq_n1/test_cache.json (0 expired/invalid).
+2025-04-08 23:20:36,687 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0lmzq_n1/test_repos.txt
+2025-04-08 23:20:36,687 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 23:20:36,687 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1)
+2025-04-08 23:20:36,687 - repolizer - INFO - Processing 1 repositories from page 1 (Total results for query: 1)
+2025-04-08 23:20:48,946 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0lmzq_n1/test_cache.json
+2025-04-08 23:20:48,946 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn0o6bc5l/test_cache.json
+2025-04-08 23:20:48,946 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppdh8dxoq/test_cache.json
+2025-04-08 23:20:48,946 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpmzrqa30b/test_cache.json
+2025-04-08 23:20:48,947 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5n5cdy6z/test_cache.json
+2025-04-08 23:20:48,947 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpd_nu9_bd/test_cache.json
+2025-04-08 23:20:48,947 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2htowga7/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:20:48,947 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpfnkof84n/test_cache.json
+2025-04-08 23:20:48,948 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpavto22w9/test_cache.json
+2025-04-08 23:20:48,948 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpmgxweghd/test_cache.json
+2025-04-08 23:20:48,948 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl965z0w6/test_cache.json
+2025-04-08 23:20:48,948 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyp76r_pm/test_cache.json
+2025-04-08 23:20:48,948 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyxpu6zl0/cache.json
+2025-04-08 23:20:48,948 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:20:48,948 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpniyh1iv5/test_cache.json
+2025-04-08 23:21:09,841 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:09,841 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn2x5ukfd/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:09,841 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn2x5ukfd/test_repos.txt
+2025-04-08 23:21:09,842 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:21:09,842 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:21:09,842 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2kwy96f0/repos.txt
+2025-04-08 23:21:09,843 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:21:09,844 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:21:09,844 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp06v__ikr/cache.json (2 expired/invalid).
+2025-04-08 23:21:09,844 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:21:09,845 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:09,845 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpa8p4kkxt/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:09,845 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpa8p4kkxt/test_repos.txt
+2025-04-08 23:21:09,846 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpa8p4kkxt/test_cache.json
+2025-04-08 23:21:09,864 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:09,864 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphv_thcre/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:09,864 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphv_thcre/test_repos.txt
+2025-04-08 23:21:09,865 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:09,865 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpil3yp5ji/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:09,865 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpil3yp5ji/test_repos.txt
+2025-04-08 23:21:09,866 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:09,866 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpibajjcjx/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:09,866 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpibajjcjx/test_repos.txt
+2025-04-08 23:21:09,867 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:09,867 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp1mkt9p8n/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:09,867 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp1mkt9p8n/test_repos.txt
+2025-04-08 23:21:09,868 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:09,868 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp72c45o9m/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:09,868 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp72c45o9m/test_repos.txt
+2025-04-08 23:21:09,869 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:21:09,869 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:21:11,876 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:21:11,877 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:21:13,922 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:13,922 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu9r704kf/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:13,922 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu9r704kf/test_repos.txt
+2025-04-08 23:21:13,922 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-08 23:21:13,924 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:13,924 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpe3gregcp/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:13,924 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpe3gregcp/test_repos.txt
+2025-04-08 23:21:13,924 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-08 23:21:13,926 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:13,926 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpscmq67vp/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:13,926 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpscmq67vp/test_repos.txt
+2025-04-08 23:21:13,927 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:13,927 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl2r6bxpp/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:13,927 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl2r6bxpp/test_repos.txt
+2025-04-08 23:21:13,929 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:13,929 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu4z936vb/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:13,929 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu4z936vb/test_repos.txt
+2025-04-08 23:21:13,930 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu4z936vb/test_repos.txt
+2025-04-08 23:21:13,931 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:13,931 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxsq9q92m/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:13,931 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxsq9q92m/test_repos.txt
+2025-04-08 23:21:13,932 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 23:21:13,932 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1)
+2025-04-08 23:21:13,932 - repolizer - INFO - Processing 1 repositories from page 1 (Total results for query: 1)
+2025-04-08 23:21:48,250 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxsq9q92m/test_cache.json
+2025-04-08 23:21:48,250 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu4z936vb/test_cache.json
+2025-04-08 23:21:48,250 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl2r6bxpp/test_cache.json
+2025-04-08 23:21:48,250 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpscmq67vp/test_cache.json
+2025-04-08 23:21:48,250 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpe3gregcp/test_cache.json
+2025-04-08 23:21:48,250 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu9r704kf/test_cache.json
+2025-04-08 23:21:48,251 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp72c45o9m/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:21:48,251 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp1mkt9p8n/test_cache.json
+2025-04-08 23:21:48,252 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpibajjcjx/test_cache.json
+2025-04-08 23:21:48,252 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpil3yp5ji/test_cache.json
+2025-04-08 23:21:48,252 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphv_thcre/test_cache.json
+2025-04-08 23:21:48,252 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpa8p4kkxt/test_cache.json
+2025-04-08 23:21:48,252 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp06v__ikr/cache.json
+2025-04-08 23:21:48,252 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:21:48,252 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpn2x5ukfd/test_cache.json
+2025-04-08 23:21:50,686 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:50,686 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3kmi7fjj/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:50,686 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3kmi7fjj/test_repos.txt
+2025-04-08 23:21:50,687 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:21:50,688 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:21:50,688 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyul9dvg_/repos.txt
+2025-04-08 23:21:50,688 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:21:50,689 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:21:50,689 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9r8ltt5u/cache.json (2 expired/invalid).
+2025-04-08 23:21:50,689 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:21:50,690 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:50,690 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuygwyf0z/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:50,690 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuygwyf0z/test_repos.txt
+2025-04-08 23:21:50,691 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuygwyf0z/test_cache.json
+2025-04-08 23:21:50,709 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:50,709 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp__6oudxp/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:50,709 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp__6oudxp/test_repos.txt
+2025-04-08 23:21:50,710 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:50,710 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphy37rgq1/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:50,710 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphy37rgq1/test_repos.txt
+2025-04-08 23:21:50,711 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:50,711 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_u5j6wqd/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:50,711 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_u5j6wqd/test_repos.txt
+2025-04-08 23:21:50,712 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:50,712 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpknzbsop5/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:50,712 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpknzbsop5/test_repos.txt
+2025-04-08 23:21:50,713 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:21:50,713 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu_s7ioht/test_cache.json (0 expired/invalid).
+2025-04-08 23:21:50,713 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu_s7ioht/test_repos.txt
+2025-04-08 23:21:50,714 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:21:50,714 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:21:52,721 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:21:52,722 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:21:54,761 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpu_s7ioht/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:21:54,762 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpknzbsop5/test_cache.json
+2025-04-08 23:21:54,762 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_u5j6wqd/test_cache.json
+2025-04-08 23:21:54,762 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphy37rgq1/test_cache.json
+2025-04-08 23:21:54,762 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp__6oudxp/test_cache.json
+2025-04-08 23:21:54,762 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuygwyf0z/test_cache.json
+2025-04-08 23:21:54,763 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9r8ltt5u/cache.json
+2025-04-08 23:21:54,763 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:21:54,763 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3kmi7fjj/test_cache.json
+2025-04-08 23:23:00,865 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:00,866 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcygwmse_/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:00,866 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcygwmse_/test_repos.txt
+2025-04-08 23:23:00,867 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:23:00,868 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:23:00,868 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpi1j3jn_p/repos.txt
+2025-04-08 23:23:00,868 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:23:00,869 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:23:00,869 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpk6fmhvt8/cache.json (2 expired/invalid).
+2025-04-08 23:23:00,869 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:23:00,870 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:00,870 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpnt4inpjc/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:00,870 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpnt4inpjc/test_repos.txt
+2025-04-08 23:23:00,870 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpnt4inpjc/test_cache.json
+2025-04-08 23:23:00,873 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:00,873 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpv4apo4bb/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:00,873 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpv4apo4bb/test_repos.txt
+2025-04-08 23:23:00,876 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:00,876 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpzcpwpwsa/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:00,876 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpzcpwpwsa/test_repos.txt
+2025-04-08 23:23:00,879 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:00,879 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyjitfi7b/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:00,879 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyjitfi7b/test_repos.txt
+2025-04-08 23:23:00,881 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:00,881 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpjzcjw9xq/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:00,881 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpjzcjw9xq/test_repos.txt
+2025-04-08 23:23:00,883 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:00,883 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpdwojryw6/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:00,883 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpdwojryw6/test_repos.txt
+2025-04-08 23:23:00,884 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:23:00,884 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:23:02,889 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:23:02,889 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:23:04,901 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpdwojryw6/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:23:04,903 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpjzcjw9xq/test_cache.json
+2025-04-08 23:23:04,903 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyjitfi7b/test_cache.json
+2025-04-08 23:23:04,904 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpzcpwpwsa/test_cache.json
+2025-04-08 23:23:04,904 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpv4apo4bb/test_cache.json
+2025-04-08 23:23:04,905 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpnt4inpjc/test_cache.json
+2025-04-08 23:23:04,905 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpk6fmhvt8/cache.json
+2025-04-08 23:23:04,906 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:23:04,906 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcygwmse_/test_cache.json
+2025-04-08 23:23:47,842 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:47,843 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp05wzj__k/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:47,843 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp05wzj__k/test_repos.txt
+2025-04-08 23:23:47,844 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:23:47,844 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:23:47,844 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpnffrwprr/repos.txt
+2025-04-08 23:23:47,845 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:23:47,845 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:23:47,845 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9x3r7lrc/cache.json (2 expired/invalid).
+2025-04-08 23:23:47,845 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:23:47,846 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:47,846 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpqoo5nba4/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:47,846 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpqoo5nba4/test_repos.txt
+2025-04-08 23:23:47,846 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpqoo5nba4/test_cache.json
+2025-04-08 23:23:47,847 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:47,847 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmplvgigug5/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:47,847 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmplvgigug5/test_repos.txt
+2025-04-08 23:23:47,848 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:47,848 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpk_mft5rp/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:47,848 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpk_mft5rp/test_repos.txt
+2025-04-08 23:23:47,849 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:47,849 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpswsjoqry/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:47,849 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpswsjoqry/test_repos.txt
+2025-04-08 23:23:47,850 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:47,850 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3ztveq32/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:47,851 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3ztveq32/test_repos.txt
+2025-04-08 23:23:47,851 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:47,851 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpr70djq1l/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:47,851 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpr70djq1l/test_repos.txt
+2025-04-08 23:23:47,852 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:23:47,852 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:23:49,858 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:23:49,859 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:23:51,866 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:51,866 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpr894r80f/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:51,866 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpr894r80f/test_repos.txt
+2025-04-08 23:23:51,866 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-08 23:23:51,867 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:51,867 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxcu97vso/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:51,867 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxcu97vso/test_repos.txt
+2025-04-08 23:23:51,867 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-08 23:23:51,868 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:51,868 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxb3lprxj/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:51,868 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxb3lprxj/test_repos.txt
+2025-04-08 23:23:51,869 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:51,869 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcaydhoap/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:51,869 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcaydhoap/test_repos.txt
+2025-04-08 23:23:51,870 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:23:51,870 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpo1eg2lc8/test_cache.json (0 expired/invalid).
+2025-04-08 23:23:51,870 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpo1eg2lc8/test_repos.txt
+2025-04-08 23:23:51,871 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpo1eg2lc8/test_repos.txt
+2025-04-08 23:23:51,872 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpo1eg2lc8/test_cache.json
+2025-04-08 23:23:51,872 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpcaydhoap/test_cache.json
+2025-04-08 23:23:51,872 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxb3lprxj/test_cache.json
+2025-04-08 23:23:51,872 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxcu97vso/test_cache.json
+2025-04-08 23:23:51,872 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpr894r80f/test_cache.json
+2025-04-08 23:23:51,873 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpr70djq1l/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:23:51,873 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp3ztveq32/test_cache.json
+2025-04-08 23:23:51,873 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpswsjoqry/test_cache.json
+2025-04-08 23:23:51,874 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpk_mft5rp/test_cache.json
+2025-04-08 23:23:51,874 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmplvgigug5/test_cache.json
+2025-04-08 23:23:51,874 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpqoo5nba4/test_cache.json
+2025-04-08 23:23:51,874 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9x3r7lrc/cache.json
+2025-04-08 23:23:51,874 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:23:51,874 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp05wzj__k/test_cache.json
+2025-04-08 23:24:37,414 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:37,415 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbt4fkwl7/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:37,415 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbt4fkwl7/test_repos.txt
+2025-04-08 23:24:37,416 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:24:37,416 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:24:37,416 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp1m6cl0_4/repos.txt
+2025-04-08 23:24:37,417 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:24:37,417 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:24:37,417 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuhdony3l/cache.json (2 expired/invalid).
+2025-04-08 23:24:37,417 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:24:37,419 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:37,419 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxlv3kod0/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:37,419 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxlv3kod0/test_repos.txt
+2025-04-08 23:24:37,419 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxlv3kod0/test_cache.json
+2025-04-08 23:24:37,420 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:37,420 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmplh238dm5/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:37,420 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmplh238dm5/test_repos.txt
+2025-04-08 23:24:37,421 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:37,421 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpstitot4f/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:37,421 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpstitot4f/test_repos.txt
+2025-04-08 23:24:37,422 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:37,422 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpahb77_zq/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:37,422 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpahb77_zq/test_repos.txt
+2025-04-08 23:24:37,423 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:37,423 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmps4obes_c/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:37,423 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmps4obes_c/test_repos.txt
+2025-04-08 23:24:37,424 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:37,424 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpokvvbhkz/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:37,424 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpokvvbhkz/test_repos.txt
+2025-04-08 23:24:37,425 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:24:37,425 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:24:39,433 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:24:39,433 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:24:41,442 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:41,443 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5rex0vpp/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:41,443 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5rex0vpp/test_repos.txt
+2025-04-08 23:24:41,444 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-08 23:24:41,447 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:41,447 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_mzhhwns/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:41,447 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_mzhhwns/test_repos.txt
+2025-04-08 23:24:41,448 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-08 23:24:41,451 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:41,451 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0w3xy9dj/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:41,451 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0w3xy9dj/test_repos.txt
+2025-04-08 23:24:41,456 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:41,456 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp490kpwrz/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:41,456 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp490kpwrz/test_repos.txt
+2025-04-08 23:24:41,459 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:41,459 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphqco73dm/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:41,459 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphqco73dm/test_repos.txt
+2025-04-08 23:24:41,462 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphqco73dm/test_repos.txt
+2025-04-08 23:24:41,464 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:24:41,464 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwuu1w5hy/test_cache.json (0 expired/invalid).
+2025-04-08 23:24:41,464 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwuu1w5hy/test_repos.txt
+2025-04-08 23:24:41,465 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 23:24:41,465 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1)
+2025-04-08 23:24:41,465 - repolizer - INFO - Processing 1 repositories from page 1 (Total results for query: 1)
+2025-04-08 23:25:59,474 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpwuu1w5hy/test_cache.json
+2025-04-08 23:25:59,474 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphqco73dm/test_cache.json
+2025-04-08 23:25:59,474 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp490kpwrz/test_cache.json
+2025-04-08 23:25:59,474 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0w3xy9dj/test_cache.json
+2025-04-08 23:25:59,474 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_mzhhwns/test_cache.json
+2025-04-08 23:25:59,474 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5rex0vpp/test_cache.json
+2025-04-08 23:25:59,475 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpokvvbhkz/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:25:59,475 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmps4obes_c/test_cache.json
+2025-04-08 23:25:59,475 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpahb77_zq/test_cache.json
+2025-04-08 23:25:59,475 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpstitot4f/test_cache.json
+2025-04-08 23:25:59,475 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmplh238dm5/test_cache.json
+2025-04-08 23:25:59,476 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpxlv3kod0/test_cache.json
+2025-04-08 23:25:59,476 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuhdony3l/cache.json
+2025-04-08 23:25:59,476 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:25:59,476 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbt4fkwl7/test_cache.json
+2025-04-08 23:26:39,877 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:39,877 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8jbu5qjp/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:39,877 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8jbu5qjp/test_repos.txt
+2025-04-08 23:26:39,878 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:26:39,879 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:26:39,879 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmphlc36po5/repos.txt
+2025-04-08 23:26:39,880 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:26:39,880 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:26:39,880 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpjhnwpbbv/cache.json (2 expired/invalid).
+2025-04-08 23:26:39,880 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:26:39,881 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:39,881 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpovsj2bsd/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:39,881 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpovsj2bsd/test_repos.txt
+2025-04-08 23:26:39,881 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpovsj2bsd/test_cache.json
+2025-04-08 23:26:39,882 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:39,882 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6d25wag7/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:39,882 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6d25wag7/test_repos.txt
+2025-04-08 23:26:39,884 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:39,884 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2cr3ynyv/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:39,884 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2cr3ynyv/test_repos.txt
+2025-04-08 23:26:39,885 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:39,885 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuuwca18p/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:39,885 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuuwca18p/test_repos.txt
+2025-04-08 23:26:39,886 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:39,886 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbfyslyrz/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:39,886 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbfyslyrz/test_repos.txt
+2025-04-08 23:26:39,887 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:39,887 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmph39p71ae/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:39,887 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmph39p71ae/test_repos.txt
+2025-04-08 23:26:39,887 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:26:39,887 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:26:41,895 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:26:41,896 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:26:43,908 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:43,908 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2fic2gaq/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:43,909 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2fic2gaq/test_repos.txt
+2025-04-08 23:26:43,909 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-08 23:26:43,913 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:43,913 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppo0kk4q0/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:43,913 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppo0kk4q0/test_repos.txt
+2025-04-08 23:26:43,914 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-08 23:26:43,917 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:43,917 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0kqh_2n3/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:43,917 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0kqh_2n3/test_repos.txt
+2025-04-08 23:26:43,921 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:43,921 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpy9c80b72/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:43,921 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpy9c80b72/test_repos.txt
+2025-04-08 23:26:43,924 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:43,925 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9dhwwc7n/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:43,925 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9dhwwc7n/test_repos.txt
+2025-04-08 23:26:43,927 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9dhwwc7n/test_repos.txt
+2025-04-08 23:26:43,929 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:26:43,930 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpsypy4fc5/test_cache.json (0 expired/invalid).
+2025-04-08 23:26:43,930 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpsypy4fc5/test_repos.txt
+2025-04-08 23:26:43,931 - repolizer - INFO - --- Starting search for query: 'location:italy' ---
+2025-04-08 23:26:43,931 - repolizer - INFO - Fetching page 1 for query 'location:italy' (max: 1)
+2025-04-08 23:26:43,931 - repolizer - INFO - Processing 1 repositories from page 1 (Total results for query: 1)
+2025-04-08 23:27:39,138 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpsypy4fc5/test_cache.json
+2025-04-08 23:27:39,138 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9dhwwc7n/test_cache.json
+2025-04-08 23:27:39,139 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpy9c80b72/test_cache.json
+2025-04-08 23:27:39,139 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp0kqh_2n3/test_cache.json
+2025-04-08 23:27:39,139 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmppo0kk4q0/test_cache.json
+2025-04-08 23:27:39,139 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2fic2gaq/test_cache.json
+2025-04-08 23:27:39,139 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmph39p71ae/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:27:39,140 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpbfyslyrz/test_cache.json
+2025-04-08 23:27:39,140 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpuuwca18p/test_cache.json
+2025-04-08 23:27:39,140 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp2cr3ynyv/test_cache.json
+2025-04-08 23:27:39,140 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6d25wag7/test_cache.json
+2025-04-08 23:27:39,140 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpovsj2bsd/test_cache.json
+2025-04-08 23:27:39,140 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpjhnwpbbv/cache.json
+2025-04-08 23:27:39,140 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:27:39,140 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp8jbu5qjp/test_cache.json
+2025-04-08 23:28:34,563 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:34,564 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmptkk4nl4_/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:34,564 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmptkk4nl4_/test_repos.txt
+2025-04-08 23:28:34,565 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:28:34,565 - repolizer - INFO - Loaded 0 valid entries from cache file /Users/fab/GitHub/repolizer/cache.json (0 expired/invalid).
+2025-04-08 23:28:34,565 - repolizer - INFO - Loaded 3 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpz9h765ys/repos.txt
+2025-04-08 23:28:34,566 - repolizer - WARNING - No GitHub token provided. API rate limits will be significantly lower.
+2025-04-08 23:28:34,566 - repolizer - WARNING - Invalid cache entry structure for key invalid_entry
+2025-04-08 23:28:34,566 - repolizer - INFO - Loaded 1 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmplt191g41/cache.json (2 expired/invalid).
+2025-04-08 23:28:34,566 - repolizer - INFO - Loaded 461 existing repo names from /Users/fab/GitHub/repolizer/repos.txt
+2025-04-08 23:28:34,567 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:34,567 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyay7g0hr/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:34,567 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyay7g0hr/test_repos.txt
+2025-04-08 23:28:34,567 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyay7g0hr/test_cache.json
+2025-04-08 23:28:34,568 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:34,568 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpriaxrnjc/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:34,568 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpriaxrnjc/test_repos.txt
+2025-04-08 23:28:34,570 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:34,570 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6606vdj9/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:34,570 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6606vdj9/test_repos.txt
+2025-04-08 23:28:34,571 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:34,571 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpkl03h2c0/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:34,571 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpkl03h2c0/test_repos.txt
+2025-04-08 23:28:34,572 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:34,572 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvvbopn8j/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:34,572 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvvbopn8j/test_repos.txt
+2025-04-08 23:28:34,573 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:34,573 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpclr6vf3p/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:34,573 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpclr6vf3p/test_repos.txt
+2025-04-08 23:28:34,573 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:28:34,573 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:28:36,580 - repolizer - WARNING - GitHub API rate limit low: 1 requests remaining.
+2025-04-08 23:28:36,580 - repolizer - WARNING - Rate limit critically low. Sleeping for 2.0 seconds until 1970-01-01 00:00:01+00:00.
+2025-04-08 23:28:38,588 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:38,588 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_rhos_ee/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:38,588 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_rhos_ee/test_repos.txt
+2025-04-08 23:28:38,589 - repolizer - INFO - Found Italian repo: test/italian-repo (Reason: Italian keyword in description)
+2025-04-08 23:28:38,592 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:38,593 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp00dtyz75/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:38,593 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp00dtyz75/test_repos.txt
+2025-04-08 23:28:38,593 - repolizer - WARNING - Owner info missing or incomplete for repo test/non-italian-repo
+2025-04-08 23:28:38,597 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:38,597 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5xpcg7va/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:38,597 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5xpcg7va/test_repos.txt
+2025-04-08 23:28:38,601 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:38,601 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9_57mcg0/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:38,602 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9_57mcg0/test_repos.txt
+2025-04-08 23:28:38,604 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:38,604 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpaw8n7asy/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:38,605 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpaw8n7asy/test_repos.txt
+2025-04-08 23:28:38,606 - repolizer - INFO - Successfully appended 2 new repositories to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpaw8n7asy/test_repos.txt
+2025-04-08 23:28:38,608 - repolizer - INFO - Using GitHub token for authentication.
+2025-04-08 23:28:38,608 - repolizer - INFO - Loaded 0 valid entries from cache file /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl95ztqk_/test_cache.json (0 expired/invalid).
+2025-04-08 23:28:38,609 - repolizer - INFO - Loaded 0 existing repo names from /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl95ztqk_/test_repos.txt
+2025-04-08 23:28:38,610 - repolizer - INFO - Found Italian repo: italian/by-owner (Reason: Owner profile - Owner is Italian)
+2025-04-08 23:28:38,612 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpl95ztqk_/test_cache.json
+2025-04-08 23:28:38,612 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpaw8n7asy/test_cache.json
+2025-04-08 23:28:38,612 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp9_57mcg0/test_cache.json
+2025-04-08 23:28:38,613 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp5xpcg7va/test_cache.json
+2025-04-08 23:28:38,613 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp00dtyz75/test_cache.json
+2025-04-08 23:28:38,613 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp_rhos_ee/test_cache.json
+2025-04-08 23:28:38,614 - repolizer - ERROR - Could not save cache to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpclr6vf3p/test_cache.json: Object of type MagicMock is not JSON serializable
+Traceback (most recent call last):
+  File "/Users/fab/GitHub/repolizer/scraper.py", line 206, in _save_cache
+    json.dump(cache_copy, f, indent=2) # Add indent for readability
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/Users/fab/.pyenv/versions/3.12.8/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type MagicMock is not JSON serializable
+2025-04-08 23:28:38,615 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpvvbopn8j/test_cache.json
+2025-04-08 23:28:38,615 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpkl03h2c0/test_cache.json
+2025-04-08 23:28:38,615 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmp6606vdj9/test_cache.json
+2025-04-08 23:28:38,615 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpriaxrnjc/test_cache.json
+2025-04-08 23:28:38,616 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmpyay7g0hr/test_cache.json
+2025-04-08 23:28:38,616 - repolizer - INFO - Successfully saved cache with 1 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmplt191g41/cache.json
+2025-04-08 23:28:38,616 - repolizer - INFO - Successfully saved cache with 0 entries to /Users/fab/GitHub/repolizer/cache.json
+2025-04-08 23:28:38,616 - repolizer - INFO - Successfully saved cache with 0 entries to /var/folders/h8/6y19287n1sx6t9r4nmxwmpgw0000gn/T/tmptkk4nl4_/test_cache.json
