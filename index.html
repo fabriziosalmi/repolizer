@@ -79,6 +79,7 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posizione</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
                         </tr>
                     </thead>
                     <tbody id="overallRanking" class="bg-white divide-y divide-gray-200">
@@ -526,7 +527,7 @@
             if (topReports.length === 0) {
                 const emptyRow = document.createElement('tr');
                 emptyRow.innerHTML = `
-                    <td colspan="3" class="px-6 py-12 text-center text-gray-500 italic">
+                    <td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
                         Nessun report disponibile per la classifica
                     </td>
                 `;
@@ -554,17 +555,43 @@
                 // Get score class based on the score value
                 const scoreClass = getScoreColorClass(report.punteggio_totale);
                 
-                // Create category score indicators
+                // Create category score indicators with icons
+                const categoryIcons = {
+                    distribuzione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>',
+                    manutenzione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
+                    codice: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
+                    documentazione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
+                    collaborazione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
+                    sicurezza: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
+                    integrazione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
+                    adozione: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
+                };
+                
                 const categoryScores = Object.entries(report.punteggi || {}).map(([category, score]) => {
                     const categoryClass = getScoreColorClass(score);
+                    const icon = categoryIcons[category] || '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
                     const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+                    
                     return `
-                        <div class="flex items-center gap-1 text-xs">
-                            <span class="font-medium">${categoryName}:</span>
-                            <span class="px-1.5 py-0.5 rounded ${categoryClass}">${score.toFixed(1)}</span>
+                        <div class="flex items-center gap-1 px-2 py-1 rounded ${categoryClass}" data-tippy-content="${categoryName}: ${score.toFixed(1)}/10">
+                            ${icon}
+                            <span class="text-xs font-medium">${score.toFixed(1)}</span>
                         </div>
                     `;
                 }).join('');
+                
+                // Create download button for this report
+                const reportData = encodeURIComponent(JSON.stringify(report, null, 2));
+                const downloadButton = `
+                    <button onclick="event.stopPropagation(); downloadSpecificReport('${reportData}', '${report.nome_repository}')" 
+                            class="inline-flex items-center px-2 py-1 text-xs font-medium rounded border border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-200">
+                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 12l-5-5 1.41-1.41L10 9.17l3.59-3.58L15 7l-5 5z"/>
+                            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12z"/>
+                        </svg>
+                        JSON
+                    </button>
+                `;
                 
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -584,7 +611,7 @@
                                     ${report.nome_repository}
                                 </a>
                                 <div class="text-xs text-gray-500">Analizzato: ${report.data_analisi}</div>
-                                <div class="mt-1.5 grid grid-cols-2 sm:grid-cols-4 gap-x-2 gap-y-1">
+                                <div class="mt-2 flex flex-wrap gap-1">
                                     ${categoryScores}
                                 </div>
                             </div>
@@ -594,6 +621,9 @@
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${scoreClass}">
                             ${report.punteggio_totale.toFixed(2)}/10
                         </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                        ${downloadButton}
                     </td>
                 `;
                 
@@ -606,6 +636,13 @@
                 
                 overallRankingTable.appendChild(row);
             });
+            
+            // Initialize tooltips after populating the rankings
+            tippy('[data-tippy-content]', {
+                theme: 'light',
+                placement: 'top',
+                arrow: true
+            });
         }
         
         function populateCategoryRankings() {
@@ -616,6 +653,18 @@
                     Object.keys(report.punteggi).forEach(cat => categories.add(cat));
                 }
             });
+            
+            // Map of category icons (reuse from above)
+            const categoryIcons = {
+                distribuzione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>',
+                manutenzione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>',
+                codice: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
+                documentazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
+                collaborazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
+                sicurezza: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
+                integrazione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>',
+                adozione: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
+            };
             
             // Create ranking tables for each category
             const categoryRankingsContainer = document.getElementById('categoryRankings');
@@ -636,21 +685,27 @@
                 categorySection.className = 'bg-white rounded-2xl shadow-lg p-8 fade-in';
                 
                 const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+                const categoryIcon = categoryIcons[category] || '';
                 
                 categorySection.innerHTML = `
-                    <h3 class="text-xl font-semibold mb-4">Top 5 - ${categoryName}</h3>
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        ${categoryIcon}
+                        <span>Top 5 - ${categoryName}</span>
+                    </h3>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead>
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posizione</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             ${sortedByCategory.map((report, index) => {
                                 const score = report.punteggi[category];
                                 const scoreClass = getScoreColorClass(score);
+                                const reportData = encodeURIComponent(JSON.stringify(report, null, 2));
                                 
                                 return `
                                 <tr class="hover:bg-gray-50 cursor-pointer" onclick="populatePage(allReports[${allReports.indexOf(report)}]); window.scrollTo({top: 0, behavior: 'smooth'});">
@@ -667,6 +722,16 @@
                                             ${score.toFixed(2)}/10
                                         </span>
                                     </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                                        <button onclick="event.stopPropagation(); downloadSpecificReport('${reportData}', '${report.nome_repository}')" 
+                                                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded border border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-200">
+                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M10 12l-5-5 1.41-1.41L10 9.17l3.59-3.58L15 7l-5 5z"/>
+                                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12z"/>
+                                            </svg>
+                                            JSON
+                                        </button>
+                                    </td>
                                 </tr>
                                 `;
                             }).join('')}
@@ -676,8 +741,32 @@
                 
                 categoryRankingsContainer.appendChild(categorySection);
             });
+            
+            // Initialize tooltips for any new elements
+            tippy('[data-tippy-content]', {
+                theme: 'light',
+                placement: 'top',
+                arrow: true
+            });
         }
         
+        // Add function to download a specific report
+        function downloadSpecificReport(encodedData, repoName) {
+            try {
+                const reportData = JSON.parse(decodeURIComponent(encodedData));
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `${repoName}_report.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            } catch (error) {
+                console.error('Error downloading report:', error);
+                alert('Si è verificato un errore durante il download del report.');
+            }
+        }
+
         function getScoreColorClass(score) {
             if (score >= 7) return 'bg-green-100 text-green-800';
             if (score >= 4) return 'bg-yellow-100 text-yellow-800';
