@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiche Repository</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.6s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .metric-card { transition: all 0.3s ease; }
+        .metric-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .chart-container { 
+            position: relative; 
+            margin: auto; 
+            height: 300px; 
+            width: 100%; 
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+        <!-- Header -->
+        <header class="text-center mb-8 sm:mb-16 fade-in">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-4">Statistiche Repository</h1>
+            <p class="text-base sm:text-lg text-gray-600 mb-6 sm:mb-8">Analisi delle statistiche aggregate dei repository</p>
+        </header>
+
+        <!-- Summary Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 sm:mb-16 fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Totale Repository</h3>
+                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.total_repos }}</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Punteggio Medio</h3>
+                <!-- Ensure avg_score is displayed -->
+                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">
+                    {{ stats.avg_score if stats.avg_score is not none else 'N/A' }}
+                </p>
+            </div>
+            {% if stats.best_category %}
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Categoria Migliore</h3>
+                <p class="text-xl sm:text-2xl font-bold text-indigo-600">{{ stats.best_category.name }}</p>
+                <p class="text-sm sm:text-base text-gray-500">Punteggio: {{ stats.best_category.score }}</p>
+            </div>
+            {% endif %}
+            {% if stats.worst_category %}
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Categoria Peggiore</h3>
+                <p class="text-xl sm:text-2xl font-bold text-red-600">{{ stats.worst_category.name }}</p>
+                <p class="text-sm sm:text-base text-gray-500">Punteggio: {{ stats.worst_category.score }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- New Summary Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 sm:mb-16 fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Categorie Valutate</h3>
+                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.categories_count }}</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Varianza dei Punteggi</h3>
+                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.variance }}</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Mediana Punteggi</h3>
+                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.median_score }}</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Deviazione Standard</h3>
+                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.std_dev }}</p>
+            </div>
+        </div>
+
+        <!-- Highest and Lowest Scoring Repositories -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 sm:mb-16 fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Repository con Punteggio più Alto</h3>
+                <p class="text-xl sm:text-2xl font-bold text-green-600">{{ stats.highest_repo.name }}</p>
+                <p class="text-sm sm:text-base text-gray-500">Punteggio: {{ stats.highest_repo.score }}</p>
+                <a href="{{ stats.highest_repo.url }}" class="text-indigo-600 hover:text-indigo-800 text-sm sm:text-base">Visualizza su GitHub</a>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2">Repository con Punteggio più Basso</h3>
+                <p class="text-xl sm:text-2xl font-bold text-red-600">{{ stats.lowest_repo.name }}</p>
+                <p class="text-sm sm:text-base text-gray-500">Punteggio: {{ stats.lowest_repo.score }}</p>
+                <a href="{{ stats.lowest_repo.url }}" class="text-indigo-600 hover:text-indigo-800 text-sm sm:text-base">Visualizza su GitHub</a>
+            </div>
+        </div>
+
+        <!-- Score Distribution -->
+        <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center mb-8 sm:mb-16 fade-in">
+            <h3 class="text-lg sm:text-xl font-semibold mb-4">Distribuzione dei Punteggi</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Punteggi Alti (>= 7)</p>
+                    <p class="text-2xl font-bold text-green-600">{{ stats.score_distribution.high }}%</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Punteggi Medi (4 - 6.99)</p>
+                    <p class="text-2xl font-bold text-yellow-600">{{ stats.score_distribution.medium }}%</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Punteggi Bassi (< 4)</p>
+                    <p class="text-2xl font-bold text-red-600">{{ stats.score_distribution.low }}%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts (One per row) -->
+        <div class="grid grid-cols-1 gap-6 mb-8 sm:mb-16 fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-6 sm:p-8" style="height: 500px;">
+                <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Categorie</h4>
+                <div class="chart-container">
+                    {{ category_chart|safe }}
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg p-6 sm:p-8" style="height: 500px;">
+                <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Distribuzione</h4>
+                <div class="chart-container">
+                    {{ distribution_chart|safe }}
+                </div>
+            </div>
+            {% if timeline_chart %}
+            <div class="bg-white rounded-2xl shadow-lg p-6 sm:p-8" style="height: 500px;">
+                <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Andamento</h4>
+                <div class="chart-container">
+                    {{ timeline_chart|safe }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Detailed Category Scores -->
+        <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 fade-in">
+            <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Dettagli Punteggi per Categoria</h4>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+                            <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio Medio</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for score in scores_table %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ score.Category }}</td>
+                            <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-500">{{ score['Average Score'] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Timeline Chart -->
+        {% if timeline_chart %}
+        <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mt-8 fade-in">
+            <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Andamento Temporale dei Punteggi</h4>
+            <div class="chart-container">
+                {{ timeline_chart|safe }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
