@@ -16,3 +16,5 @@ pytest==7.4.0
 pycodestyle
 bandit
 flake8
+
+plotly
