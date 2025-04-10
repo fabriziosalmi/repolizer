@@ -49,7 +49,7 @@
             {% if stats.best_category %}
             <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
                 <h3 class="text-lg sm:text-xl font-semibold mb-2">Categoria Migliore</h3>
-                <p class="text-xl sm:text-2xl font-bold text-indigo-600">{{ stats.best_category.name }}</p>
+                <p class="text-xl sm:text-2xl font-bold text-green-600">{{ stats.best_category.name }}</p>
                 <p class="text-sm sm:text-base text-gray-500">Punteggio: {{ stats.best_category.score }}</p>
             </div>
             {% endif %}
@@ -66,19 +66,19 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 sm:mb-16 fade-in">
             <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
                 <h3 class="text-lg sm:text-xl font-semibold mb-2">Categorie Valutate</h3>
-                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.categories_count }}</p>
+                <p class="text-3xl sm:text-4xl font-bold text-gray-600">{{ stats.categories_count }}</p>
             </div>
             <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
                 <h3 class="text-lg sm:text-xl font-semibold mb-2">Varianza dei Punteggi</h3>
-                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.variance }}</p>
+                <p class="text-3xl sm:text-4xl font-bold text-gray-600">{{ stats.variance }}</p>
             </div>
             <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
                 <h3 class="text-lg sm:text-xl font-semibold mb-2">Mediana Punteggi</h3>
-                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.median_score }}</p>
+                <p class="text-3xl sm:text-4xl font-bold text-gray-600">{{ stats.median_score }}</p>
             </div>
             <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-center">
                 <h3 class="text-lg sm:text-xl font-semibold mb-2">Deviazione Standard</h3>
-                <p class="text-3xl sm:text-4xl font-bold text-indigo-600">{{ stats.std_dev }}</p>
+                <p class="text-3xl sm:text-4xl font-bold text-gray-600">{{ stats.std_dev }}</p>
             </div>
         </div>
 
