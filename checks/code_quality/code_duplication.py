@@ -8,6 +8,7 @@ import re
 import logging
 import hashlib
 import time
+import signal
 from typing import Dict, Any, List, Set, Tuple
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -15,13 +16,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Setup logging
 logger = logging.getLogger(__name__)
 
-def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
+def check_code_duplication(repo_path: str = None, repo_data: Dict = None, timeout: int = 30) -> Dict[str, Any]:
     """
     Check for code duplication in the repository
     
     Args:
         repo_path: Path to the repository on local filesystem
         repo_data: Repository data from API (used if repo_path is not available)
+        timeout: Maximum time in seconds to process a single file (default: 30)
         
     Returns:
         Dictionary with check results
@@ -34,8 +36,11 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
         "total_lines_analyzed": 0,
         "duplicate_lines": 0,
         "files_checked": 0,
+        "files_skipped": 0,
+        "files_timed_out": 0,
         "language_stats": {},
-        "duplication_by_language": {}
+        "duplication_by_language": {},
+        "timeout_seconds": timeout
     }
     
     # Check if repository is available locally
@@ -87,31 +92,62 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
     file_contents = defaultdict(list)
     files_checked = 0
     
+    # Timeout handler for file operations
+    class TimeoutException(Exception):
+        pass
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutException("File processing timed out")
+    
+    def read_file_with_timeout(file_path, timeout_sec):
+        """Read a file with timeout"""
+        # Set the timeout handler
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout_sec)
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+            signal.alarm(0)  # Disable the alarm
+            return lines
+        except TimeoutException:
+            logger.warning(f"Timeout while reading file: {file_path}")
+            return None
+        except Exception as e:
+            logger.error(f"Error reading file {file_path}: {e}")
+            return None
+        finally:
+            signal.signal(signal.SIGALRM, old_handler)  # Restore old handler
+            signal.alarm(0)  # Disable the alarm
+    
     def process_file(file_data):
         file_path, file_language = file_data
         try:
             # Skip files that are too large
             if os.path.getsize(file_path) > MAX_FILE_SIZE:
                 logger.info(f"Skipping large file: {file_path}")
-                return None
+                return {"status": "skipped", "reason": "size"}
                 
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                lines = f.readlines()
-                non_empty_lines = [line.strip() for line in lines if line.strip()]
+            lines = read_file_with_timeout(file_path, timeout)
+            if lines is None:
+                return {"status": "timeout", "reason": "read_timeout"}
                 
-                # Skip very small files
-                if len(non_empty_lines) < MIN_BLOCK_SIZE:
-                    return None
-                
-                return {
-                    "path": os.path.relpath(file_path, repo_path),
-                    "language": file_language,
-                    "lines": non_empty_lines
-                }
+            non_empty_lines = [line.strip() for line in lines if line.strip()]
+            
+            # Skip very small files
+            if len(non_empty_lines) < MIN_BLOCK_SIZE:
+                return {"status": "skipped", "reason": "too_small"}
+            
+            return {
+                "status": "success",
+                "path": os.path.relpath(file_path, repo_path),
+                "language": file_language,
+                "lines": non_empty_lines
+            }
                 
         except Exception as e:
             logger.error(f"Error analyzing file {file_path}: {e}")
-            return None
+            return {"status": "error", "reason": str(e)}
     
     # Gather all files to analyze first
     files_to_process = []
@@ -145,20 +181,27 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
         future_to_file = {executor.submit(process_file, file_data): file_data for file_data in files_to_process}
         
         for future in as_completed(future_to_file):
-            file_info = future.result()
-            if file_info:
-                file_language = file_info["language"]
+            file_result = future.result()
+            if not file_result:
+                continue
+                
+            if file_result["status"] == "success":
+                file_language = file_result["language"]
                 file_contents[file_language].append({
-                    "path": file_info["path"],
-                    "lines": file_info["lines"]
+                    "path": file_result["path"],
+                    "lines": file_result["lines"]
                 })
                 
                 # Update language stats
                 result["language_stats"][file_language]["files"] += 1
-                result["language_stats"][file_language]["lines"] += len(file_info["lines"])
-                result["total_lines_analyzed"] += len(file_info["lines"])
+                result["language_stats"][file_language]["lines"] += len(file_result["lines"])
+                result["total_lines_analyzed"] += len(file_result["lines"])
                 
                 files_checked += 1
+            elif file_result["status"] == "timeout":
+                result["files_timed_out"] += 1
+            elif file_result["status"] == "skipped":
+                result["files_skipped"] += 1
     
     result["files_checked"] = files_checked
     
@@ -246,7 +289,7 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
     
     # Add execution time info
     execution_time = time.time() - start_time
-    logger.info(f"Code duplication check completed in {execution_time:.2f} seconds, analyzed {files_checked} files")
+    logger.info(f"Code duplication check completed in {execution_time:.2f} seconds, analyzed {files_checked} files, skipped {result['files_skipped']}, timed out {result['files_timed_out']}")
     
     # Round and convert to integer if it's a whole number
     rounded_score = round(duplication_score, 1)
@@ -268,8 +311,11 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Check if we have a local path to the repository
         local_path = repository.get('local_path')
         
+        # Get timeout setting from repository config if available
+        timeout = repository.get('config', {}).get('code_duplication_timeout', 30)
+        
         # Run the check
-        result = check_code_duplication(local_path, repository)
+        result = check_code_duplication(local_path, repository, timeout)
         
         # Return the result with the score
         return {
