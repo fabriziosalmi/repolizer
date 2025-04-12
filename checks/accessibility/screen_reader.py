@@ -6,7 +6,9 @@ Checks screen reader compatibility of the repository.
 import os
 import re
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple, Set
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import fnmatch
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -31,7 +33,8 @@ def check_screen_reader_compatibility(repo_path: str = None, repo_data: Dict = N
         "role_attributes_count": 0,
         "has_title_attributes": False,
         "files_checked": 0,
-        "issues": []
+        "issues": [],
+        "semantic_html_count": 0
     }
     
     # Check if repository is available locally
@@ -43,61 +46,102 @@ def check_screen_reader_compatibility(repo_path: str = None, repo_data: Dict = N
     html_extensions = ['.html', '.htm', '.jsx', '.tsx', '.vue', '.svelte']
     css_extensions = ['.css', '.scss', '.sass', '.less']
     
+    # Combine all extensions for easier filtering
+    all_extensions = html_extensions + css_extensions
+    
     # Patterns for screen reader features
     aria_pattern = r'aria-\w+=["\'][^"\']*?["\']\s*'
     role_pattern = r'role=["\'][^"\']*?["\']\s*'
     title_pattern = r'title=["\'][^"\']*?["\']\s*'
-    skip_link_pattern = r'<a\s+[^>]*?href=["\']\s*#(?:main|content)["\']'
-    sr_only_pattern = r'\.sr-only|\.screen-reader-text|\.visually-hidden'
+    skip_link_pattern = r'<a\s+[^>]*?href=["\']\s*#(?:main|content)["\']|class=["\']\s*(?:.*?\s)?(?:skip|skip-link|visually-hidden-focusable)(?:\s.*?)?["\']'
+    sr_only_pattern = r'\.sr-only|\.screen-reader-text|\.visually-hidden|\.a11y-hidden|\.accessibility'
     label_input_pattern = r'<input\s+[^>]*?id=["\'](.*?)["\']((?!.*?aria-labelledby).*?)>'
     corresponding_label_pattern = r'<label\s+[^>]*?for=["\'](.*?)["\']'
     
-    files_checked = 0
-    aria_count = 0
-    role_count = 0
+    # Pattern for semantic HTML elements
+    semantic_html_pattern = r'<(?:header|nav|main|article|section|aside|footer|figure|figcaption|details|summary|mark|time)\b'
     
-    # Walk through repository files
-    for root, _, files in os.walk(repo_path):
-        # Skip node_modules, .git and other common directories
-        if any(skip_dir in root for skip_dir in ['/node_modules/', '/.git/', '/dist/', '/build/']):
-            continue
-            
+    # Directories to skip
+    skip_dirs = ['node_modules', '.git', 'dist', 'build', 'vendor', 'bower_components', 'public/assets']
+    
+    # Maximum file size to analyze (5MB)
+    max_file_size = 5 * 1024 * 1024
+    
+    # Gather eligible files first for better performance
+    eligible_files = []
+    
+    for root, dirs, files in os.walk(repo_path):
+        # Skip directories in-place
+        dirs[:] = [d for d in dirs if not any(fnmatch.fnmatch(d, pattern) for pattern in skip_dirs)]
+        
         for file in files:
             file_path = os.path.join(root, file)
             _, ext = os.path.splitext(file_path)
             ext = ext.lower()
             
-            # Skip files that aren't HTML/CSS
-            if ext not in html_extensions and ext not in css_extensions:
+            # Skip files with irrelevant extensions
+            if ext not in all_extensions:
                 continue
                 
+            # Skip files that are too large
             try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    content = f.read()
-                    files_checked += 1
+                if os.path.getsize(file_path) > max_file_size:
+                    continue
+            except (OSError, IOError):
+                continue
+                
+            eligible_files.append((file_path, ext))
+    
+    # If no eligible files found, return early
+    if not eligible_files:
+        return result
+    
+    # Define worker function for parallel processing
+    def process_file(file_info: Tuple[str, str]) -> Dict[str, Any]:
+        file_path, ext = file_info
+        file_result = {
+            "has_aria": False,
+            "aria_count": 0,
+            "has_role": False,
+            "role_count": 0,
+            "has_title": False,
+            "has_skip_link": False,
+            "has_sr_only": False,
+            "issues": [],
+            "semantic_html_count": 0
+        }
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+                
+                if ext in html_extensions:
+                    # Check for ARIA attributes
+                    aria_matches = re.findall(aria_pattern, content, re.IGNORECASE)
+                    if aria_matches:
+                        file_result["has_aria"] = True
+                        file_result["aria_count"] = len(aria_matches)
                     
-                    if ext in html_extensions:
-                        # Check for ARIA attributes
-                        aria_matches = re.findall(aria_pattern, content, re.IGNORECASE)
-                        if aria_matches:
-                            result["has_aria_attributes"] = True
-                            aria_count += len(aria_matches)
-                        
-                        # Check for role attributes
-                        role_matches = re.findall(role_pattern, content, re.IGNORECASE)
-                        if role_matches:
-                            result["has_role_attributes"] = True
-                            role_count += len(role_matches)
-                        
-                        # Check for title attributes
-                        if re.search(title_pattern, content, re.IGNORECASE):
-                            result["has_title_attributes"] = True
-                        
-                        # Check for skip links
-                        if re.search(skip_link_pattern, content, re.IGNORECASE):
-                            result["has_skip_links"] = True
-                        
-                        # Check for input-label mismatches
+                    # Check for role attributes
+                    role_matches = re.findall(role_pattern, content, re.IGNORECASE)
+                    if role_matches:
+                        file_result["has_role"] = True
+                        file_result["role_count"] = len(role_matches)
+                    
+                    # Check for title attributes
+                    if re.search(title_pattern, content, re.IGNORECASE):
+                        file_result["has_title"] = True
+                    
+                    # Check for skip links
+                    if re.search(skip_link_pattern, content, re.IGNORECASE):
+                        file_result["has_skip_link"] = True
+                    
+                    # Check for semantic HTML
+                    semantic_matches = re.findall(semantic_html_pattern, content, re.IGNORECASE)
+                    file_result["semantic_html_count"] = len(semantic_matches)
+                    
+                    # Check for input-label mismatches (only for HTML to improve performance)
+                    if '<input' in content.lower() and '<label' in content.lower():
                         input_ids = re.findall(label_input_pattern, content, re.IGNORECASE)
                         label_fors = re.findall(corresponding_label_pattern, content, re.IGNORECASE)
                         
@@ -106,120 +150,174 @@ def check_screen_reader_compatibility(repo_path: str = None, repo_data: Dict = N
                         
                         # Find inputs without corresponding labels
                         for input_id in input_id_set:
-                            if input_id not in label_for_set:
+                            if input_id and input_id not in label_for_set:
                                 relative_path = os.path.relpath(file_path, repo_path)
-                                result["issues"].append({
+                                file_result["issues"].append({
                                     "file": relative_path,
                                     "issue": f"Input with id '{input_id}' has no corresponding label"
                                 })
-                    
-                    elif ext in css_extensions:
-                        # Check for screen reader only classes
-                        if re.search(sr_only_pattern, content, re.IGNORECASE):
-                            result["has_sr_only_class"] = True
-                    
-            except Exception as e:
-                logger.error(f"Error analyzing file {file_path}: {e}")
+                
+                elif ext in css_extensions:
+                    # Check for screen reader only classes
+                    if re.search(sr_only_pattern, content, re.IGNORECASE):
+                        file_result["has_sr_only"] = True
+        
+        except Exception as e:
+            logger.error(f"Error analyzing file {file_path}: {e}")
+        
+        return file_result
+    
+    # Process files in parallel
+    files_checked = 0
+    
+    # Determine optimal number of workers
+    max_workers = min(os.cpu_count() or 4, 8, len(eligible_files))
+    
+    # Use parallel processing for better performance
+    if len(eligible_files) > 5:
+        file_results = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(process_file, file_info): file_info for file_info in eligible_files}
+            
+            for future in as_completed(futures):
+                file_results.append(future.result())
+                files_checked += 1
+    else:
+        # Process sequentially for small repositories
+        file_results = []
+        for file_info in eligible_files:
+            file_results.append(process_file(file_info))
+            files_checked += 1
+    
+    # Aggregate results
+    for file_result in file_results:
+        result["has_aria_attributes"] |= file_result["has_aria"]
+        result["aria_attributes_count"] += file_result["aria_count"]
+        result["has_role_attributes"] |= file_result["has_role"]
+        result["role_attributes_count"] += file_result["role_count"]
+        result["has_title_attributes"] |= file_result["has_title"]
+        result["has_skip_links"] |= file_result["has_skip_link"]
+        result["has_sr_only_class"] |= file_result["has_sr_only"]
+        result["semantic_html_count"] += file_result["semantic_html_count"]
+        result["issues"].extend(file_result["issues"])
     
     result["files_checked"] = files_checked
-    result["aria_attributes_count"] = aria_count
-    result["role_attributes_count"] = role_count
     
-    # Calculate screen reader compatibility score (0-100 scale)
-    def calculate_score(result_data):
-        """
-        Calculate a weighted score based on screen reader compatibility.
-        
-        The score consists of:
-        - Base score for ARIA attributes (0-30 points, scaled by count)
-        - Score for role attributes (0-25 points, scaled by count)
-        - Score for skip links (0-15 points)
-        - Score for screen reader only class (0-15 points)
-        - Score for title attributes (0-10 points)
-        - Implementation quality bonus (0-10 points)
-        - Penalty for accessibility issues (0-35 points deduction)
-        
-        Final score is normalized to 0-100 range.
-        """
-        # Start with base score
-        base_score = 0
-        
-        # Points for ARIA attributes - essential for screen reader compatibility
-        aria_score = 0
-        if result_data.get("has_aria_attributes", False):
-            aria_count = result_data.get("aria_attributes_count", 0)
-            # Scale points based on quantity - more is better up to a reasonable limit
-            aria_score = min(30, 10 + (aria_count // 5))
-        
-        # Points for role attributes - important for structural semantics
-        role_score = 0
-        if result_data.get("has_role_attributes", False):
-            role_count = result_data.get("role_attributes_count", 0)
-            # Scale points based on quantity - more is better up to a reasonable limit
-            role_score = min(25, 10 + (role_count // 3))
-        
-        # Points for skip links - critical for keyboard navigation
-        skip_links_score = 15 if result_data.get("has_skip_links", False) else 0
-        
-        # Points for screen reader only classes - important for hidden content
-        sr_only_score = 15 if result_data.get("has_sr_only_class", False) else 0
-        
-        # Points for title attributes - helpful but less important
-        title_score = 10 if result_data.get("has_title_attributes", False) else 0
-        
-        # Implementation quality bonus - reward comprehensive implementation
-        implementation_bonus = 0
-        
-        # Calculate what percentage of possible features are implemented
-        feature_count = sum([
-            result_data.get("has_aria_attributes", False),
-            result_data.get("has_role_attributes", False),
-            result_data.get("has_skip_links", False),
-            result_data.get("has_sr_only_class", False),
-            result_data.get("has_title_attributes", False)
-        ])
-        
-        # Add bonus for comprehensive implementation
-        if feature_count >= 3:
-            implementation_bonus += 5
-        if feature_count >= 4:
-            implementation_bonus += 5
-        
-        # Calculate raw score
-        raw_score = base_score + aria_score + role_score + skip_links_score + sr_only_score + title_score + implementation_bonus
-        
-        # Penalty for accessibility issues
-        issues_count = len(result_data.get("issues", []))
-        # Progressive penalty - each issue is more severe as the count increases
-        issue_penalty = min(35, issues_count * 5 * (1 + (issues_count / 10)))
-        
-        # Apply penalty
-        final_score = max(0, raw_score - issue_penalty)
-        
-        # Ensure score is between 0-100
-        final_score = min(100, final_score)
-        
-        # Store score components for transparency
-        result_data["score_components"] = {
-            "aria_score": aria_score,
-            "role_score": role_score,
-            "skip_links_score": skip_links_score,
-            "sr_only_score": sr_only_score,
-            "title_score": title_score,
-            "implementation_bonus": implementation_bonus,
-            "raw_score": raw_score,
-            "issue_penalty": round(issue_penalty, 1),
-            "final_score": round(final_score, 1)
-        }
-        
-        # Round and convert to integer if it's a whole number
-        rounded_score = round(final_score, 1)
-        return int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
-    
-    # Apply the new scoring method
+    # Calculate screen reader compatibility score
     result["screen_reader_score"] = calculate_score(result)
     
     return result
+
+def calculate_score(result_data):
+    """
+    Calculate a weighted score based on screen reader compatibility.
+    
+    The score consists of:
+    - Base score for ARIA attributes (0-30 points, scaled by count)
+    - Score for role attributes (0-20 points, scaled by count)
+    - Score for semantic HTML usage (0-15 points)
+    - Score for skip links (0-10 points)
+    - Score for screen reader only class (0-10 points)
+    - Score for title attributes (0-5 points)
+    - Implementation quality bonus (0-10 points)
+    - Penalty for accessibility issues (0-50 points deduction)
+    
+    Final score is normalized to 1-100 range.
+    """
+    # Extract relevant metrics
+    has_aria = result_data.get("has_aria_attributes", False)
+    aria_count = result_data.get("aria_attributes_count", 0)
+    has_roles = result_data.get("has_role_attributes", False)
+    role_count = result_data.get("role_attributes_count", 0)
+    has_skip_links = result_data.get("has_skip_links", False)
+    has_sr_only = result_data.get("has_sr_only_class", False)
+    has_title = result_data.get("has_title_attributes", False)
+    semantic_html_count = result_data.get("semantic_html_count", 0)
+    issues_count = len(result_data.get("issues", []))
+    files_checked = result_data.get("files_checked", 0)
+    
+    # If no files were checked, assign minimal score
+    if files_checked == 0:
+        return 1  # Successfully executed but worst result possible
+    
+    # 1. ARIA attributes score (0-30 points)
+    aria_score = 0
+    if has_aria:
+        # Scale based on quantity, with diminishing returns
+        aria_score = min(30, 10 + min(20, aria_count / 2))
+    
+    # 2. Role attributes score (0-20 points)
+    role_score = 0
+    if has_roles:
+        # Scale based on quantity, with diminishing returns
+        role_score = min(20, 8 + min(12, role_count / 3))
+    
+    # 3. Semantic HTML score (0-15 points)
+    semantic_html_score = min(15, semantic_html_count * 0.75)
+    
+    # 4. Skip links score (essential for keyboard navigation) (0-10 points)
+    skip_links_score = 10 if has_skip_links else 0
+    
+    # 5. Screen reader only class score (0-10 points)
+    sr_only_score = 10 if has_sr_only else 0
+    
+    # 6. Title attributes score (least important) (0-5 points)
+    title_score = 5 if has_title else 0
+    
+    # Calculate raw score
+    raw_score = aria_score + role_score + semantic_html_score + skip_links_score + sr_only_score + title_score
+    
+    # Calculate feature coverage for bonus points
+    feature_count = sum([
+        has_aria,
+        has_roles,
+        has_skip_links,
+        has_sr_only,
+        has_title,
+        semantic_html_count > 0
+    ])
+    
+    # Implementation quality bonus (more comprehensive = higher bonus)
+    quality_bonus = 0
+    
+    if feature_count >= 3:
+        quality_bonus = 5
+    if feature_count >= 5:
+        quality_bonus += 5
+    
+    # Apply quality bonus
+    adjusted_score = raw_score + quality_bonus
+    
+    # Apply penalty for accessibility issues
+    issue_penalty = 0
+    if issues_count > 0:
+        # Each issue is more impactful as the count increases
+        if issues_count <= 3:
+            # For a few issues, apply a smaller penalty
+            issue_penalty = issues_count * 5
+        else:
+            # For many issues, apply an exponential penalty
+            issue_penalty = 15 + min(35, (issues_count - 3) * 7)
+    
+    # Calculate final score
+    final_score = max(1, min(100, adjusted_score - issue_penalty))
+    
+    # Store score components for transparency
+    result_data["score_components"] = {
+        "aria_score": round(aria_score, 1),
+        "role_score": round(role_score, 1),
+        "semantic_html_score": round(semantic_html_score, 1),
+        "skip_links_score": skip_links_score,
+        "sr_only_score": sr_only_score,
+        "title_score": title_score,
+        "quality_bonus": quality_bonus,
+        "raw_score": round(raw_score, 1),
+        "adjusted_score": round(adjusted_score, 1),
+        "issue_penalty": round(issue_penalty, 1),
+        "final_score": round(final_score, 1)
+    }
+    
+    return final_score
 
 def get_screen_reader_recommendation(result: Dict[str, Any]) -> str:
     """Generate a recommendation based on the screen reader compatibility check results"""
@@ -228,6 +326,7 @@ def get_screen_reader_recommendation(result: Dict[str, Any]) -> str:
     has_roles = result.get("has_role_attributes", False)
     has_skip_links = result.get("has_skip_links", False)
     has_sr_only = result.get("has_sr_only_class", False)
+    semantic_html_count = result.get("semantic_html_count", 0)
     issues_count = len(result.get("issues", []))
     
     if score >= 80:
@@ -246,6 +345,9 @@ def get_screen_reader_recommendation(result: Dict[str, Any]) -> str:
     
     if not has_sr_only:
         recommendations.append("Add screen-reader-only classes for content that should be read but not displayed visually.")
+    
+    if semantic_html_count < 5:
+        recommendations.append("Use more semantic HTML elements (header, nav, main, article, section) for better structure.")
     
     if issues_count > 0:
         recommendations.append(f"Fix {issues_count} identified issues with form inputs missing proper labels.")
@@ -289,10 +391,16 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
                 "errors": "Missing repository path"
             }
         
+        # Track execution time
+        import time
+        start_time = time.time()
+        
         # Run the check
         result = check_screen_reader_compatibility(local_path, repository)
         
-        logger.info(f"Screen reader compatibility check completed with score: {result.get('screen_reader_score', 0)}")
+        # Calculate execution time
+        execution_time = time.time() - start_time
+        logger.info(f"Screen reader compatibility check completed in {execution_time:.2f}s with score: {result.get('screen_reader_score', 0)}")
         
         # Return the result with enhanced metadata
         return {
@@ -303,9 +411,11 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
                 "files_checked": result.get("files_checked", 0),
                 "aria_attributes_count": result.get("aria_attributes_count", 0),
                 "role_attributes_count": result.get("role_attributes_count", 0),
+                "semantic_html_count": result.get("semantic_html_count", 0),
                 "has_skip_links": result.get("has_skip_links", False),
                 "has_sr_only_class": result.get("has_sr_only_class", False),
                 "issues_count": len(result.get("issues", [])),
+                "execution_time": f"{execution_time:.2f}s",
                 "score_breakdown": result.get("score_components", {}),
                 "recommendation": get_screen_reader_recommendation(result)
             },
