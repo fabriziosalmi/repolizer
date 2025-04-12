@@ -101,60 +101,103 @@
                 const ctx = document.getElementById('scoreHistoryChart').getContext('2d');
                 const historyData = {{ history_data | tojson }};
 
-                // Prepare data for Chart.js
-                const labels = historyData.map(entry => new Date(entry.timestamp.replace(' ', 'T') + 'Z')); // Ensure ISO format for date parsing
-                const scores = historyData.map(entry => entry.overall_score);
+                // Debug output to console
+                console.log("History data:", historyData);
 
-                const scoreHistoryChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Overall Score',
-                            data: scores,
-                            borderColor: 'rgb(59, 130, 246)', // Blue color
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.1,
-                            fill: true,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                type: 'time',
-                                time: {
-                                    unit: 'day', // Adjust as needed (e.g., 'week', 'month')
-                                    tooltipFormat: 'PPpp', // Date-fns format for tooltip
-                                    displayFormats: {
-                                        day: 'MMM d, yyyy' // Date-fns format for axis label
+                // Prepare data for Chart.js
+                const labels = historyData.map(entry => {
+                    // Make sure we handle the timestamp format correctly
+                    let timestamp = entry.timestamp;
+                    // If it's not already in ISO format, convert it
+                    if (!timestamp.includes('T')) {
+                        timestamp = timestamp.replace(' ', 'T');
+                    }
+                    // Add Z if timezone is missing
+                    if (!timestamp.endsWith('Z') && !timestamp.includes('+')) {
+                        timestamp += 'Z';
+                    }
+                    return new Date(timestamp);
+                });
+                
+                // Handle potentially different formats for overall_score
+                const scores = historyData.map(entry => {
+                    // Check if overall_score exists and is a number
+                    if (typeof entry.overall_score === 'number') {
+                        return entry.overall_score;
+                    }
+                    // Try to parse as a number if it's a string
+                    else if (typeof entry.overall_score === 'string') {
+                        const parsed = parseFloat(entry.overall_score);
+                        return isNaN(parsed) ? 0 : parsed;
+                    }
+                    // Return 0 if score doesn't exist or is invalid
+                    return 0;
+                });
+
+                // Ensure we have valid data to display
+                if (labels.length > 0 && scores.length > 0) {
+                    const scoreHistoryChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Overall Score',
+                                data: scores,
+                                borderColor: 'rgb(59, 130, 246)', // Blue color
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.1,
+                                fill: true,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    type: 'time',
+                                    time: {
+                                        unit: 'day', // Adjust as needed (e.g., 'week', 'month')
+                                        tooltipFormat: 'PPpp', // Date-fns format for tooltip
+                                        displayFormats: {
+                                            day: 'MMM d, yyyy' // Date-fns format for axis label
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Date of Analysis'
                                     }
                                 },
-                                title: {
-                                    display: true,
-                                    text: 'Date of Analysis'
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    title: {
+                                        display: true,
+                                        text: 'Overall Score (/100)'
+                                    }
                                 }
                             },
-                            y: {
-                                beginAtZero: true,
-                                max: 100,
-                                title: {
-                                    display: true,
-                                    text: 'Overall Score (/100)'
+                            plugins: {
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                    callbacks: {
+                                        title: function(context) {
+                                            // Format the date for tooltip title
+                                            const date = new Date(context[0].label);
+                                            return date.toLocaleString();
+                                        }
+                                    }
                                 }
                             }
-                        },
-                        plugins: {
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                            }
                         }
-                    }
-                });
+                    });
+                } else {
+                    // Display a message if no valid data is available
+                    document.getElementById('scoreHistoryChart').parentNode.innerHTML = 
+                        '<div class="text-center text-gray-500 py-8"><p>No valid score data available to display chart.</p></div>';
+                }
             </script>
 
             {% else %}

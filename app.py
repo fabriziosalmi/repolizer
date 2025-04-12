@@ -516,9 +516,10 @@ def repo_detail(repo_id):
     # Pass the latest valid data object to the template
     return render_template('repo_detail.html', repo=latest_valid_repo_data)
 
-@app.route('/repo/<repo_id>/history')
+@app.route('/repo/<path:repo_id>/history')
 def repo_history(repo_id):
     """Render the analysis history page for a specific repository"""
+    print(f"--- Starting repo_history for ID/Name: {repo_id} ---") # DEBUG
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
 
     if not os.path.exists(file_path):
@@ -526,73 +527,154 @@ def repo_history(repo_id):
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
         if os.path.exists(sample_path):
             file_path = sample_path
+            print(f"Using sample file: {file_path}") # DEBUG
         else:
+            print(f"Error: Results file not found for ID/Name: {repo_id}") # DEBUG
             return render_template('error.html', error="Results file not found"), 404
 
     history_data = []
     repo_info = None
     latest_timestamp = None
+    line_count = 0 # DEBUG
 
     try:
-        # Convert repo_id to both string and int formats for flexible matching
-        repo_id_str = str(repo_id)
-        repo_id_int = int(repo_id) if repo_id.isdigit() else None
+        # Determine if the repo_id is numeric (GitHub ID) or a string (full_name)
+        is_numeric_id = repo_id.isdigit()
+        repo_id_int = int(repo_id) if is_numeric_id else None
+        repo_full_name = repo_id if not is_numeric_id else None
+        
+        print(f"Searching by: {'Numeric ID' if is_numeric_id else 'Full Name'}: {repo_id}") # DEBUG
 
         with open(file_path, 'r') as f:
             for line in f:
+                line_count += 1 # DEBUG
                 try:
                     data = json.loads(line)
+                    
+                    # Get repository info from different possible locations
                     current_repo_info = data.get('repository', {})
                     repo_id_in_data = current_repo_info.get('id')
+                    repo_name_in_data = current_repo_info.get('full_name')
 
-                    # Check if this entry matches the requested repo ID
-                    if (repo_id_str == str(repo_id_in_data) or
-                        (repo_id_int is not None and repo_id_int == repo_id_in_data)):
+                    # Check if this entry matches the requested repo ID or Name
+                    match = False
+                    if is_numeric_id and repo_id_int is not None and repo_id_in_data == repo_id_int:
+                        match = True
+                    elif not is_numeric_id and repo_full_name is not None and repo_name_in_data == repo_full_name:
+                        match = True
+                    # Optional: Handle case where numeric ID might be stored as string
+                    elif is_numeric_id and str(repo_id_in_data) == repo_id:
+                        match = True
 
-                        analysis_results = data.get('analysis_results', {})
-                        timestamp_str = analysis_results.get('timestamp')
-
-                        if timestamp_str:
-                            # Attempt to parse the timestamp
-                            try:
-                                current_timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                            except ValueError:
-                                # Handle potential non-ISO formats if necessary, or skip
-                                print(f"Warning: Could not parse timestamp '{timestamp_str}' for repo {repo_id_in_data}")
-                                continue # Skip this entry if timestamp is invalid
-
-                            # Extract history entry details
-                            history_entry = {
-                                'timestamp': timestamp_str,
-                                'overall_score': analysis_results.get('overall_score', 0),
-                                'total_checks': analysis_results.get('total_checks', 0),
-                                'engine_version': analysis_results.get('engine_version')
-                                # Add other relevant fields if needed
-                            }
-                            history_data.append(history_entry)
-
-                            # Update repo_info with the data from the latest entry
-                            if latest_timestamp is None or current_timestamp > latest_timestamp:
-                                latest_timestamp = current_timestamp
-                                repo_info = current_repo_info # Store the basic repo info
+                    if match:
+                        print(f"  [Line {line_count}] Match found for repo {repo_id_in_data if is_numeric_id else repo_name_in_data}") # DEBUG
+                        
+                        # Try to get timestamp from multiple possible locations
+                        timestamp_str = None
+                        
+                        # First try direct timestamp
+                        if 'timestamp' in data:
+                            timestamp_str = data['timestamp']
+                            
+                        # Then try in analysis_results
+                        elif 'analysis_results' in data and isinstance(data['analysis_results'], dict):
+                            timestamp_str = data['analysis_results'].get('timestamp')
+                            
+                        # Skip entries without timestamp
+                        if not timestamp_str:
+                            print(f"    Missing timestamp for entry - skipping") # DEBUG
+                            continue
+                            
+                        print(f"    Found timestamp: {timestamp_str}") # DEBUG
+                        
+                        # Try to parse the timestamp
+                        try:
+                            # Parse timestamp (handle potential 'Z' timezone)
+                            current_timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                            # Ensure timestamp is timezone-aware for comparison
+                            if current_timestamp.tzinfo is None:
+                                current_timestamp = current_timestamp.replace(tzinfo=timezone.utc)
+                        except ValueError as e:
+                            print(f"    Invalid timestamp format ({timestamp_str}): {e} - Skipping this entry") # DEBUG
+                            continue
+                            
+                        # Extract analysis results - look for top-level score first, then in analysis_results
+                        overall_score = 0
+                        total_checks = 0
+                        engine_version = "N/A"
+                        
+                        # Check in multiple locations for score data
+                        if 'overall_score' in data:
+                            overall_score = data['overall_score']
+                        elif 'score' in data:
+                            overall_score = data['score']
+                        elif 'analysis_results' in data and isinstance(data['analysis_results'], dict):
+                            ar = data['analysis_results']
+                            if 'overall_score' in ar:
+                                overall_score = ar['overall_score']
+                            elif 'score' in ar:
+                                overall_score = ar['score']
+                            
+                            # Get other metadata
+                            if 'total_checks' in ar:
+                                total_checks = ar['total_checks']
+                            if 'engine_version' in ar:
+                                engine_version = ar['engine_version']
+                            elif 'version' in ar:
+                                engine_version = ar['version']
+                        
+                        # Create history entry
+                        history_entry = {
+                            'timestamp': timestamp_str,
+                            'overall_score': overall_score,
+                            'total_checks': total_checks,
+                            'engine_version': engine_version
+                        }
+                        
+                        # Add to history data
+                        history_data.append(history_entry)
+                        print(f"    Added entry with score: {history_entry['overall_score']}") # DEBUG
+                        
+                        # Update repo_info with the data from the latest entry
+                        if latest_timestamp is None or current_timestamp > latest_timestamp:
+                            latest_timestamp = current_timestamp
+                            repo_info = current_repo_info
+                            print(f"    Updated repo_info with latest data ({current_timestamp})") # DEBUG
 
                 except json.JSONDecodeError as json_err:
-                    print(f"Warning: Skipping invalid JSON line: {json_err}")
+                    print(f"Warning: Skipping invalid JSON line {line_count} in repo_history: {json_err}") # DEBUG
                     continue
                 except Exception as line_err:
-                    print(f"Warning: Error processing line: {line_err}")
+                    print(f"Warning: Error processing line {line_count} in repo_history: {line_err}") # DEBUG
                     continue
 
         # Sort history data by timestamp (most recent first)
-        history_data.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')), reverse=True)
+        try:
+            if history_data:
+                history_data.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')), reverse=True)
+                print(f"Sorted {len(history_data)} history entries by timestamp (newest first)") # DEBUG
+        except Exception as sort_err:
+            print(f"Warning: Error sorting history data: {sort_err}") # DEBUG
+            # If sorting fails, still try to display the data
 
     except Exception as e:
-        print(f"Error loading repository history data: {e}")
+        print(f"Error loading repository history data: {e}") # DEBUG
         return render_template('error.html', error=f"Error loading repository history data: {e}"), 500
 
+    print(f"Found {len(history_data)} history entries for repo ID/Name: {repo_id}") # DEBUG
+    
+    # If no repo_info was found but we have history data, use data from the first entry
+    if repo_info is None and history_data:
+        print(f"No repo_info found, using default values")
+        repo_info = {
+            'id': repo_id,
+            'full_name': repo_full_name or f"Repository {repo_id}",
+            'description': 'No description available',
+            'html_url': f"https://github.com/{repo_full_name}" if repo_full_name else "#"
+        }
+    
     # Pass repo_info (basic details) and history_data (list of runs) to the template
     return render_template('repo_history.html', repo_info=repo_info, history_data=history_data)
-
 
 @app.route('/analyze')
 def analyze():

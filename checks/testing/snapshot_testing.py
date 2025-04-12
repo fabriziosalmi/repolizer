@@ -5,6 +5,7 @@ Checks if the repository uses snapshot testing properly.
 """
 import os
 import re
+import json  # Add this import for JSON operations
 import logging
 from typing import Dict, Any, List
 
