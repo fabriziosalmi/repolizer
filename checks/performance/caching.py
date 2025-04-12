@@ -6,22 +6,27 @@ Checks if the repository implements caching mechanisms to improve performance.
 import os
 import re
 import logging
+import time
+import signal
 from typing import Dict, Any, List, Set, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
-def check_caching(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
+def check_caching(repo_path: str = None, repo_data: Dict = None, timeout: int = 30) -> Dict[str, Any]:
     """
     Check for caching implementation in the repository
     
     Args:
         repo_path: Path to the repository on local filesystem
         repo_data: Repository data from API (used if repo_path is not available)
+        timeout: Maximum time in seconds to process a single file (default: 30)
         
     Returns:
         Dictionary with check results
     """
+    start_time = time.time()
     result = {
         "has_caching": False,
         "caching_types": [],
@@ -29,8 +34,12 @@ def check_caching(repo_path: str = None, repo_data: Dict = None) -> Dict[str, An
         "language_specific_caching": {},
         "files_with_caching": 0,
         "total_files_checked": 0,
+        "files_skipped": 0,
+        "files_timed_out": 0,
         "file_examples": [],
-        "caching_score": 0
+        "caching_score": 0,
+        "execution_time_ms": 0,
+        "early_stopped": False
     }
     
     # If no local path is available, return basic result
@@ -171,6 +180,8 @@ def check_caching(repo_path: str = None, repo_data: Dict = None) -> Dict[str, An
     
     total_files_checked = 0
     files_with_caching = 0
+    files_skipped = 0
+    files_timed_out = 0
     caching_types_found = set()
     caching_libraries_found = set()
     language_caching = {}
@@ -180,7 +191,120 @@ def check_caching(repo_path: str = None, repo_data: Dict = None) -> Dict[str, An
     skip_dirs = ['.git', 'node_modules', 'venv', '.venv', 'env', '.env', 'dist', 'build',
                 'target', '.idea', '.vscode', '__pycache__', 'vendor', 'bin', 'obj']
     
-    # First, scan source code files
+    # Performance optimization parameters
+    MAX_FILES_TO_CHECK = 5000  # Limit for very large repos
+    MAX_FILE_SIZE = 1024 * 1024  # 1MB
+    
+    # Timeout handler for file operations
+    class TimeoutException(Exception):
+        pass
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutException("File processing timed out")
+    
+    def read_file_with_timeout(file_path, timeout_sec):
+        """Read a file with timeout"""
+        # Set the timeout handler
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout_sec)
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            signal.alarm(0)  # Disable the alarm
+            return content
+        except TimeoutException:
+            logger.warning(f"Timeout while reading file: {file_path}")
+            return None
+        except Exception as e:
+            logger.error(f"Error reading file {file_path}: {e}")
+            return None
+        finally:
+            signal.signal(signal.SIGALRM, old_handler)  # Restore old handler
+            signal.alarm(0)  # Disable the alarm
+    
+    def process_source_file(file_path, ext, patterns, libraries):
+        """Process a single source code file"""
+        nonlocal files_with_caching, total_files_checked, files_skipped, files_timed_out
+        
+        try:
+            # Skip very large files
+            file_size = os.path.getsize(file_path)
+            if file_size > MAX_FILE_SIZE:
+                files_skipped += 1
+                return None
+            
+            total_files_checked += 1
+            
+            content = read_file_with_timeout(file_path, timeout)
+            if content is None:
+                files_timed_out += 1
+                return None
+            
+            # Look for caching patterns
+            found_patterns = []
+            for pattern in patterns:
+                if re.search(pattern, content):
+                    found_patterns.append(pattern)
+            
+            if not found_patterns:
+                return None
+            
+            files_with_caching += 1
+            
+            # Identify libraries used
+            found_libraries = set()
+            for library in libraries:
+                for pattern in found_patterns:
+                    if library.lower() in pattern.lower() or library.lower() in content.lower():
+                        found_libraries.add(library)
+                        break
+            
+            # Identify caching types
+            found_types = set()
+            for pattern in found_patterns:
+                if 'redis' in pattern.lower():
+                    found_types.add('redis')
+                elif 'memcache' in pattern.lower():
+                    found_types.add('memcached')
+                elif 'local' in pattern.lower() or 'session' in pattern.lower():
+                    found_types.add('browser')
+                elif 'file' in pattern.lower() or 'open(' in pattern.lower() or 'dump' in pattern.lower():
+                    found_types.add('file')
+                elif '@cache' in pattern.lower() or 'memoize' in pattern.lower() or 'lru' in pattern.lower():
+                    found_types.add('function')
+                elif 'etag' in pattern.lower() or 'control' in pattern.lower() or 'modified' in pattern.lower():
+                    found_types.add('http')
+                else:
+                    found_types.add('in-memory')
+            
+            # Find a code snippet for an example
+            example = None
+            for pattern in found_patterns:
+                match = re.search(pattern, content)
+                if match:
+                    line = content[max(0, match.start() - 50):min(len(content), match.end() + 50)]
+                    example = {
+                        "file": os.path.relpath(file_path, repo_path),
+                        "pattern": pattern,
+                        "snippet": line.strip()
+                    }
+                    break
+            
+            return {
+                "patterns": found_patterns,
+                "libraries": found_libraries,
+                "types": found_types,
+                "example": example,
+                "language": ext[1:]  # Remove the dot
+            }
+            
+        except Exception as e:
+            logger.error(f"Error processing file {file_path}: {e}")
+            return None
+    
+    # Collect all potential files to analyze
+    files_to_process = []
     for root, dirs, files in os.walk(repo_path):
         # Skip excluded directories
         dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith('.')]
@@ -191,125 +315,62 @@ def check_caching(repo_path: str = None, repo_data: Dict = None) -> Dict[str, An
             # Check if this file extension has defined caching patterns
             if ext in caching_patterns:
                 file_path = os.path.join(root, file)
-                
-                # Skip very large files
-                try:
-                    file_size = os.path.getsize(file_path)
-                    if file_size > 1000000:  # 1MB
-                        continue
-                except OSError:
-                    continue
-                
-                total_files_checked += 1
+                files_to_process.append((file_path, ext))
+            
+            # Also check if it's a config file we care about
+            file_path = os.path.join(root, file)
+            for config_pattern in config_files:
+                if isinstance(config_pattern, str) and not config_pattern.endswith('/') and file == config_pattern:
+                    files_to_process.append((file_path, "config"))
+    
+    # Check if we need to limit the number of files
+    if len(files_to_process) > MAX_FILES_TO_CHECK:
+        logger.info(f"Repository has too many files ({len(files_to_process)}), limiting to {MAX_FILES_TO_CHECK}")
+        files_to_process = files_to_process[:MAX_FILES_TO_CHECK]
+        result["early_stopped"] = True
+    
+    # Process files in parallel using ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=min(os.cpu_count() * 2, 8)) as executor:
+        futures = []
+        
+        # Submit source code file tasks
+        for file_path, ext in files_to_process:
+            if ext in caching_patterns:
                 patterns = caching_patterns[ext]["patterns"]
                 libraries = caching_patterns[ext]["libraries"]
-                
-                try:
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read()
-                        
-                        # Look for caching patterns
-                        found_patterns = []
-                        for pattern in patterns:
-                            if re.search(pattern, content):
-                                found_patterns.append(pattern)
-                                # Clean up pattern for readability
-                                clean_pattern = pattern.replace(r'\s+', ' ').replace(r'\(', '(').replace(r'\.', '.')
-                                
-                                # Categorize the caching type
-                                if 'redis' in pattern.lower():
-                                    caching_types_found.add('redis')
-                                elif 'memcache' in pattern.lower():
-                                    caching_types_found.add('memcached')
-                                elif 'local' in pattern.lower() or 'session' in pattern.lower():
-                                    caching_types_found.add('browser')
-                                elif 'file' in pattern.lower() or 'open(' in pattern.lower() or 'dump' in pattern.lower():
-                                    caching_types_found.add('file')
-                                elif '@cache' in pattern.lower() or 'memoize' in pattern.lower() or 'lru' in pattern.lower():
-                                    caching_types_found.add('function')
-                                elif 'etag' in pattern.lower() or 'control' in pattern.lower() or 'modified' in pattern.lower():
-                                    caching_types_found.add('http')
-                                else:
-                                    caching_types_found.add('in-memory')
-                        
-                        # If we found caching patterns
-                        if found_patterns:
-                            files_with_caching += 1
-                            
-                            # Identify which libraries are used
-                            for library in libraries:
-                                for pattern in found_patterns:
-                                    if library.lower() in pattern.lower() or library.lower() in content.lower():
-                                        caching_libraries_found.add(library)
-                                        break
-                            
-                            # Track language-specific patterns
-                            lang = ext[1:]  # Remove the dot
-                            if lang not in language_caching:
-                                language_caching[lang] = set()
-                            language_caching[lang].update(found_patterns)
-                            
-                            # Add to file examples (limit to 5)
-                            if len(file_examples) < 5:
-                                rel_path = os.path.relpath(file_path, repo_path)
-                                # Find a specific caching pattern example
-                                for pattern in found_patterns:
-                                    match = re.search(pattern, content)
-                                    if match:
-                                        line = content[max(0, match.start() - 50):min(len(content), match.end() + 50)]
-                                        file_examples.append({
-                                            "file": rel_path,
-                                            "pattern": pattern,
-                                            "snippet": line.strip()
-                                        })
-                                        break
-                
-                except Exception as e:
-                    logger.error(f"Error reading file {file_path}: {e}")
-    
-    # Next, check configuration files for caching settings
-    for config_item in config_files:
-        if os.path.isdir(os.path.join(repo_path, config_item)):
-            # Handle directory-based config like .github/workflows/
-            config_dir = os.path.join(repo_path, config_item)
-            if os.path.exists(config_dir):
-                for root, _, files in os.walk(config_dir):
-                    for file in files:
-                        file_path = os.path.join(root, file)
-                        if check_config_file(file_path, repo_path, config_caching_keywords, 
-                                        caching_types_found, file_examples):
-                            files_with_caching += 1
-                        total_files_checked += 1
-        else:
-            # Handle single config files
-            file_path = os.path.join(repo_path, config_item)
-            if os.path.isfile(file_path):
-                if check_config_file(file_path, repo_path, config_caching_keywords, 
-                                    caching_types_found, file_examples):
-                    files_with_caching += 1
-                total_files_checked += 1
-    
-    # Check for web server files that often contain caching configs
-    web_server_files = [
-        "nginx.conf", "apache2.conf", "httpd.conf", ".htaccess", 
-        "web.config", "lighttpd.conf", "varnish.vcl"
-    ]
-    
-    for web_file in web_server_files:
-        # Look for the file in common locations
-        common_locations = [
-            "", "config/", "conf/", "etc/", "server/", "apache/", "nginx/", "deploy/"
-        ]
+                future = executor.submit(process_source_file, file_path, ext, patterns, libraries)
+                futures.append(future)
+            elif ext == "config":
+                # Handle config files separately
+                future = executor.submit(check_config_file, file_path, repo_path, config_caching_keywords, set(), [])
+                futures.append((future, file_path))
         
-        for location in common_locations:
-            file_path = os.path.join(repo_path, location, web_file)
-            if os.path.isfile(file_path):
-                if check_config_file(file_path, repo_path, config_caching_keywords, 
-                                    caching_types_found, file_examples):
+        # Process results as they complete
+        for future in as_completed(futures):
+            if isinstance(future, tuple):
+                # Config file result
+                future_obj, file_path = future
+                config_has_caching = future_obj.result()
+                if config_has_caching:
                     files_with_caching += 1
-                    # Add "http" type for web server configs
-                    caching_types_found.add("http")
+                    caching_types_found.add("config")
                 total_files_checked += 1
+            else:
+                # Source file result
+                result_data = future.result()
+                if result_data:
+                    caching_types_found.update(result_data["types"])
+                    caching_libraries_found.update(result_data["libraries"])
+                    
+                    # Track language-specific patterns
+                    lang = result_data["language"]
+                    if lang not in language_caching:
+                        language_caching[lang] = set()
+                    language_caching[lang].update(result_data["patterns"])
+                    
+                    # Add to file examples if we have fewer than 5
+                    if result_data["example"] and len(file_examples) < 5:
+                        file_examples.append(result_data["example"])
     
     # Convert language patterns to a serializable format
     lang_caching_dict = {}
@@ -323,41 +384,65 @@ def check_caching(repo_path: str = None, repo_data: Dict = None) -> Dict[str, An
     result["language_specific_caching"] = lang_caching_dict
     result["files_with_caching"] = files_with_caching
     result["total_files_checked"] = total_files_checked
+    result["files_skipped"] = files_skipped
+    result["files_timed_out"] = files_timed_out
     result["file_examples"] = file_examples
     
     # Calculate caching score (0-100 scale)
+    # A more granular scoring system
     score = 0
     
     # Base score for having caching
     if result["has_caching"]:
-        score += 30
+        # Start with 1 for a successful check with minimal implementation
+        score = 1
         
-        # Points for caching coverage
+        # Add points for caching coverage - more granular scale
         if total_files_checked > 0:
-            coverage_ratio = min(1.0, files_with_caching / (total_files_checked * 0.15))  # Assume 15% of files might need caching
-            coverage_points = int(coverage_ratio * 30)
-            score += coverage_points
+            # Realistic target: 10% of files might need caching in a typical repo
+            coverage_ratio = min(1.0, files_with_caching / (total_files_checked * 0.1))
+            # Scale from 1-60 points for coverage
+            coverage_points = int(coverage_ratio * 59) + 1
+            score = max(score, coverage_points)
         
-        # Points for variety of caching types
-        type_points = min(25, len(caching_types_found) * 5)
-        score += type_points
+        # Points for variety of caching types (redis, memcached, http, browser, etc.)
+        # Each type is worth 5 points, up to 25 points
+        variety_points = min(25, len(caching_types_found) * 5)
         
         # Points for using established libraries
+        # Each library is worth 3 points, up to 15 points
         library_points = min(15, len(caching_libraries_found) * 3)
-        score += library_points
+        
+        # Combine scores, starting from current score and adding variety and library points
+        # This ensures a minimal score of 1 for any caching implementation
+        score = min(100, score + variety_points + library_points)
+    else:
+        # No caching detected but check executed successfully
+        score = 1
     
-    # Ensure score is within 0-100 range
-    score = min(100, max(0, score))
+    # Record execution time
+    execution_time = time.time() - start_time
+    result["execution_time_ms"] = int(execution_time * 1000)
+    
+    # Ensure score is within 1-100 range (0 reserved for failed checks)
+    score = min(100, max(1, score))
     
     # Round and convert to integer if it's a whole number
     rounded_score = round(score, 1)
     result["caching_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
+    
+    logger.info(f"Caching check completed in {execution_time:.2f}s, score: {result['caching_score']}, "
+                f"files checked: {total_files_checked}, files with caching: {files_with_caching}")
     
     return result
 
 def check_config_file(file_path, repo_path, keywords, types_found, file_examples):
     """Helper function to check configuration files for caching settings"""
     try:
+        # Skip files that are too large
+        if os.path.getsize(file_path) > 1024 * 1024:  # 1MB
+            return False
+            
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read().lower()
             
@@ -410,14 +495,17 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         repository: Repository data dictionary which might include a local_path
         
     Returns:
-        Check results with score on 0-100 scale
+        Check results with score on 1-100 scale (0 for failures)
     """
     try:
         # Check if we have a local path to the repository
         local_path = repository.get('local_path')
         
+        # Get timeout setting from repository config if available
+        timeout = repository.get('config', {}).get('file_timeout', 30)
+        
         # Run the check
-        result = check_caching(local_path, repository)
+        result = check_caching(local_path, repository, timeout)
         
         # Return the result with the score
         return {
@@ -427,10 +515,10 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             "errors": None
         }
     except Exception as e:
-        logger.error(f"Error running caching check: {e}")
+        logger.error(f"Error running caching check: {e}", exc_info=True)
         return {
             "status": "failed",
-            "score": 0,
-            "result": {},
+            "score": 0,  # Score 0 for failed checks
+            "result": {"error": str(e)},
             "errors": str(e)
         }
