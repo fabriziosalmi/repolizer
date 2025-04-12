@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repolizer - Repository Analyzer</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-card {
+            transition: all 0.3s ease;
+        }
+        .form-card:hover {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .score-bar {
+            height: 8px;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+        .score-bar-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        /* Score color gradients */
+        .score-high {
+            background-color: #34d399;
+        }
+        .score-medium {
+            background-color: #fbbf24;
+        }
+        .score-low {
+            background-color: #f87171;
+        }
+        /* Toggle button styling */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+        /* Category badge styles */
+        .category-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            display: inline-block;
+            margin-right: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="bg-gray-800 text-white shadow-lg">
+        <div class="container mx-auto p-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <i class="fab fa-github text-4xl mr-3"></i>
+                <h1 class="text-2xl font-bold">Repolizer - Repository Analyzer</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-home mr-1"></i> Home
+                </a>
+                <a href="/scraper" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-search mr-1"></i> Scraper
+                </a>
+                <a href="/analyze" class="text-blue-300 border-b-2 border-blue-300">
+                    <i class="fas fa-chart-line mr-1"></i> Analyzer
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Repository Health Analyzer</h2>
+            <p class="text-gray-600 mb-4">Analyze a GitHub repository for code quality, maintainability, security, and more. Use repositories from your existing collection or enter details for a new repository.</p>
+            
+            <form id="analyze-form" class="space-y-6">
+                <!-- Source Selection -->
+                <div class="form-card bg-blue-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-medium text-blue-800 mb-2">
+                        <i class="fas fa-database mr-2"></i>Repository Source
+                    </h3>
+                    
+                    <div class="flex space-x-4 mb-4">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="repo-source" value="existing" class="h-4 w-4 text-blue-600" checked>
+                            <span class="text-gray-700">Use existing repository from collection</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="repo-source" value="new" class="h-4 w-4 text-blue-600">
+                            <span class="text-gray-700">Analyze a new repository</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Existing Repository Selection -->
+                    <div id="existing-repo-form">
+                        <label for="existing-repo" class="block text-sm font-medium text-gray-700 mb-1">Select Repository</label>
+                        <select id="existing-repo" name="existing-repo" class="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Loading repositories...</option>
+                        </select>
+                    </div>
+                    
+                    <!-- New Repository Input -->
+                    <div id="new-repo-form" class="hidden">
+                        <div class="mb-3">
+                            <label for="repo-url" class="block text-sm font-medium text-gray-700 mb-1">GitHub Repository URL</label>
+                            <input type="text" id="repo-url" name="repo-url" placeholder="https://github.com/username/repository" 
+                                  class="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">Enter the full URL to the GitHub repository you want to analyze.</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="github-token" class="block text-sm font-medium text-gray-700 mb-1">GitHub Token (Optional)</label>
+                            <input type="password" id="github-token" name="github-token" placeholder="Enter GitHub personal access token" 
+                                  class="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">For private repositories or to avoid API rate limits. Never stored on server.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Analysis Options -->
+                <div class="form-card bg-green-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-medium text-green-800 mb-2">
+                        <i class="fas fa-sliders-h mr-2"></i>Analysis Options
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="categories" class="block text-sm font-medium text-gray-700 mb-1">Categories to Analyze</label>
+                            <select id="categories" name="categories" multiple class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500 h-32">
+                                <option value="all" selected>All Categories</option>
+                                <option value="documentation">Documentation</option>
+                                <option value="security">Security</option>
+                                <option value="code_quality">Code Quality</option>
+                                <option value="performance">Performance</option>
+                                <option value="accessibility">Accessibility</option>
+                                <option value="ci_cd">CI/CD</option>
+                                <option value="maintainability">Maintainability</option>
+                                <option value="testing">Testing</option>
+                                <option value="licensing">Licensing</option>
+                                <option value="community">Community</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple categories</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Analysis Depth</label>
+                            
+                            <div class="space-y-2">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="analysis-depth" value="api" class="h-4 w-4 text-green-600">
+                                    <span class="text-gray-700">API Only (Faster but less detailed)</span>
+                                </label>
+                                
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="analysis-depth" value="clone" class="h-4 w-4 text-green-600" checked>
+                                    <span class="text-gray-700">Full Clone (More comprehensive analysis)</span>
+                                </label>
+                                
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="analysis-depth" value="force" class="h-4 w-4 text-green-600">
+                                    <span class="text-gray-700">Force Reanalysis (Ignore cached results)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center mb-2">
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" name="save-results" id="save-results" checked 
+                                  class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
+                            <label for="save-results" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                        <label for="save-results" class="text-sm text-gray-700">Save results to repository collection</label>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center">
+                    <button type="submit" id="start-analyze-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+                        <i class="fas fa-chart-line mr-2"></i> Start Analysis
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Analysis Progress -->
+        <div id="analysis-progress" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-sync-alt fa-spin mr-2"></i>Analysis in Progress
+            </h2>
+            
+            <div class="mb-6">
+                <div class="flex justify-between mb-1">
+                    <span class="text-sm font-medium text-gray-700">Overall Progress</span>
+                    <span id="progress-percentage" class="text-sm font-medium text-blue-600">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-100 rounded-lg p-4 max-h-64 overflow-y-auto mb-4">
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Analysis Log</h3>
+                <div id="log-container" class="text-sm font-mono text-gray-700 whitespace-pre-wrap"></div>
+            </div>
+            
+            <div class="flex justify-between">
+                <button id="stop-analyze-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center">
+                    <i class="fas fa-stop mr-2"></i> Stop Analysis
+                </button>
+            </div>
+        </div>
+        
+        <!-- Analysis Results -->
+        <div id="analysis-results" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>Analysis Results
+            </h2>
+            
+            <div class="bg-gray-100 rounded-lg p-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="text-sm font-medium text-gray-500">Repository</div>
+                        <div class="text-xl font-bold text-blue-600" id="repo-name">-</div>
+                    </div>
+                    
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="text-sm font-medium text-gray-500">Overall Health Score</div>
+                        <div class="text-2xl font-bold" id="overall-score">-</div>
+                    </div>
+                    
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="text-sm font-medium text-gray-500">Analysis Time</div>
+                        <div class="text-2xl font-bold text-purple-600" id="analysis-time">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Category Scores</h3>
+                <div id="category-scores" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Category scores will be inserted here -->
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Detailed Check Results</h3>
+                <div id="check-details-container" class="space-y-4">
+                    <!-- Check details will be inserted here -->
+                </div>
+            </div>
+            
+            <div class="flex justify-center space-x-4">
+                <button id="view-report-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+                    <i class="fas fa-file-alt mr-2"></i> View Full Report
+                </button>
+                
+                <button id="analyze-another-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+                    <i class="fas fa-redo mr-2"></i> Analyze Another Repository
+                </button>
+            </div>
+        </div>
+
+        <!-- Analysis Results Area -->
+        <div id="analysisResults" class="mt-6 bg-white p-6 rounded-lg shadow-md hidden">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Analysis Results</h3>
+            <div id="resultsSummary" class="mb-4">
+                <!-- Summary will be populated here -->
+            </div>
+
+            <!-- Action Buttons - Initially Hidden -->
+            <div id="resultsActions" class="flex space-x-4 mb-4 hidden">
+                 <button id="downloadReportButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm">
+                    <i class="fas fa-download mr-2"></i> Download Full Report (JSON)
+                </button>
+                <a id="viewReportButton" href="#" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm">
+                    <i class="fas fa-file-alt mr-2"></i> View Full Report
+                </a>
+            </div>
+
+            <div id="resultsLog" class="mt-4 max-h-60 overflow-y-auto bg-gray-50 p-3 rounded border border-gray-200 text-sm">
+                <!-- Log messages will appear here -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-auto py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>Repolizer - GitHub Repository Health Analyzer</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Form elements
+            const analyzeForm = document.getElementById('analyze-form');
+            const startAnalyzeBtn = document.getElementById('start-analyze-btn');
+            
+            // Source selection elements
+            const repoSourceRadios = document.querySelectorAll('input[name="repo-source"]');
+            const existingRepoForm = document.getElementById('existing-repo-form');
+            const newRepoForm = document.getElementById('new-repo-form');
+            const existingRepoSelect = document.getElementById('existing-repo');
+            
+            // Progress elements
+            const analysisProgress = document.getElementById('analysis-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const progressPercentage = document.getElementById('progress-percentage');
+            const logContainer = document.getElementById('log-container');
+            const stopAnalyzeBtn = document.getElementById('stop-analyze-btn');
+            
+            // Results elements
+            const analysisResults = document.getElementById('analysis-results');
+            const repoName = document.getElementById('repo-name');
+            const overallScore = document.getElementById('overall-score');
+            const analysisTime = document.getElementById('analysis-time');
+            const categoryScores = document.getElementById('category-scores');
+            const checkDetailsContainer = document.getElementById('check-details-container');
+            const viewReportBtn = document.getElementById('view-report-btn');
+            const analyzeAnotherBtn = document.getElementById('analyze-another-btn');
+            
+            // Analysis state
+            let analysisRunning = false;
+            let analysisJobId = null;
+            let eventSource = null;
+            
+            // Load repositories from results.jsonl for the select dropdown
+            loadRepositories();
+            
+            // Toggle between existing and new repository forms
+            repoSourceRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (radio.value === 'existing') {
+                        existingRepoForm.classList.remove('hidden');
+                        newRepoForm.classList.add('hidden');
+                    } else {
+                        existingRepoForm.classList.add('hidden');
+                        newRepoForm.classList.remove('hidden');
+                    }
+                });
+            });
+            
+            // Start the analysis
+            analyzeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                startAnalysis();
+            });
+            
+            // Handle stop button
+            stopAnalyzeBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to stop the analysis? All progress will be lost.')) {
+                    stopAnalysis();
+                }
+            });
+            
+            // Handle analyze another button
+            analyzeAnotherBtn.addEventListener('click', () => {
+                resetUI();
+            });
+            
+            // Handle view report button
+            viewReportBtn.addEventListener('click', () => {
+                // Get repo ID from the current analysis
+                const repoId = viewReportBtn.getAttribute('data-repo-id');
+                if (repoId) {
+                    window.location.href = `/repo/${repoId}`;
+                } else {
+                    alert('No repository ID available for this report.');
+                }
+            });
+            
+            // Function to load repositories for the dropdown
+            async function loadRepositories() {
+                try {
+                    // First try to load from results.jsonl (analyzed repos)
+                    let response = await fetch('/results.jsonl');
+                    
+                    if (!response.ok) {
+                        // If no results file exists, try repositories.jsonl (scraped repos)
+                        response = await fetch('/repositories.jsonl');
+                        if (!response.ok) {
+                            throw new Error('No repository files found');
+                        }
+                    }
+                    
+                    const text = await response.text();
+                    const repos = text.split('\n')
+                        .filter(line => line.trim())
+                        .map(line => {
+                            try {
+                                return JSON.parse(line);
+                            } catch (e) {
+                                console.error('Error parsing line:', e);
+                                return null;
+                            }
+                        })
+                        .filter(repo => repo !== null);
+                    
+                    // Clear loading option
+                    existingRepoSelect.innerHTML = '';
+                    
+                    if (repos.length === 0) {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'No repositories found';
+                        existingRepoSelect.appendChild(option);
+                    } else {
+                        // Add placeholder option
+                        const placeholderOption = document.createElement('option');
+                        placeholderOption.value = '';
+                        placeholderOption.textContent = 'Select a repository...';
+                        existingRepoSelect.appendChild(placeholderOption);
+                        
+                        // Process each repository
+                        repos.forEach(repo => {
+                            // For results.jsonl format
+                            if (repo.repository) {
+                                const repoData = repo.repository;
+                                const option = document.createElement('option');
+                                option.value = repoData.id;
+                                option.textContent = repoData.full_name || repoData.name;
+                                option.setAttribute('data-analyzed', 'true');
+                                existingRepoSelect.appendChild(option);
+                            } 
+                            // For repositories.jsonl format
+                            else if (repo.full_name || repo.name) {
+                                const option = document.createElement('option');
+                                option.value = repo.id;
+                                option.textContent = repo.full_name || repo.name;
+                                existingRepoSelect.appendChild(option);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading repositories:', error);
+                    existingRepoSelect.innerHTML = `<option value="">Error loading repositories</option>`;
+                }
+            }
+            
+            // Function to start the analysis
+            function startAnalysis() {
+                // Get form data
+                const formData = new FormData(analyzeForm);
+                const analysisConfig = {
+                    source: formData.get('repo-source'),
+                    categories: getSelectedCategories(),
+                    analysisDepth: formData.get('analysis-depth'),
+                    saveResults: formData.get('save-results') === 'on'
+                };
+                
+                // Add source-specific data
+                if (analysisConfig.source === 'existing') {
+                    analysisConfig.repoId = formData.get('existing-repo');
+                    if (!analysisConfig.repoId) {
+                        alert('Please select a repository to analyze');
+                        return;
+                    }
+                } else {
+                    analysisConfig.repoUrl = formData.get('repo-url');
+                    analysisConfig.githubToken = formData.get('github-token');
+                    
+                    if (!analysisConfig.repoUrl) {
+                        alert('Please enter a GitHub repository URL');
+                        return;
+                    }
+                    
+                    // Validate URL format
+                    if (!isValidGitHubUrl(analysisConfig.repoUrl)) {
+                        alert('Please enter a valid GitHub repository URL');
+                        return;
+                    }
+                }
+                
+                // Show progress UI
+                analyzeForm.parentElement.classList.add('hidden');
+                analysisProgress.classList.remove('hidden');
+                analysisRunning = true;
+                
+                // Clear log
+                logContainer.innerHTML = '';
+                
+                // Log starting
+                addLogMessage('Starting repository analysis...');
+                
+                // Send request to start analysis
+                fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(analysisConfig)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        analysisJobId = data.job_id;
+                        addLogMessage(`Analysis started with job ID: ${analysisJobId}`);
+                        // Start listening for events
+                        connectEventSource();
+                    } else {
+                        addLogMessage(`Error: ${data.message}`);
+                        stopAnalysis(true);
+                    }
+                })
+                .catch(error => {
+                    addLogMessage(`Failed to start analysis: ${error}`);
+                    stopAnalysis(true);
+                });
+            }
+            
+            // Function to connect to the event source
+            function connectEventSource() {
+                // Close existing event source if any
+                if (eventSource) {
+                    eventSource.close();
+                }
+                
+                // Create new event source
+                eventSource = new EventSource(`/api/analyze/stream?job_id=${analysisJobId}`);
+                
+                // Handle connection open
+                eventSource.addEventListener('connected', (e) => {
+                    addLogMessage('Connected to analysis output stream');
+                });
+                
+                // Handle log messages
+                eventSource.addEventListener('log', (e) => {
+                    try {
+                        const message = JSON.parse(e.data);
+                        addLogMessage(message.text || 'Log message received');
+                        
+                        // Update progress based on log message
+                        if (message.progress) {
+                            updateProgress(message.progress);
+                        }
+                    } catch (error) {
+                        console.error('Error parsing log message:', error);
+                    }
+                });
+                
+                // Handle progress updates
+                eventSource.addEventListener('progress', (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        updateProgress(data.percentage || 0);
+                    } catch (error) {
+                        console.error('Error parsing progress message:', error);
+                    }
+                });
+                
+                // Handle completion
+                eventSource.addEventListener('complete', (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        addLogMessage('Analysis completed successfully!');
+                        
+                        // Stop analysis process
+                        analysisRunning = false;
+                        
+                        // Close event source
+                        eventSource.close();
+                        eventSource = null;
+                        
+                        // Show results
+                        showResults(data.results);
+                    } catch (error) {
+                        console.error('Error parsing completion message:', error);
+                    }
+                });
+                
+                // Handle errors
+                eventSource.addEventListener('error', (e) => {
+                    try {
+                        let errorMessage = 'An error occurred during analysis.';
+                        
+                        if (e.data) {
+                            const data = JSON.parse(e.data);
+                            errorMessage = data.message || errorMessage;
+                        }
+                        
+                        addLogMessage(`Error: ${errorMessage}`);
+                        stopAnalysis(true);
+                    } catch (error) {
+                        console.error('Error parsing error message:', error);
+                        addLogMessage('An unknown error occurred');
+                        stopAnalysis(true);
+                    }
+                });
+                
+                // Handle general error
+                eventSource.onerror = function(e) {
+                    addLogMessage('Connection error. Trying to reconnect...');
+                    
+                    // The EventSource will automatically try to reconnect
+                    if (e.eventPhase === EventSource.CLOSED) {
+                        addLogMessage('Connection closed permanently.');
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                        stopAnalysis(true);
+                    }
+                };
+            }
+            
+            // Function to stop the analysis
+            function stopAnalysis(isError = false) {
+                if (analysisRunning) {
+                    // Send request to stop the analysis
+                    fetch('/api/analyze/stop', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ job_id: analysisJobId })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        addLogMessage(`Analysis stopped: ${data.message}`);
+                    })
+                    .catch(error => {
+                        addLogMessage(`Error stopping analysis: ${error}`);
+                    });
+                }
+                
+                analysisRunning = false;
+                
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                
+                // If error, show form again
+                if (isError) {
+                    resetUI();
+                }
+            }
+            
+            // Function to get selected categories
+            function getSelectedCategories() {
+                const select = document.getElementById('categories');
+                const selected = [];
+                
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].selected) {
+                        selected.push(select.options[i].value);
+                    }
+                }
+                
+                // If "all" is selected, return null (all categories)
+                if (selected.includes('all')) {
+                    return null;
+                }
+                
+                return selected.length ? selected : null;
+            }
+            
+            // Function to validate GitHub URL
+            function isValidGitHubUrl(url) {
+                return /^https?:\/\/(www\.)?github\.com\/[\w-]+\/[\w.-]+\/?$/.test(url);
+            }
+            
+            // Function to reset the UI
+            function resetUI() {
+                analyzeForm.parentElement.classList.remove('hidden');
+                analysisProgress.classList.add('hidden');
+                analysisResults.classList.add('hidden');
+                logContainer.innerHTML = '';
+                progressBar.style.width = '0%';
+                progressPercentage.textContent = '0%';
+                analysisRunning = false;
+            }
+            
+            // Function to add a log message
+            function addLogMessage(message) {
+                const now = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `[${now}] ${message}`;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // Function to update progress
+            function updateProgress(percentage) {
+                const progressValue = Math.min(100, Math.max(0, percentage));
+                progressBar.style.width = `${progressValue}%`;
+                progressPercentage.textContent = `${Math.round(progressValue)}%`;
+            }
+            
+            // Function to show results
+            function showResults(results) {
+                // Hide progress, show results
+                analysisProgress.classList.add('hidden');
+                analysisResults.classList.remove('hidden');
+                
+                if (!results) {
+                    // Handle error case
+                    repoName.textContent = 'Error: No results available';
+                    return;
+                }
+                
+                // Display basic info
+                const repository = results.repository || {};
+                repoName.textContent = repository.full_name || repository.name || 'Unknown Repository';
+                
+                // Set repo ID for view report button
+                viewReportBtn.setAttribute('data-repo-id', repository.id || '');
+                
+                // Display overall score with color
+                const score = results.overall_score || 0;
+                const scoreClass = score >= 70 ? 'text-green-600' : (score >= 40 ? 'text-yellow-600' : 'text-red-600');
+                overallScore.textContent = `${score}/100`;
+                overallScore.className = `text-2xl font-bold ${scoreClass}`;
+                
+                // Display analysis time
+                const processingTime = results.total_processing_time || 0;
+                const formattedTime = formatTime(processingTime);
+                analysisTime.textContent = formattedTime;
+                
+                // Display category scores
+                categoryScores.innerHTML = '';
+                
+                const categories = [
+                    { id: 'documentation', name: 'Documentation', icon: 'fa-file-alt' },
+                    { id: 'security', name: 'Security', icon: 'fa-shield-alt' },
+                    { id: 'code_quality', name: 'Code Quality', icon: 'fa-code' },
+                    { id: 'performance', name: 'Performance', icon: 'fa-tachometer-alt' },
+                    { id: 'accessibility', name: 'Accessibility', icon: 'fa-universal-access' },
+                    { id: 'ci_cd', name: 'CI/CD', icon: 'fa-sync' },
+                    { id: 'maintainability', name: 'Maintainability', icon: 'fa-wrench' },
+                    { id: 'testing', name: 'Testing', icon: 'fa-vial' },
+                    { id: 'licensing', name: 'Licensing', icon: 'fa-balance-scale' },
+                    { id: 'community', name: 'Community', icon: 'fa-users' }
+                ];
+                
+                categories.forEach(category => {
+                    if (results[category.id]) {
+                        // Calculate average score for category
+                        const checks = Object.values(results[category.id]);
+                        if (checks.length === 0) return;
+                        
+                        let totalScore = 0;
+                        let validChecks = 0;
+                        
+                        checks.forEach(check => {
+                            if (typeof check.score === 'number') {
+                                totalScore += check.score;
+                                validChecks++;
+                            }
+                        });
+                        
+                        const categoryScore = validChecks > 0 ? Math.round(totalScore / validChecks) : 0;
+                        const scoreClass = categoryScore >= 70 ? 'bg-green-100 text-green-800' : 
+                                         (categoryScore >= 40 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+                        
+                        const categoryElement = document.createElement('div');
+                        categoryElement.className = 'bg-white p-3 rounded-lg shadow border';
+                        
+                        categoryElement.innerHTML = `
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center">
+                                    <i class="fas ${category.icon} text-gray-600 mr-2"></i>
+                                    <span class="font-medium">${category.name}</span>
+                                </div>
+                                <span class="category-badge ${scoreClass}">${categoryScore}/100</span>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-bar-fill ${categoryScore >= 70 ? 'score-high' : (categoryScore >= 40 ? 'score-medium' : 'score-low')}" 
+                                     style="width: ${categoryScore}%"></div>
+                            </div>
+                        `;
+                        
+                        categoryScores.appendChild(categoryElement);
+                    }
+                });
+                
+                // Display check details
+                checkDetailsContainer.innerHTML = '';
+                
+                // Add a collapsible section for each category
+                categories.forEach(category => {
+                    if (results[category.id] && Object.keys(results[category.id]).length > 0) {
+                        const categoryId = `category-${category.id}`;
+                        const checkCount = Object.keys(results[category.id]).length;
+                        
+                        const categorySection = document.createElement('div');
+                        categorySection.className = 'border rounded-lg overflow-hidden';
+                        
+                        categorySection.innerHTML = `
+                            <div class="p-3 bg-gray-100 cursor-pointer flex justify-between items-center" 
+                                 onclick="document.getElementById('${categoryId}').classList.toggle('hidden')">
+                                <div class="flex items-center">
+                                    <i class="fas ${category.icon} text-gray-600 mr-2"></i>
+                                    <span class="font-medium">${category.name}</span>
+                                </div>
+                                <span class="text-sm text-gray-600">${checkCount} check${checkCount !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div id="${categoryId}" class="hidden p-3 space-y-3">
+                                <!-- Individual checks will be added here -->
+                            </div>
+                        `;
+                        
+                        checkDetailsContainer.appendChild(categorySection);
+                        
+                        const checksContainer = document.getElementById(categoryId);
+                        
+                        // Add individual checks
+                        Object.entries(results[category.id]).forEach(([checkName, check]) => {
+                            const checkElement = document.createElement('div');
+                            checkElement.className = 'p-3 bg-white rounded border';
+                            
+                            // Format check details
+                            const checkScore = typeof check.score === 'number' ? check.score : 0;
+                            const checkStatus = check.status || 'unknown';
+                            const statusClass = checkStatus === 'completed' ? 'text-green-600' : 'text-red-600';
+                            
+                            // Format duration
+                            const duration = check.duration ? `${check.duration.toFixed(2)}s` : 'N/A';
+                            
+                            // Get check details
+                            const details = check.details || {};
+                            let detailsHtml = '';
+                            
+                            if (Object.keys(details).length > 0) {
+                                detailsHtml = `<div class="mt-2 text-sm text-gray-700 space-y-1">`;
+                                
+                                Object.entries(details).forEach(([key, value]) => {
+                                    // Skip complex objects unless they're arrays of simple values
+                                    if (typeof value === 'object' && value !== null) {
+                                        if (Array.isArray(value) && value.every(item => typeof item === 'string' || typeof item === 'number')) {
+                                            detailsHtml += `<div><span class="font-medium">${formatKey(key)}:</span> ${value.join(', ')}</div>`;
+                                        }
+                                    } else {
+                                        detailsHtml += `<div><span class="font-medium">${formatKey(key)}:</span> ${value}</div>`;
+                                    }
+                                });
+                                
+                                detailsHtml += `</div>`;
+                            }
+                            
+                            checkElement.innerHTML = `
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium">${formatCheckName(checkName)}</span>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-sm ${statusClass}">${checkStatus}</span>
+                                        <span class="px-2 py-1 rounded ${getScoreClass(checkScore)}">${checkScore}/100</span>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-600 mt-1">Duration: ${duration}</div>
+                                ${detailsHtml}
+                            `;
+                            
+                            checksContainer.appendChild(checkElement);
+                        });
+                    }
+                });
+            }
+            
+            // Helper function to format time in seconds
+            function formatTime(seconds) {
+                if (seconds < 60) {
+                    return `${seconds.toFixed(2)} seconds`;
+                } else if (seconds < 3600) {
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = (seconds % 60).toFixed(1);
+                    return `${minutes}m ${remainingSeconds}s`;
+                } else {
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    return `${hours}h ${minutes}m`;
+                }
+            }
+            
+            // Helper function to format check name
+            function formatCheckName(name) {
+                // Convert snake_case or kebab-case to Title Case
+                return name
+                    .replace(/[_-]/g, ' ')
+                    .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+            }
+            
+            // Helper function to format object keys
+            function formatKey(key) {
+                return key
+                    .replace(/[_-]/g, ' ')
+                    .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+            }
+            
+            // Helper function to get score class
+            function getScoreClass(score) {
+                if (score >= 70) return 'bg-green-100 text-green-800';
+                if (score >= 40) return 'bg-yellow-100 text-yellow-800';
+                return 'bg-red-100 text-red-800';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repolizer - Repository History</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script> <!-- Date adapter -->
+    <style>
+        /* Add any custom styles if needed */
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <header class="bg-gray-800 text-white shadow-lg">
+        <div class="container mx-auto p-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <i class="fab fa-github text-4xl mr-3"></i>
+                <h1 class="text-2xl font-bold">Repolizer</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-home mr-1"></i> Home
+                </a>
+                <a href="/scraper" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-search mr-1"></i> Scraper
+                </a>
+                <a href="/analyze" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-chart-line mr-1"></i> Analyzer
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 flex-grow">
+        {% if repo_info %}
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <a href="{{ repo_info.html_url }}" target="_blank" class="hover:text-blue-600">
+                            {{ repo_info.full_name }}
+                        </a> - Analysis History
+                    </h2>
+                    <p class="text-gray-600 mt-1">{{ repo_info.description or 'No description available' }}</p>
+                </div>
+                <a href="{{ url_for('repo_detail', repo_id=repo_info.id) }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Details
+                </a>
+            </div>
+
+            {% if history_data %}
+            <!-- Score Trend Chart -->
+            <div class="mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Overall Score Trend</h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <canvas id="scoreHistoryChart"></canvas>
+                </div>
+            </div>
+
+            <!-- History Table -->
+            <div>
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Analysis Runs</h3>
+                <div class="overflow-x-auto bg-white rounded-lg shadow">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Score</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checks Run</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Engine Version</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for entry in history_data %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ entry.timestamp | replace('T', ' ') | replace('Z', '') | truncate(19, true, '') }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {% if entry.overall_score >= 70 %}text-green-600{% elif entry.overall_score >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                    {{ entry.overall_score|round(1) }}/100
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ entry.total_checks }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ entry.engine_version or 'N/A' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    {# Link to a potential future view showing full details of a specific run #}
+                                    {# <a href="#" class="text-blue-600 hover:text-blue-800">View Run</a> #}
+                                    <span class="text-gray-400">N/A</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <script>
+                const ctx = document.getElementById('scoreHistoryChart').getContext('2d');
+                const historyData = {{ history_data | tojson }};
+
+                // Prepare data for Chart.js
+                const labels = historyData.map(entry => new Date(entry.timestamp.replace(' ', 'T') + 'Z')); // Ensure ISO format for date parsing
+                const scores = historyData.map(entry => entry.overall_score);
+
+                const scoreHistoryChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Overall Score',
+                            data: scores,
+                            borderColor: 'rgb(59, 130, 246)', // Blue color
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.1,
+                            fill: true,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day', // Adjust as needed (e.g., 'week', 'month')
+                                    tooltipFormat: 'PPpp', // Date-fns format for tooltip
+                                    displayFormats: {
+                                        day: 'MMM d, yyyy' // Date-fns format for axis label
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date of Analysis'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Overall Score (/100)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                            }
+                        }
+                    }
+                });
+            </script>
+
+            {% else %}
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-history text-4xl mb-3"></i>
+                <p>No historical analysis data found for this repository.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6 text-center">
+            <i class="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Repository Not Found</h2>
+            <p class="text-gray-600 mb-6">Could not retrieve information for the specified repository.</p>
+            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md inline-flex items-center">
+                <i class="fas fa-home mr-2"></i> Go to Homepage
+            </a>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-auto py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>Repolizer - GitHub Repository Health Analyzer</p>
+        </div>
+    </footer>
+</body>
+</html>

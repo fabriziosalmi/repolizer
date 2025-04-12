@@ -1,0 +1,7 @@
+__pycache__
+.pytest_cache
+.DS_Store
+logs/*.log
+config.yaml
+config.json
+results.jsonl

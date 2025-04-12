@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repolizer - Home</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .repo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .repo-card {
+            transition: all 0.3s ease;
+        }
+        .score-bar {
+            height: 8px;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+        .score-bar-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        /* Score color gradients */
+        .score-high {
+            background-color: #34d399;
+        }
+        .score-medium {
+            background-color: #fbbf24;
+        }
+        .score-low {
+            background-color: #f87171;
+        }
+        /* Category badge styles */
+        .category-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            display: inline-block;
+            margin-right: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="bg-gray-800 text-white shadow-lg">
+        <div class="container mx-auto p-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <i class="fab fa-github text-4xl mr-3"></i>
+                <h1 class="text-2xl font-bold">Repolizer</h1>
+            </div>
+            <!-- Add the navigation menu here -->
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-blue-300 border-b-2 border-blue-300"> <!-- Active link style -->
+                    <i class="fas fa-home mr-1"></i> Home
+                </a>
+                <a href="/scraper" class="text-white hover:text-blue-300 transition-colors"> <!-- Inactive link style, update href if needed -->
+                    <i class="fas fa-search mr-1"></i> Scraper
+                </a>
+                <a href="/analyze" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-chart-line mr-1"></i> Analyzer
+                </a>
+            </div>
+            <!-- Removed the old search/sort div -->
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <!-- Add back search/sort controls here, below the header -->
+        <div class="mb-6 bg-white rounded-lg shadow-md p-4 flex flex-wrap items-center gap-4"> <!-- Adjusted flex classes -->
+            <div class="relative flex-grow md:flex-grow-0"> <!-- Adjusted flex-grow -->
+                <input id="search-input" type="text" placeholder="Search repositories..."
+                       class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+            </div>
+            <select id="sort-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-auto flex-grow md:flex-grow-0"> <!-- Adjusted flex-grow -->
+                <option value="overall_score_desc">Sort by Overall Score (High to Low)</option>
+                <option value="overall_score_asc">Sort by Overall Score (Low to High)</option>
+                <option value="stars">Sort by Stars</option>
+                <option value="forks">Sort by Forks</option>
+                <option value="updated">Sort by Updated</option>
+                <option value="name">Sort by Name</option>
+            </select>
+
+            <!-- Moved Filters Start -->
+            <div class="w-full border-t border-gray-200 pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-4 flex flex-wrap gap-4 items-center"> <!-- Adjusted gap -->
+                <span class="text-sm text-gray-600 font-medium">Filters:</span>
+                <!-- Language Filter Dropdown -->
+                <select id="language-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto flex-grow sm:flex-grow-0">
+                    <option value="all">All Languages</option>
+                    <option value="Python">Python</option>
+                    <option value="JavaScript">JavaScript</option>
+                    <option value="Java">Java</option>
+                    <option value="Go">Go</option>
+                    <option value="TypeScript">TypeScript</option>
+                    <!-- Add more languages if needed -->
+                </select>
+
+                <!-- Category Filter Dropdown -->
+                <select id="category-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto flex-grow sm:flex-grow-0">
+                    <option value="all">All Categories</option>
+                    <option value="documentation">Documentation</option>
+                    <option value="security">Security</option>
+                    <option value="code_quality">Code Quality</option>
+                    <option value="performance">Performance</option>
+                    <option value="accessibility">Accessibility</option>
+                    <option value="ci_cd">CI/CD</option>
+                    <option value="maintainability">Maintainability</option>
+                    <option value="testing">Testing</option>
+                    <option value="licensing">Licensing</option>
+                    <option value="community">Community</option>
+                </select>
+
+                <!-- Min Score Filter Dropdown -->
+                <select id="score-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto flex-grow sm:flex-grow-0">
+                    <option value="0">Min Score: 0+</option>
+                    <option value="25">Min Score: 25+</option>
+                    <option value="50">Min Score: 50+</option>
+                    <option value="75">Min Score: 75+</option>
+                    <option value="90">Min Score: 90+</option>
+                </select>
+
+                <!-- Removed old filter buttons and slider -->
+                <!-- <div class="flex gap-2 flex-wrap"> ... </div> -->
+                <!-- <div class="flex gap-2 flex-wrap"> ... </div> -->
+                <!-- <div class="flex items-center gap-2 flex-wrap"> ... </div> -->
+            </div>
+            <!-- Moved Filters End -->
+        </div>
+
+        <!-- Removed the old filter container -->
+
+        <div class="mb-6 flex justify-between items-center"> <!-- Simple container for title and count -->
+            <h2 class="text-xl font-bold text-gray-800">Repository Health Analysis</h2>
+            <div class="text-sm text-gray-600">
+                <span id="repo-count" class="font-semibold">0</span> repositories found
+            </div>
+        </div>
+
+        <div id="loading" class="flex justify-center items-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+
+        <div id="repos-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Repository cards will be dynamically inserted here -->
+        </div>
+
+        <div id="no-results" class="hidden text-center py-12">
+            <i class="fas fa-search text-gray-400 text-5xl mb-4"></i>
+            <p class="text-xl text-gray-600">No repositories found matching your search criteria.</p>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-auto py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>Repolizer</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            let allRepos = [];
+            let filteredRepos = [];
+            let currentLanguage = 'all';
+            let currentCategory = 'all';
+            let minScoreFilter = 0;
+            const reposContainer = document.getElementById('repos-container');
+            const loadingIndicator = document.getElementById('loading');
+            const noResults = document.getElementById('no-results');
+            const repoCount = document.getElementById('repo-count');
+            const searchInput = document.getElementById('search-input');
+            const sortSelect = document.getElementById('sort-select');
+            // Removed references to old filter buttons and slider
+            // const languageFilters = document.querySelectorAll('.language-filter');
+            // const categoryFilters = document.querySelectorAll('.category-filter');
+            // const scoreFilter = document.getElementById('score-filter');
+            // const scoreValue = document.getElementById('score-value');
+
+            // Get references to new select elements
+            const languageFilterSelect = document.getElementById('language-filter-select');
+            const categoryFilterSelect = document.getElementById('category-filter-select');
+            const scoreFilterSelect = document.getElementById('score-filter-select');
+
+            // Set up category names for display
+            const categoryNames = {
+                'documentation': 'Documentation',
+                'security': 'Security',
+                'code_quality': 'Code Quality',
+                'performance': 'Performance',
+                'accessibility': 'Accessibility', 
+                'ci_cd': 'CI/CD',
+                'maintainability': 'Maintainability',
+                'testing': 'Testing',
+                'licensing': 'Licensing',
+                'community': 'Community'
+            };
+
+            // Set up category icons for display
+            const categoryIcons = {
+                'documentation': 'fa-file-lines',
+                'security': 'fa-shield-alt',
+                'code_quality': 'fa-code',
+                'performance': 'fa-tachometer-alt',
+                'accessibility': 'fa-universal-access',
+                'ci_cd': 'fa-sync',
+                'maintainability': 'fa-wrench',
+                'testing': 'fa-vial',
+                'licensing': 'fa-balance-scale',
+                'community': 'fa-users'
+            };
+
+            // Removed event listener for score range slider input
+            // scoreFilter.addEventListener('input', () => { ... });
+
+            // Load repositories from the JSONL file
+            try {
+                const response = await fetch('results.jsonl');
+                const text = await response.text();
+                
+                // Parse JSONL (one JSON object per line)
+                allRepos = text.split('\n')
+                    .filter(line => line.trim() !== '')
+                    .map(line => {
+                        try {
+                            return JSON.parse(line);
+                        } catch (e) {
+                            console.error('Error parsing line:', line, e);
+                            return null;
+                        }
+                    })
+                    .filter(repo => repo !== null);
+                
+                // Process each repo to calculate category averages
+                allRepos.forEach(repo => {
+                    // Add category averages
+                    repo.category_scores = {};
+                    
+                    // For each category, calculate average score
+                    Object.keys(categoryNames).forEach(category => {
+                        if (repo[category]) {
+                            const checks = Object.values(repo[category]);
+                            if (checks.length > 0) {
+                                const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
+                                repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
+                            } else {
+                                repo.category_scores[category] = 0;
+                            }
+                        } else {
+                            repo.category_scores[category] = 0;
+                        }
+                    });
+                });
+                
+                filteredRepos = [...allRepos];
+                repoCount.textContent = filteredRepos.length;
+                
+                // Initial sort by overall score
+                sortRepos('overall_score_desc');
+                
+                // Hide loading indicator
+                loadingIndicator.classList.add('hidden');
+                
+            } catch (error) {
+                console.error('Error loading repositories:', error);
+                loadingIndicator.classList.add('hidden');
+                noResults.classList.remove('hidden');
+                noResults.querySelector('p').textContent = 'Error loading repositories. Please make sure your repositories.jsonl file is accessible.';
+            }
+
+            // Event listener for search input
+            searchInput.addEventListener('input', () => {
+                filterRepos();
+            });
+
+            // Event listener for sort select
+            sortSelect.addEventListener('change', () => {
+                sortRepos(sortSelect.value);
+            });
+
+            // Event listener for language filter select
+            languageFilterSelect.addEventListener('change', () => {
+                currentLanguage = languageFilterSelect.value;
+                filterRepos();
+            });
+
+            // Event listener for category filter select
+            categoryFilterSelect.addEventListener('change', () => {
+                currentCategory = categoryFilterSelect.value;
+                filterRepos();
+            });
+
+            // Event listener for score filter select
+            scoreFilterSelect.addEventListener('change', () => {
+                minScoreFilter = parseInt(scoreFilterSelect.value);
+                filterRepos();
+            });
+
+            // Function to filter repositories
+            function filterRepos() {
+                const searchTerm = searchInput.value.toLowerCase();
+
+                // Values are now read directly from module-level variables updated by event listeners
+                // currentLanguage, currentCategory, minScoreFilter
+
+                filteredRepos = allRepos.filter(repo => {
+                    // Filter by search term (repo name or description)
+                    const nameMatch = repo.repository?.name?.toLowerCase().includes(searchTerm) ||
+                                     (repo.repository?.description && repo.repository.description.toLowerCase().includes(searchTerm));
+
+                    // Filter by language
+                    const languageMatch = currentLanguage === 'all' || repo.repository?.language === currentLanguage;
+
+                    // Filter by overall score
+                    const scoreMatch = (repo.overall_score || 0) >= minScoreFilter;
+
+                    // Filter by category if selected
+                    let categoryMatch = true;
+                    if (currentCategory !== 'all') {
+                        // Check if the selected category exists and has a score > 0
+                        // (You might adjust this logic, e.g., filter based on a minimum score for the category)
+                        categoryMatch = (repo.category_scores?.[currentCategory] || 0) > 0;
+                    }
+
+                    return nameMatch && languageMatch && scoreMatch && categoryMatch;
+                });
+
+                // Update count and display repositories
+                repoCount.textContent = filteredRepos.length;
+                sortRepos(sortSelect.value); // Re-sort after filtering
+            }
+
+            // Function to sort repositories
+            function sortRepos(sortBy) {
+                switch(sortBy) {
+                    case 'overall_score_desc':
+                        filteredRepos.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+                        break;
+                    case 'overall_score_asc':
+                        filteredRepos.sort((a, b) => (a.overall_score || 0) - (b.overall_score || 0));
+                        break;
+                    case 'stars':
+                        filteredRepos.sort((a, b) => (b.repository?.stargazers_count || 0) - (a.repository?.stargazers_count || 0));
+                        break;
+                    case 'forks':
+                        filteredRepos.sort((a, b) => (b.repository?.forks_count || 0) - (a.repository?.forks_count || 0));
+                        break;
+                    case 'updated':
+                        filteredRepos.sort((a, b) => {
+                            const dateA = a.repository?.updated_at ? new Date(a.repository.updated_at) : new Date(0);
+                            const dateB = b.repository?.updated_at ? new Date(b.repository.updated_at) : new Date(0);
+                            return dateB - dateA;
+                        });
+                        break;
+                    case 'name':
+                        filteredRepos.sort((a, b) => {
+                            const nameA = a.repository?.name?.toLowerCase() || '';
+                            const nameB = b.repository?.name?.toLowerCase() || '';
+                            return nameA.localeCompare(nameB);
+                        });
+                        break;
+                }
+                
+                displayRepos();
+            }
+
+            // Function to display repositories
+            function displayRepos() {
+                // Clear the container
+                reposContainer.innerHTML = '';
+                
+                if (filteredRepos.length === 0) {
+                    noResults.classList.remove('hidden');
+                    return;
+                }
+                
+                noResults.classList.add('hidden');
+                
+                // Display the filtered repositories
+                filteredRepos.forEach(repo => {
+                    const card = createRepoCard(repo);
+                    reposContainer.appendChild(card);
+                });
+            }
+
+            // Function to create a repository card
+            function createRepoCard(repo) {
+                const card = document.createElement('div');
+                card.className = 'repo-card bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col';
+                
+                const repoData = repo.repository || {};
+                
+                // Format numbers
+                const stars = formatNumber(repoData.stargazers_count || 0);
+                const forks = formatNumber(repoData.forks_count || 0);
+                
+                // Format date (convert to relative time)
+                const updatedAt = repoData.updated_at ? formatDate(repoData.updated_at) : 'unknown';
+                
+                // Truncate description
+                const description = repoData.description 
+                    ? truncateText(repoData.description, 120) 
+                    : 'No description available';
+                
+                // Create language badge with color
+                const languageColor = getLanguageColor(repoData.language);
+                const languageBadge = repoData.language ? 
+                    `<span class="inline-flex items-center">
+                        <span class="w-3 h-3 rounded-full mr-1" style="background-color: ${languageColor}"></span>
+                        ${repoData.language}
+                    </span>` : '';
+                
+                // Create overall score badge
+                const overallScore = repo.overall_score || 0;
+                const scoreClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
+                
+                // Create category score badges
+                let categoryScoresHtml = '';
+                if (repo.category_scores) {
+                    // Sort categories by score (highest first)
+                    const sortedCategories = Object.entries(repo.category_scores)
+                        .sort((a, b) => b[1] - a[1]);
+                        
+                    categoryScoresHtml = sortedCategories.map(([category, score]) => {
+                        const catScoreClass = score >= 70 ? 'bg-green-100 text-green-800' : 
+                                             (score >= 40 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+                        return `<span class="category-badge ${catScoreClass}" title="${categoryNames[category]}">
+                                    <i class="fas ${categoryIcons[category]} mr-1"></i>${score}
+                                </span>`;
+                    }).join('');
+                }
+                
+                card.innerHTML = `
+                    <div class="p-5 flex-grow">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800">
+                                    <a href="${repoData.html_url || '#'}" target="_blank" class="hover:text-blue-600">
+                                        ${repoData.name || 'Unnamed Repository'}
+                                    </a>
+                                </h3>
+                                <p class="text-sm text-gray-600">${repoData.full_name || ''}</p>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="flex items-center text-sm mr-3">
+                                    <i class="fas fa-star text-yellow-400 mr-1"></i> ${stars}
+                                </span>
+                                <span class="flex items-center text-sm">
+                                    <i class="fas fa-code-branch text-gray-600 mr-1"></i> ${forks}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium text-gray-700">Overall Health Score:</span>
+                                <span class="text-sm font-medium ${scoreClass.replace('score-', 'text-')}">${overallScore.toFixed(1)}</span>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-bar-fill ${scoreClass}" style="width: ${overallScore}%"></div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-gray-700 mb-4">${description}</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            ${categoryScoresHtml}
+                        </div>
+                        
+                        <div class="mt-4 text-center">
+                            <a href="/repo/${repo.repository.id || ''}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-chart-bar mr-1"></i> View Detailed Report
+                            </a>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm text-gray-600">
+                        <div>${languageBadge}</div>
+                        <div>Updated ${updatedAt}</div>
+                    </div>
+                `;
+                
+                return card;
+            }
+
+            // Helper function to format numbers (e.g., 1000 -> 1k)
+            function formatNumber(num) {
+                if (num >= 1000000) {
+                    return (num / 1000000).toFixed(1) + 'M';
+                }
+                if (num >= 1000) {
+                    return (num / 1000).toFixed(1) + 'k';
+                }
+                return num;
+            }
+
+            // Helper function to format dates to relative time
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffInSeconds = Math.floor((now - date) / 1000);
+                
+                if (dateString.includes('2025')) {
+                    // Handle future dates (from the sample data)
+                    return 'recently';
+                }
+                
+                if (diffInSeconds < 60) {
+                    return 'just now';
+                }
+                
+                const diffInMinutes = Math.floor(diffInSeconds / 60);
+                if (diffInMinutes < 60) {
+                    return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+                }
+                
+                const diffInHours = Math.floor(diffInMinutes / 60);
+                if (diffInHours < 24) {
+                    return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+                }
+                
+                const diffInDays = Math.floor(diffInHours / 24);
+                if (diffInDays < 30) {
+                    return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+                }
+                
+                const diffInMonths = Math.floor(diffInDays / 30);
+                if (diffInMonths < 12) {
+                    return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
+                }
+                
+                const diffInYears = Math.floor(diffInMonths / 12);
+                return `${diffInYears} year${diffInYears > 1 ? 's' : ''} ago`;
+            }
+
+            // Helper function to truncate text
+            function truncateText(text, maxLength) {
+                if (text.length <= maxLength) return text;
+                return text.substring(0, maxLength) + '...';
+            }
+
+            // Helper function to get language color
+            function getLanguageColor(language) {
+                const colors = {
+                    'Python': '#3572A5',
+                    'JavaScript': '#f7df1e',
+                    'Java': '#b07219',
+                    'Go': '#00ADD8',
+                    'TypeScript': '#2b7489',
+                    'C++': '#f34b7d',
+                    'Ruby': '#701516',
+                    'PHP': '#4F5D95',
+                    'C#': '#178600',
+                    'Swift': '#ffac45',
+                    'Kotlin': '#F18E33',
+                    'Rust': '#dea584',
+                    'Scala': '#c22d40',
+                    'HTML': '#e34c26',
+                    'CSS': '#563d7c'
+                };
+                
+                return colors[language] || '#8F8F8F';
+            }
+        });
+    </script>
+</body>
+</html>

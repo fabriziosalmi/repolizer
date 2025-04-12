@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repolizer - GitHub Scraper</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-card {
+            transition: all 0.3s ease;
+        }
+        .form-card:hover {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .score-bar {
+            height: 8px;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+        .score-bar-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        /* Score color gradients */
+        .score-high {
+            background-color: #34d399;
+        }
+        .score-medium {
+            background-color: #fbbf24;
+        }
+        .score-low {
+            background-color: #f87171;
+        }
+        /* Toggle button styling */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="bg-gray-800 text-white shadow-lg">
+        <div class="container mx-auto p-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <i class="fab fa-github text-4xl mr-3"></i>
+                <h1 class="text-2xl font-bold">Repolizer - GitHub Scraper</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-home mr-1"></i> Home
+                </a>
+                <a href="#" class="text-blue-300 border-b-2 border-blue-300">
+                    <i class="fas fa-search mr-1"></i> Scraper
+                </a>
+                <a href="/analyze" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-chart-line mr-1"></i> Analyzer
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">GitHub Repository Scraper</h2>
+            <p class="text-gray-600 mb-4">Configure and run the GitHub repository scraper to collect data for analysis.</p>
+            
+            <form id="scraper-form" class="space-y-6">
+                <!-- API Authentication -->
+                <div class="form-card bg-blue-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-medium text-blue-800 mb-2">
+                        <i class="fas fa-key mr-2"></i>API Authentication
+                    </h3>
+                    <p class="text-sm text-blue-600 mb-3">GitHub API token(s) for authentication. Higher rate limits with token.</p>
+                    
+                    <div class="mb-3">
+                        <label for="github-token" class="block text-sm font-medium text-gray-700 mb-1">GitHub Token(s)</label>
+                        <input type="password" id="github-token" name="github-token" placeholder="Enter GitHub token(s) - separate multiple with commas" 
+                              class="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">Your tokens are never stored on the server, they're only used for the current request.</p>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" name="enable-unauth" id="enable-unauth" checked 
+                                  class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
+                            <label for="enable-unauth" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                        <label for="enable-unauth" class="text-sm text-gray-700">Enable unauthenticated fallback</label>
+                    </div>
+                </div>
+                
+                <!-- Search Filters -->
+                <div class="form-card bg-green-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-medium text-green-800 mb-2">
+                        <i class="fas fa-filter mr-2"></i>Repository Search Filters
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="min-stars" class="block text-sm font-medium text-gray-700 mb-1">Minimum Stars</label>
+                            <input type="number" id="min-stars" name="min-stars" value="5" min="0"
+                                  class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
+                        </div>
+                        
+                        <div>
+                            <label for="languages" class="block text-sm font-medium text-gray-700 mb-1">Languages</label>
+                            <input type="text" id="languages" name="languages" placeholder="e.g. Python, JavaScript, Go"
+                                  class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
+                            <p class="text-xs text-gray-500 mt-1">Comma-separated list of languages to filter</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="pushed-after" class="block text-sm font-medium text-gray-700 mb-1">Updated After Date</label>
+                            <input type="date" id="pushed-after" name="pushed-after"
+                                  class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
+                            <p class="text-xs text-gray-500 mt-1">Only repositories updated after this date</p>
+                        </div>
+                        
+                        <div>
+                            <label for="max-pages" class="block text-sm font-medium text-gray-700 mb-1">Max Pages</label>
+                            <input type="number" id="max-pages" name="max-pages" value="10" min="1" max="100"
+                                  class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
+                            <p class="text-xs text-gray-500 mt-1">Maximum pages to fetch (100 repos per page)</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="direct-query" class="block text-sm font-medium text-gray-700 mb-1">Direct Query (Advanced)</label>
+                        <input type="text" id="direct-query" name="direct-query" placeholder="e.g. stars:>100 language:python pushed:>2023-01-01"
+                              class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
+                        <p class="text-xs text-gray-500 mt-1">Direct GitHub search query (overrides other filters if specified)</p>
+                    </div>
+                    
+                    <div class="mt-4 flex flex-wrap gap-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="simple-query" name="simple-query"
+                                  class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                            <label for="simple-query" class="ml-2 block text-sm text-gray-700">Use Simple Query</label>
+                            <span class="ml-1 text-gray-500 text-xs" title="Omit some filters that might cause issues">
+                                <i class="fas fa-question-circle"></i>
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="diagnose-query" name="diagnose-query"
+                                  class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                            <label for="diagnose-query" class="ml-2 block text-sm text-gray-700">Diagnose Query</label>
+                            <span class="ml-1 text-gray-500 text-xs" title="Test increasingly specific queries to find which filters are too restrictive">
+                                <i class="fas fa-question-circle"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Options -->
+                <div class="form-card bg-purple-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-medium text-purple-800 mb-2">
+                        <i class="fas fa-cogs mr-2"></i>Advanced Options
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label for="request-delay" class="block text-sm font-medium text-gray-700 mb-1">Request Delay (ms)</label>
+                            <input type="number" id="request-delay" name="request-delay" value="500" min="100"
+                                  class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                        
+                        <div>
+                            <label for="retries" class="block text-sm font-medium text-gray-700 mb-1">Max Retries</label>
+                            <input type="number" id="retries" name="retries" value="3" min="1" max="10"
+                                  class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                        
+                        <div>
+                            <label for="output-format" class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
+                            <select id="output-format" name="output-format"
+                                   class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                                <option value="jsonl">JSONL (One JSON per line)</option>
+                                <option value="json">JSON (Single array)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="save-interval" class="block text-sm font-medium text-gray-700 mb-1">Save Interval</label>
+                            <input type="number" id="save-interval" name="save-interval" value="25" min="0"
+                                  class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                            <p class="text-xs text-gray-500 mt-1">Save progress every N repositories (0 to disable)</p>
+                        </div>
+                        
+                        <div>
+                            <label for="timeout" class="block text-sm font-medium text-gray-700 mb-1">Request Timeout (seconds)</label>
+                            <input type="number" id="timeout" name="timeout" value="30" min="5" max="120"
+                                  class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="debug-search" name="debug-search"
+                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <label for="debug-search" class="ml-2 block text-sm text-gray-700">Debug Search</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="debug-api" name="debug-api"
+                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <label for="debug-api" class="ml-2 block text-sm text-gray-700">Debug API</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="dump-responses" name="dump-responses"
+                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <label for="dump-responses" class="ml-2 block text-sm text-gray-700">Dump Responses</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="test-only" name="test-only"
+                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <label for="test-only" class="ml-2 block text-sm text-gray-700">Test Only (No data saved)</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="resume" name="resume"
+                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <label for="resume" class="ml-2 block text-sm text-gray-700">Resume Scraping</label>
+                            <span class="ml-1 text-gray-500 text-xs" title="Resume from existing output file if present">
+                                <i class="fas fa-question-circle"></i>
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="force-restart" name="force-restart"
+                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <label for="force-restart" class="ml-2 block text-sm text-gray-700">Force Restart</label>
+                            <span class="ml-1 text-gray-500 text-xs" title="Force restart scraping from scratch (ignore existing output file)">
+                                <i class="fas fa-question-circle"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center">
+                    <button type="submit" id="start-scraper-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+                        <i class="fas fa-play mr-2"></i> Start Scraper
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Scraper Progress -->
+        <div id="scraper-progress" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-sync-alt fa-spin mr-2"></i>Scraper Running
+            </h2>
+            
+            <div class="mb-6">
+                <div class="flex justify-between mb-1">
+                    <span class="text-sm font-medium text-gray-700">Overall Progress</span>
+                    <span id="progress-percentage" class="text-sm font-medium text-blue-600">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-100 rounded-lg p-4 max-h-64 overflow-y-auto mb-4">
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Log</h3>
+                <div id="log-container" class="text-sm font-mono text-gray-700 whitespace-pre-wrap"></div>
+            </div>
+            
+            <div class="flex justify-between">
+                <button id="stop-scraper-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center">
+                    <i class="fas fa-stop mr-2"></i> Stop
+                </button>
+                
+                <div class="flex justify-end space-x-3">
+                    <button id="pause-scraper-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center">
+                        <i class="fas fa-pause mr-2"></i> Pause
+                    </button>
+                    <button id="resume-scraper-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center hidden">
+                        <i class="fas fa-play mr-2"></i> Resume
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scraper Results -->
+        <div id="scraper-results" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>Scraper Results
+            </h2>
+            
+            <div class="bg-gray-100 rounded-lg p-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="text-sm font-medium text-gray-500">Repositories Scraped</div>
+                        <div class="text-2xl font-bold text-blue-600" id="repos-count">0</div>
+                    </div>
+                    
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="text-sm font-medium text-gray-500">Pages Processed</div>
+                        <div class="text-2xl font-bold text-green-600" id="pages-count">0</div>
+                    </div>
+                    
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="text-sm font-medium text-gray-500">Time Elapsed</div>
+                        <div class="text-2xl font-bold text-purple-600" id="time-elapsed">0s</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-100 rounded-lg p-4 mb-6">
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Preview (First 5 repositories)</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
+                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Owner</th>
+                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Stars</th>
+                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Language</th>
+                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-preview">
+                            <!-- Results will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="flex justify-center space-x-4">
+                <button id="download-results-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+                    <i class="fas fa-download mr-2"></i> Download Results
+                </button>
+                
+                <button id="analyze-results-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+                    <i class="fas fa-chart-bar mr-2"></i> Analyze Results
+                </button>
+                
+                <button id="new-search-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+                    <i class="fas fa-redo mr-2"></i> New Search
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-auto py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>Repolizer - GitHub Repository Health Analyzer</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Form elements
+            const scraperForm = document.getElementById('scraper-form');
+            const startScraperBtn = document.getElementById('start-scraper-btn');
+            
+            // Progress elements
+            const scraperProgress = document.getElementById('scraper-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const progressPercentage = document.getElementById('progress-percentage');
+            const logContainer = document.getElementById('log-container');
+            const stopScraperBtn = document.getElementById('stop-scraper-btn');
+            const pauseScraperBtn = document.getElementById('pause-scraper-btn');
+            const resumeScraperBtn = document.getElementById('resume-scraper-btn');
+            
+            // Results elements
+            const scraperResults = document.getElementById('scraper-results');
+            const reposCount = document.getElementById('repos-count');
+            const pagesCount = document.getElementById('pages-count');
+            const timeElapsed = document.getElementById('time-elapsed');
+            const resultsPreview = document.getElementById('results-preview');
+            const downloadResultsBtn = document.getElementById('download-results-btn');
+            const analyzeResultsBtn = document.getElementById('analyze-results-btn');
+            const newSearchBtn = document.getElementById('new-search-btn');
+            
+            // Scraper state
+            let scraperRunning = false;
+            let scraperPaused = false;
+            let outputFile = 'results.jsonl';
+            let outputFormat = 'jsonl';
+            let eventSource = null;
+            let currentStats = {
+                repositories: 0,
+                pages: 0,
+                startTime: null
+            };
+            let previewRepos = [];
+            
+            // Set default date for pushed-after to 30 days ago
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            document.getElementById('pushed-after').value = thirtyDaysAgo.toISOString().split('T')[0];
+            
+            // Start the scraper
+            scraperForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                startScraper();
+            });
+            
+            // Handle stop button
+            stopScraperBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to stop the scraper? All progress will be lost.')) {
+                    stopScraper();
+                }
+            });
+            
+            // Handle pause button (not implemented in backend yet)
+            pauseScraperBtn.addEventListener('click', () => {
+                addLogMessage('Pause functionality is not implemented in this version.');
+            });
+            
+            // Handle resume button (not implemented in backend yet)
+            resumeScraperBtn.addEventListener('click', () => {
+                addLogMessage('Resume functionality is not implemented in this version.');
+            });
+            
+            // Handle download button
+            downloadResultsBtn.addEventListener('click', () => {
+                downloadResults();
+            });
+            
+            // Handle analyze button
+            analyzeResultsBtn.addEventListener('click', () => {
+                analyzeResults();
+            });
+            
+            // Handle new search button
+            newSearchBtn.addEventListener('click', () => {
+                resetUI();
+            });
+            
+            // Function to start the scraper
+            function startScraper() {
+                // Reset data
+                currentStats = {
+                    repositories: 0,
+                    pages: 0,
+                    startTime: Date.now()
+                };
+                previewRepos = [];
+                
+                // Get form data as JSON
+                const formData = new FormData(scraperForm);
+                const scraperConfig = {
+                    github_token: formData.get('github-token'),
+                    enable_unauth: formData.get('enable-unauth') === 'on',
+                    
+                    // Repository search filters
+                    min_stars: parseInt(formData.get('min-stars')),
+                    languages: formData.get('languages'),
+                    pushed_after: formData.get('pushed-after'),
+                    max_pages: parseInt(formData.get('max-pages')),
+                    direct_query: formData.get('direct-query'),
+                    simple_query: formData.get('simple-query') === 'on',
+                    diagnose_query: formData.get('diagnose-query') === 'on',
+                    
+                    // Advanced options
+                    request_delay: parseInt(formData.get('request-delay')),
+                    retries: parseInt(formData.get('retries')),
+                    timeout: parseInt(formData.get('timeout')),
+                    output_format: formData.get('output-format'),
+                    save_interval: parseInt(formData.get('save-interval')),
+                    
+                    // Debug options
+                    debug_search: formData.get('debug-search') === 'on',
+                    debug_api: formData.get('debug-api') === 'on',
+                    dump_responses: formData.get('dump-responses') === 'on',
+                    test_only: formData.get('test-only') === 'on',
+                    
+                    // Resume options
+                    resume: formData.get('resume') === 'on',
+                    force_restart: formData.get('force-restart') === 'on'
+                };
+                
+                outputFormat = formData.get('output-format');
+                outputFile = `results.${outputFormat}`;
+                
+                // Show progress UI
+                scraperForm.parentElement.classList.add('hidden');
+                scraperProgress.classList.remove('hidden');
+                scraperRunning = true;
+                currentStats.startTime = Date.now();
+                
+                // Start timer for elapsed time
+                startElapsedTimeCounter();
+                
+                // Log starting
+                addLogMessage('Starting GitHub scraper...');
+                
+                // Send request to start scraper
+                fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(scraperConfig)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        addLogMessage(`Scraper process started with ID: ${data.process_id}`);
+                        // Start listening for events
+                        connectEventSource();
+                    } else {
+                        addLogMessage(`Error: ${data.message}`);
+                        stopScraper(true);
+                    }
+                })
+                .catch(error => {
+                    addLogMessage(`Failed to start scraper: ${error}`);
+                    stopScraper(true);
+                });
+            }
+            
+            // Function to connect to the event source
+            function connectEventSource() {
+                // Close existing event source if any
+                if (eventSource) {
+                    eventSource.close();
+                }
+                
+                // Create new event source
+                eventSource = new EventSource('/api/scrape/stream');
+                
+                // Handle connection open
+                eventSource.addEventListener('connected', (e) => {
+                    addLogMessage('Connected to scraper output stream');
+                });
+                
+                // Handle log messages
+                eventSource.addEventListener('log', (e) => {
+                    try {
+                        const message = JSON.parse(e.data);
+                        const text = message.text || '';
+                        
+                        // Add to log
+                        addLogMessage(text);
+                        
+                        // Try to extract progress information
+                        if (text.includes('page') && text.includes('of')) {
+                            const pageMatch = text.match(/page (\d+) of/);
+                            if (pageMatch && pageMatch[1]) {
+                                const pageNum = parseInt(pageMatch[1]);
+                                if (!isNaN(pageNum) && pageNum > currentStats.pages) {
+                                    currentStats.pages = pageNum;
+                                    updateProgress();
+                                }
+                            }
+                        }
+                        
+                        // Try to extract repository counts
+                        const repoCountMatch = text.match(/Found (\d+) repositories/);
+                        if (repoCountMatch && repoCountMatch[1]) {
+                            const newRepos = parseInt(repoCountMatch[1]);
+                            if (!isNaN(newRepos)) {
+                                currentStats.repositories += newRepos;
+                                updateProgress();
+                            }
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error parsing log message:', error, e.data);
+                    }
+                });
+                
+                // Handle progress updates
+                eventSource.addEventListener('progress', (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        if (data.repositories !== undefined) {
+                            currentStats.repositories = data.repositories;
+                        }
+                        if (data.pages !== undefined) {
+                            currentStats.pages = data.pages;
+                        }
+                        if (data.preview_repos) {
+                            // Store preview repos for display in results
+                            previewRepos = data.preview_repos.slice(0, 5);
+                            console.log("Received preview repos:", previewRepos);
+                        }
+                        updateProgress();
+                    } catch (error) {
+                        console.error('Error parsing progress message:', error, e.data);
+                    }
+                });
+                
+                // Handle completion
+                eventSource.addEventListener('complete', (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        addLogMessage('Scraper completed successfully!');
+                        
+                        if (data.output_file) {
+                            outputFile = data.output_file;
+                        }
+                        
+                        // Save preview repositories if available
+                        if (data.preview_repos && data.preview_repos.length > 0) {
+                            previewRepos = data.preview_repos.slice(0, 5);
+                            console.log("Using preview repos from completion:", previewRepos);
+                        }
+                        
+                        scraperRunning = false;
+                        showResults();
+                        
+                        // Close event source
+                        eventSource.close();
+                        eventSource = null;
+                    } catch (error) {
+                        console.error('Error parsing completion message:', error, e.data);
+                    }
+                });
+                
+                // Handle errors
+                eventSource.addEventListener('error', (e) => {
+                    try {
+                        let errorMessage = 'An error occurred in the scraper.';
+                        
+                        if (e.data) {
+                            const data = JSON.parse(e.data);
+                            errorMessage = data.message || errorMessage;
+                        }
+                        
+                        addLogMessage(`Error: ${errorMessage}`);
+                        stopScraper(true);
+                    } catch (error) {
+                        console.error('Error parsing error message:', error, e.data);
+                        addLogMessage('An unknown error occurred');
+                        stopScraper(true);
+                    }
+                });
+                
+                // Handle stops
+                eventSource.addEventListener('stopped', (e) => {
+                    addLogMessage('Scraper was stopped.');
+                    scraperRunning = false;
+                    
+                    // Close event source
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                    
+                    // Show form again if no results
+                    if (currentStats.repositories === 0) {
+                        resetUI();
+                    } else {
+                        showResults();
+                    }
+                });
+                
+                // Handle connection closed
+                eventSource.addEventListener('closed', (e) => {
+                    addLogMessage('Connection to scraper closed.');
+                    
+                    // Close event source
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                });
+                
+                // Handle general error
+                eventSource.onerror = function(e) {
+                    addLogMessage('Connection error. Trying to reconnect...');
+                    
+                    // The EventSource will automatically try to reconnect
+                    if (e.eventPhase === EventSource.CLOSED) {
+                        addLogMessage('Connection closed permanently.');
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                        stopScraper(true);
+                    }
+                };
+            }
+            
+            // Function to stop the scraper
+            function stopScraper(isError = false) {
+                if (scraperRunning) {
+                    // Send request to stop the scraper
+                    fetch('/api/scrape/stop', {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        addLogMessage(`Scraper stopped: ${data.message}`);
+                    })
+                    .catch(error => {
+                        addLogMessage(`Error stopping scraper: ${error}`);
+                    });
+                }
+                
+                scraperRunning = false;
+                clearInterval(elapsedTimeInterval);
+                
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                
+                // If we have data and no error, show results
+                if (currentStats.repositories > 0 && !isError) {
+                    showResults();
+                } else {
+                    resetUI();
+                }
+            }
+            
+            // Function to download results
+            function downloadResults() {
+                // Create link to the actual result file
+                window.location.href = `/results/${outputFile}`;
+            }
+            
+            // Function to analyze results
+            function analyzeResults() {
+                // Redirect to the analysis page
+                window.location.href = '/';
+            }
+            
+            // Function to reset the UI
+            function resetUI() {
+                scraperForm.parentElement.classList.remove('hidden');
+                scraperProgress.classList.add('hidden');
+                scraperResults.classList.add('hidden');
+                logContainer.innerHTML = '';
+                progressBar.style.width = '0%';
+                progressPercentage.textContent = '0%';
+                scraperRunning = false;
+                scraperPaused = false;
+                clearInterval(elapsedTimeInterval);
+                
+                // Reset pause/resume buttons
+                resumeScraperBtn.classList.add('hidden');
+                pauseScraperBtn.classList.remove('hidden');
+            }
+            
+            // Function to add a log message
+            function addLogMessage(message) {
+                const now = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `[${now}] ${message}`;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // Function to update progress
+            function updateProgress() {
+                // For now, use a simple approximation based on pages
+                // In a real implementation, we'd get more detailed progress from the backend
+                const maxPages = parseInt(document.getElementById('max-pages').value) || 10;
+                const percentage = Math.min(100, Math.round((currentStats.pages / maxPages) * 100));
+                progressBar.style.width = `${percentage}%`;
+                progressPercentage.textContent = `${percentage}%`;
+                
+                // Update stats if needed
+                reposCount.textContent = currentStats.repositories;
+                pagesCount.textContent = currentStats.pages;
+            }
+            
+            // Function to show results
+            function showResults() {
+                scraperProgress.classList.add('hidden');
+                scraperResults.classList.remove('hidden');
+                
+                // Update stats
+                reposCount.textContent = currentStats.repositories;
+                pagesCount.textContent = currentStats.pages;
+                
+                // Calculate elapsed time
+                const elapsedMs = Date.now() - currentStats.startTime;
+                const seconds = Math.floor(elapsedMs / 1000);
+                let timeString;
+                if (seconds < 60) {
+                    timeString = `${seconds}s`;
+                } else if (seconds < 3600) {
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = seconds % 60;
+                    timeString = `${minutes}m ${remainingSeconds}s`;
+                } else {
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    timeString = `${hours}h ${minutes}m`;
+                }
+                timeElapsed.textContent = timeString;
+                
+                // Show preview of repositories if we have some
+                resultsPreview.innerHTML = '';
+                
+                console.log("Preview repos available:", previewRepos.length);
+                
+                // If we have preview repos, use them
+                if (previewRepos && previewRepos.length > 0) {
+                    previewRepos.forEach(repo => {
+                        addRepoToPreview(repo);
+                    });
+                } else {
+                    // Otherwise, try to load the first 5 repositories from the results file
+                    addLogMessage('No preview repositories available, attempting to load from results file...');
+                    
+                    // Load the first 5 repositories from the results file
+                    fetch('/results/' + outputFile)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to fetch results file');
+                            }
+                            return response.text();
+                        })
+                        .then(text => {
+                            const repos = [];
+                            if (outputFormat === 'jsonl') {
+                                // Parse JSONL format (one JSON per line)
+                                const lines = text.trim().split('\n');
+                                for (let i = 0; i < Math.min(5, lines.length); i++) {
+                                    try {
+                                        const repo = JSON.parse(lines[i]);
+                                        repos.push(repo);
+                                    } catch (e) {
+                                        console.error('Error parsing JSON line:', e);
+                                    }
+                                }
+                            } else {
+                                // Parse JSON format (array of repositories)
+                                try {
+                                    const allRepos = JSON.parse(text);
+                                    if (Array.isArray(allRepos)) {
+                                        for (let i = 0; i < Math.min(5, allRepos.length); i++) {
+                                            repos.push(allRepos[i]);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing JSON file:', e);
+                                }
+                            }
+                            
+                            if (repos.length > 0) {
+                                // Display the loaded repositories
+                                repos.forEach(repo => {
+                                    addRepoToPreview(repo);
+                                });
+                            } else {
+                                // Show placeholder when no repositories are available
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td colspan="5" class="py-2 px-4 text-sm text-center text-gray-500">
+                                        No repositories available in the results file.
+                                    </td>
+                                `;
+                                resultsPreview.appendChild(row);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading repositories from file:', error);
+                            // Show placeholder when there's an error
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td colspan="5" class="py-2 px-4 text-sm text-center text-gray-500">
+                                    Error loading preview data: ${error.message}. Download the full results to view repositories.
+                                </td>
+                            `;
+                            resultsPreview.appendChild(row);
+                        });
+                }
+            }
+            
+            // Function to add a repository to the preview table
+            function addRepoToPreview(repo) {
+                console.log("Adding repo to preview:", repo);
+                const row = document.createElement('tr');
+                
+                // Extract all needed fields, providing defaults for missing data
+                const name = repo.name || (repo.full_name ? repo.full_name.split('/')[1] : 'Unknown');
+                const owner = repo.owner?.login || (repo.full_name ? repo.full_name.split('/')[0] : 'Unknown');
+                const stars = repo.stargazers_count || 0;
+                const language = repo.language || 'Not specified';
+                const updated_at = repo.updated_at || repo.pushed_at || null;
+                
+                row.innerHTML = `
+                    <td class="py-2 px-4 text-sm">${name}</td>
+                    <td class="py-2 px-4 text-sm">${owner}</td>
+                    <td class="py-2 px-4 text-sm">${stars}</td>
+                    <td class="py-2 px-4 text-sm">${language}</td>
+                    <td class="py-2 px-4 text-sm">${formatDate(updated_at)}</td>
+                `;
+                resultsPreview.appendChild(row);
+            }
+            
+            // Elapsed time counter
+            let elapsedTimeInterval;
+            
+            function startElapsedTimeCounter() {
+                elapsedTimeInterval = setInterval(() => {
+                    if (!scraperRunning || scraperPaused) return;
+                    
+                    const elapsedMs = Date.now() - currentStats.startTime;
+                    const seconds = Math.floor(elapsedMs / 1000);
+                    
+                    let timeString;
+                    if (seconds < 60) {
+                        timeString = `${seconds}s`;
+                    } else if (seconds < 3600) {
+                        const minutes = Math.floor(seconds / 60);
+                        const remainingSeconds = seconds % 60;
+                        timeString = `${minutes}m ${remainingSeconds}s`;
+                    } else {
+                        const hours = Math.floor(seconds / 3600);
+                        const minutes = Math.floor((seconds % 3600) / 60);
+                        timeString = `${hours}h ${minutes}m`;
+                    }
+                    
+                    timeElapsed.textContent = timeString;
+                }, 1000);
+            }
+            
+            // Function to format date
+            function formatDate(dateString) {
+                if (!dateString) return 'Unknown';
+                const date = new Date(dateString);
+                return date.toLocaleDateString();
+            }
+        });
+    </script>
+</body>
+</html>

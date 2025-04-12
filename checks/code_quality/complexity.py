@@ -1,0 +1,277 @@
+"""
+Code Complexity Check
+
+Analyzes the complexity of code in the repository.
+"""
+import os
+import re
+import logging
+from typing import Dict, Any, List, Tuple
+from collections import defaultdict
+
+# Setup logging
+logger = logging.getLogger(__name__)
+
+def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
+    """
+    Analyze code complexity in the repository
+    
+    Args:
+        repo_path: Path to the repository on local filesystem
+        repo_data: Repository data from API (used if repo_path is not available)
+        
+    Returns:
+        Dictionary with check results
+    """
+    result = {
+        "average_complexity": 0,
+        "complex_functions": [],
+        "complexity_distribution": {
+            "simple": 0,      # 1-5 complexity
+            "moderate": 0,    # 6-10 complexity
+            "complex": 0,     # 11-20 complexity
+            "very_complex": 0 # 21+ complexity
+        },
+        "functions_analyzed": 0,
+        "files_checked": 0,
+        "language_stats": {}
+    }
+    
+    # Check if repository is available locally
+    if not repo_path or not os.path.isdir(repo_path):
+        logger.warning("No local repository path provided or path is not a directory")
+        return result
+    
+    # Language-specific function/method patterns and complexity indicators
+    language_patterns = {
+        "python": {
+            "extensions": [".py"],
+            "function_pattern": r'def\s+(\w+)\s*\(.*?\)(?:\s*->.*?)?\s*:',
+            "class_pattern": r'class\s+(\w+)',
+            "complexity_patterns": [
+                r'\bif\b', r'\belif\b', r'\belse\b',
+                r'\bfor\b', r'\bwhile\b', r'\btry\b',
+                r'\bexcept\b', r'\band\b', r'\bor\b',
+                r'\breturn\b', r'\braise\b'
+            ]
+        },
+        "javascript": {
+            "extensions": [".js", ".jsx", ".ts", ".tsx"],
+            "function_pattern": r'function\s+(\w+)|(\w+)\s*=\s*function|(\w+)\s*:\s*function|(\w+)\s*\(.*?\)\s*{|(\w+)\s*=\s*\(.*?\)\s*=>',
+            "class_pattern": r'class\s+(\w+)',
+            "complexity_patterns": [
+                r'\bif\b', r'\belse\b', r'\bswitch\b',
+                r'\bcase\b', r'\bfor\b', r'\bwhile\b',
+                r'\bdo\b', r'\btry\b', r'\bcatch\b',
+                r'\b\?\b', r'\b&&\b', r'\b\|\|\b',
+                r'\breturn\b', r'\bthrow\b'
+            ]
+        },
+        "java": {
+            "extensions": [".java"],
+            "function_pattern": r'(?:public|private|protected|static|\s)+[\w\<\>\[\]]+\s+(\w+)\s*\(.*?\)\s*(?:throws.*?)?{',
+            "class_pattern": r'class\s+(\w+)',
+            "complexity_patterns": [
+                r'\bif\b', r'\belse\b', r'\bswitch\b',
+                r'\bcase\b', r'\bfor\b', r'\bwhile\b',
+                r'\bdo\b', r'\btry\b', r'\bcatch\b',
+                r'\b\?\b', r'\b&&\b', r'\b\|\|\b',
+                r'\breturn\b', r'\bthrow\b'
+            ]
+        },
+        "csharp": {
+            "extensions": [".cs"],
+            "function_pattern": r'(?:public|private|protected|static|virtual|override|\s)+[\w\<\>\[\]]+\s+(\w+)\s*\(.*?\)\s*{',
+            "class_pattern": r'class\s+(\w+)',
+            "complexity_patterns": [
+                r'\bif\b', r'\belse\b', r'\bswitch\b',
+                r'\bcase\b', r'\bfor\b', r'\bwhile\b',
+                r'\bdo\b', r'\btry\b', r'\bcatch\b',
+                r'\b\?\b', r'\b&&\b', r'\b\|\|\b',
+                r'\breturn\b', r'\bthrow\b'
+            ]
+        }
+    }
+    
+    # Initialize language stats
+    for lang in language_patterns:
+        result["language_stats"][lang] = {
+            "files": 0,
+            "functions": 0,
+            "average_complexity": 0,
+            "total_complexity": 0
+        }
+    
+    files_checked = 0
+    total_complexity = 0
+    total_functions = 0
+    
+    # Analyze each file
+    for root, _, files in os.walk(repo_path):
+        # Skip node_modules, .git and other common directories
+        if any(skip_dir in root for skip_dir in ['/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/']):
+            continue
+            
+        for file in files:
+            file_path = os.path.join(root, file)
+            _, ext = os.path.splitext(file_path)
+            ext = ext.lower()
+            
+            # Determine language for this file
+            file_language = None
+            for lang, config in language_patterns.items():
+                if ext in config["extensions"]:
+                    file_language = lang
+                    break
+            
+            # Skip files we don't know how to analyze
+            if not file_language:
+                continue
+                
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                    files_checked += 1
+                    result["language_stats"][file_language]["files"] += 1
+                    
+                    # Extract functions/methods
+                    language_config = language_patterns[file_language]
+                    function_matches = re.finditer(language_config["function_pattern"], content, re.MULTILINE)
+                    
+                    functions_found = 0
+                    language_complexity = 0
+                    
+                    for match in function_matches:
+                        functions_found += 1
+                        
+                        # Get the function name from the match groups (first non-None group)
+                        function_name = next((g for g in match.groups() if g is not None), "unknown")
+                        
+                        # Find the function body (basic approach: from match to next function or end of file)
+                        start_pos = match.end()
+                        next_match = re.search(language_config["function_pattern"], content[start_pos:], re.MULTILINE)
+                        end_pos = start_pos + next_match.start() if next_match else len(content)
+                        
+                        function_body = content[start_pos:end_pos]
+                        
+                        # Calculate function complexity (simple approach: count complexity indicators)
+                        complexity = 1  # Base complexity
+                        for pattern in language_config["complexity_patterns"]:
+                            complexity += len(re.findall(pattern, function_body))
+                        
+                        # Update complexity distribution
+                        if complexity <= 5:
+                            result["complexity_distribution"]["simple"] += 1
+                        elif complexity <= 10:
+                            result["complexity_distribution"]["moderate"] += 1
+                        elif complexity <= 20:
+                            result["complexity_distribution"]["complex"] += 1
+                        else:
+                            result["complexity_distribution"]["very_complex"] += 1
+                        
+                        # Track complex functions
+                        if complexity > 10 and len(result["complex_functions"]) < 10:  # Limit to 10 examples
+                            line_number = content[:start_pos].count('\n') + 1  # Approximate line number
+                            relative_path = os.path.relpath(file_path, repo_path)
+                            result["complex_functions"].append({
+                                "file": relative_path,
+                                "function": function_name,
+                                "complexity": complexity,
+                                "line": line_number
+                            })
+                        
+                        # Update statistics
+                        total_complexity += complexity
+                        language_complexity += complexity
+                    
+                    # Update language stats
+                    result["language_stats"][file_language]["functions"] += functions_found
+                    result["language_stats"][file_language]["total_complexity"] += language_complexity
+                    total_functions += functions_found
+                    
+            except Exception as e:
+                logger.error(f"Error analyzing file {file_path}: {e}")
+    
+    result["files_checked"] = files_checked
+    result["functions_analyzed"] = total_functions
+    
+    # Calculate average complexity
+    if total_functions > 0:
+        result["average_complexity"] = round(total_complexity / total_functions, 2)
+    
+    # Calculate language-specific averages
+    for lang in language_patterns:
+        language_functions = result["language_stats"][lang]["functions"]
+        if language_functions > 0:
+            language_complexity = result["language_stats"][lang]["total_complexity"]
+            result["language_stats"][lang]["average_complexity"] = round(language_complexity / language_functions, 2)
+    
+    # Sort complex functions by complexity (descending)
+    result["complex_functions"] = sorted(result["complex_functions"], key=lambda x: x["complexity"], reverse=True)
+    
+    # Calculate complexity score (0-100 scale, higher is better)
+    complexity_score = 100
+    
+    if result["average_complexity"] > 0:
+        # Penalty based on average complexity
+        if result["average_complexity"] >= 15:
+            complexity_score = 0  # Critical issue: Very high average complexity
+        elif result["average_complexity"] >= 12:
+            complexity_score = 20  # Severe issue: High average complexity
+        elif result["average_complexity"] >= 10:
+            complexity_score = 40  # Major issue: Moderately high average complexity
+        elif result["average_complexity"] >= 8:
+            complexity_score = 60  # Moderate issue: Slightly high average complexity
+        elif result["average_complexity"] >= 6:
+            complexity_score = 80  # Minor issue: Normal average complexity
+        else:
+            complexity_score = 90  # Minimal issue: Low average complexity
+    
+    # Additional penalty for high percentage of very complex functions
+    if total_functions > 0:
+        very_complex_percentage = (result["complexity_distribution"]["very_complex"] / total_functions) * 100
+        if very_complex_percentage >= 20:
+            complexity_score = max(0, complexity_score - 40)  # Critical issue: Many very complex functions
+        elif very_complex_percentage >= 10:
+            complexity_score = max(0, complexity_score - 20)  # Major issue: Several very complex functions
+        elif very_complex_percentage >= 5:
+            complexity_score = max(0, complexity_score - 10)  # Moderate issue: Some very complex functions
+    
+    # Round and convert to integer if it's a whole number
+    rounded_score = round(complexity_score, 1)
+    result["complexity_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
+    
+    return result
+
+def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Run the code complexity check
+    
+    Args:
+        repository: Repository data dictionary which might include a local_path
+        
+    Returns:
+        Check results with score on 0-100 scale
+    """
+    try:
+        # Check if we have a local path to the repository
+        local_path = repository.get('local_path')
+        
+        # Run the check
+        result = check_code_complexity(local_path, repository)
+        
+        # Return the result with the score
+        return {
+            "status": "completed",
+            "score": result.get("complexity_score", 0),
+            "result": result,
+            "errors": None
+        }
+    except Exception as e:
+        logger.error(f"Error running code complexity check: {e}")
+        return {
+            "status": "failed",
+            "score": 0,
+            "result": {},
+            "errors": str(e)
+        }

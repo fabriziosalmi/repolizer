@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repolizer - Repository Details</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .score-bar {
+            height: 8px;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+        .score-bar-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        /* Score color gradients */
+        .score-high {
+            background-color: #34d399;
+        }
+        .score-medium {
+            background-color: #fbbf24;
+        }
+        .score-low {
+            background-color: #f87171;
+        }
+        /* Category badge styles */
+        .category-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            display: inline-block;
+            margin-right: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <header class="bg-gray-800 text-white shadow-lg">
+        <div class="container mx-auto p-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <i class="fab fa-github text-4xl mr-3"></i>
+                <h1 class="text-2xl font-bold">Repolizer</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-home mr-1"></i> Home
+                </a>
+                <a href="/scraper" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-search mr-1"></i> Scraper
+                </a>
+                <a href="/analyze" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-chart-line mr-1"></i> Analyzer
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 flex-grow">
+        {% if repo %}
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-start mb-6">
+                <div class="mb-4 md:mb-0">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <a href="{{ repo.repository.html_url }}" target="_blank" class="hover:text-blue-600">
+                            {{ repo.repository.full_name }}
+                        </a> - Analysis Details
+                    </h2>
+                    <p class="text-gray-600 mt-1">{{ repo.repository.description or 'No description available' }}</p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        {% if repo.timestamp %}
+                            Analysis performed on: {{ repo.timestamp | replace('T', ' ') | replace('Z', '') | truncate(19, true, '') }}
+                        {% endif %}
+                        {% if repo.engine_version %}
+                            (Engine v{{ repo.engine_version }})
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="flex space-x-2">
+                    <a href="/" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to List
+                    </a>
+                    <!-- Add History Button -->
+                    <a href="{{ url_for('repo_history', repo_id=repo.repository.id) }}" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm">
+                        <i class="fas fa-history mr-2"></i> View History
+                    </a>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-start mb-6">
+                <div class="flex flex-col items-end">
+                    <div class="text-3xl font-bold {% if repo.overall_score >= 70 %}text-green-600{% elif repo.overall_score >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                        {{ repo.overall_score|round(1) }}/100
+                    </div>
+                    <div class="text-sm text-gray-500">Overall Health Score</div>
+                </div>
+            </div>
+
+            <!-- Repository stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="text-sm font-medium text-gray-500">Stars</div>
+                    <div class="text-xl font-bold text-blue-600">{{ repo.repository.stargazers_count or 0 }}</div>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="text-sm font-medium text-gray-500">Forks</div>
+                    <div class="text-xl font-bold text-green-600">{{ repo.repository.forks_count or 0 }}</div>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="text-sm font-medium text-gray-500">Language</div>
+                    <div class="text-xl font-bold text-purple-600">{{ repo.repository.language or 'Unknown' }}</div>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="text-sm font-medium text-gray-500">Last Updated</div>
+                    <div class="text-xl font-bold text-gray-600">
+                        {% if repo.repository.updated_at %}
+                            {{ repo.repository.updated_at | replace('T', ' ') | replace('Z', '') | truncate(16, true, '') }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category scores -->
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Category Scores</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {% set categories = {
+                    'documentation': {'name': 'Documentation', 'icon': 'fa-file-lines'},
+                    'security': {'name': 'Security', 'icon': 'fa-shield-alt'},
+                    'code_quality': {'name': 'Code Quality', 'icon': 'fa-code'},
+                    'performance': {'name': 'Performance', 'icon': 'fa-tachometer-alt'},
+                    'accessibility': {'name': 'Accessibility', 'icon': 'fa-universal-access'},
+                    'ci_cd': {'name': 'CI/CD', 'icon': 'fa-sync'},
+                    'maintainability': {'name': 'Maintainability', 'icon': 'fa-wrench'},
+                    'testing': {'name': 'Testing', 'icon': 'fa-vial'},
+                    'licensing': {'name': 'Licensing', 'icon': 'fa-balance-scale'},
+                    'community': {'name': 'Community', 'icon': 'fa-users'}
+                } %}
+
+                {% for cat_id, cat_info in categories.items() %}
+                    {% if repo[cat_id] is defined and repo[cat_id]|length > 0 %}
+                        {# Use 'do' extension to modify variables within the loop #}
+                        {% set temp_data = {'total': 0.0, 'count': 0} %}
+                        {% for check_name, check in repo[cat_id].items() %}
+                            {% if check.score is defined and check.score is not none %}
+                                {% do temp_data.update({'total': temp_data.total + check.score|float, 'count': temp_data.count + 1}) %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% set category_score = (temp_data.total / temp_data.count) if temp_data.count > 0 else 0 %}
+                        {% set score_class = "bg-green-50 border-green-200" if category_score >= 70 else ("bg-yellow-50 border-yellow-200" if category_score >= 40 else "bg-red-50 border-red-200") %}
+                        {% set text_class = "text-green-600" if category_score >= 70 else ("text-yellow-600" if category_score >= 40 else "text-red-600") %}
+                        {% set fill_class = "score-high" if category_score >= 70 else ("score-medium" if category_score >= 40 else "score-low") %}
+                        
+                        <div class="p-4 rounded-lg {{ score_class }} border">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center">
+                                    <i class="fas {{ cat_info.icon }} text-gray-600 mr-2"></i>
+                                    <span class="font-medium">{{ cat_info.name }}</span>
+                                </div>
+                                <span class="text-sm font-bold {{ text_class }}">
+                                    {{ category_score|round(1) }}/100
+                                </span>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-bar-fill {{ fill_class }}"
+                                     style="width: {{ category_score }}%"></div>
+                            </div>
+                            <div class="mt-2 text-xs text-gray-500">
+                                Based on {{ temp_data.count }} checks in this category
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Detailed Check Results Section -->
+            <div class="mt-8 border-t pt-6">
+                {# Button to toggle visibility #}
+                <button id="toggleChecksButton" class="w-full flex justify-between items-center text-left text-lg font-semibold text-gray-700 hover:text-gray-900 focus:outline-none mb-4" aria-expanded="false" aria-controls="detailedChecksContent">
+                    <span>Detailed Check Results</span>
+                    {# Icon starts as 'right' (collapsed) #}
+                    <i id="toggleChecksIcon" class="fas fa-chevron-right transition-transform duration-200"></i>
+                </button>
+
+                {# Content Div - Initially hidden #}
+                <div id="detailedChecksContent" class="hidden">
+                    {% set categories = {
+                        'documentation': {'name': 'Documentation', 'icon': 'fa-file-lines'},
+                        'security': {'name': 'Security', 'icon': 'fa-shield-alt'},
+                        'code_quality': {'name': 'Code Quality', 'icon': 'fa-code'},
+                        'performance': {'name': 'Performance', 'icon': 'fa-tachometer-alt'},
+                        'accessibility': {'name': 'Accessibility', 'icon': 'fa-universal-access'},
+                        'ci_cd': {'name': 'CI/CD', 'icon': 'fa-sync'},
+                        'maintainability': {'name': 'Maintainability', 'icon': 'fa-wrench'},
+                        'testing': {'name': 'Testing', 'icon': 'fa-vial'},
+                        'licensing': {'name': 'Licensing', 'icon': 'fa-balance-scale'},
+                        'community': {'name': 'Community', 'icon': 'fa-users'}
+                    } %}
+                    
+                    <div class="space-y-4">
+                        {% for cat_id, cat_info in categories.items() %}
+                            {% if repo[cat_id] is defined and repo[cat_id]|length > 0 %}
+                                <div class="bg-white rounded-lg shadow border">
+                                    <!-- Category Header -->
+                                    <div class="flex items-center bg-gray-50 p-4 border-b rounded-t-lg">
+                                        <i class="fas {{ cat_info.icon }} text-gray-600 mr-3 text-lg"></i>
+                                        <h3 class="text-lg font-semibold text-gray-800">{{ cat_info.name }}</h3>
+                                    </div>
+                                    
+                                    <!-- Category Checks -->
+                                    <div class="divide-y divide-gray-200">
+                                        {% for check_name, check_details in repo[cat_id].items() %}
+                                            {% set check_display = check_name.replace('_', ' ')|title %}
+                                            {% set score = check_details.score if check_details.score is defined else 'N/A' %}
+                                            {% set details = check_details.details if check_details.details is defined else 'No details provided.' %}
+                                            {% set suggestions = check_details.suggestions if check_details.suggestions is defined else [] %}
+
+                                            {% set score_class = "" %}
+                                            {% set badge_class = "" %}
+                                            {% if score is number and score >= 70 %}
+                                                {% set score_class = "text-green-600" %}
+                                                {% set badge_class = "bg-green-100 text-green-800" %}
+                                            {% elif score is number and score >= 40 %}
+                                                {% set score_class = "text-yellow-600" %}
+                                                {% set badge_class = "bg-yellow-100 text-yellow-800" %}
+                                            {% elif score is number %}
+                                                {% set score_class = "text-red-600" %}
+                                                {% set badge_class = "bg-red-100 text-red-800" %}
+                                            {% else %}
+                                                {% set score_class = "text-gray-500" %}
+                                                {% set badge_class = "bg-gray-100 text-gray-800" %}
+                                            {% endif %}
+
+                                            <div class="p-4">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <div class="font-medium">{{ check_display }}</div>
+                                                    <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full {{ badge_class }}">
+                                                        {% if score is number %}{{ score|round(1) }}{% else %}{{ score }}{% endif %}
+                                                    </span>
+                                                </div>
+                                                <p class="text-sm text-gray-600 mb-2">{{ details }}</p>
+                                                {% if suggestions %}
+                                                    <div class="mt-2 bg-blue-50 p-2 rounded-md border border-blue-100">
+                                                        <div class="text-xs font-medium text-blue-700 mb-1">Suggestions:</div>
+                                                        <ul class="list-disc list-inside text-xs text-blue-800 space-y-1">
+                                                            {% for suggestion in suggestions %}
+                                                            <li>{{ suggestion }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                const toggleButton = document.getElementById('toggleChecksButton');
+                const contentDiv = document.getElementById('detailedChecksContent');
+                const toggleIcon = document.getElementById('toggleChecksIcon');
+
+                // Ensure elements exist before adding listeners
+                if (toggleButton && contentDiv && toggleIcon) {
+                    toggleButton.addEventListener('click', () => {
+                        // Toggle visibility by toggling the 'hidden' class
+                        const isHidden = contentDiv.classList.toggle('hidden');
+
+                        // Update ARIA attribute and icon
+                        if (isHidden) {
+                            toggleButton.setAttribute('aria-expanded', 'false');
+                            toggleIcon.classList.remove('fa-chevron-down');
+                            toggleIcon.classList.add('fa-chevron-right');
+                        } else {
+                            toggleButton.setAttribute('aria-expanded', 'true');
+                            toggleIcon.classList.remove('fa-chevron-right');
+                            toggleIcon.classList.add('fa-chevron-down');
+                        }
+                    });
+
+                    // Keyboard accessibility
+                    toggleButton.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            toggleButton.click();
+                        }
+                    });
+                } else {
+                    // Log an error if elements aren't found (for debugging)
+                    console.error("Could not find elements for detailed checks toggle.");
+                }
+            </script>
+        </div> {# End of main white card #}
+
+        {# Back to Repository List button #}
+        <div class="flex justify-center mb-6">
+            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Repository List
+            </a>
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6 text-center">
+            <i class="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Repository Not Found</h2>
+            <p class="text-gray-600 mb-6">The repository you're looking for could not be found.</p>
+            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md inline-flex items-center">
+                <i class="fas fa-home mr-2"></i> Go to Homepage
+            </a>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-auto py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>Repolizer - GitHub Repository Health Analyzer</p>
+        </div>
+    </footer>
+</body>
+</html>

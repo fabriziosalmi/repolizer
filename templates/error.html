@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repolizer - Error</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="bg-gray-800 text-white shadow-lg">
+        <div class="container mx-auto p-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <i class="fab fa-github text-4xl mr-3"></i>
+                <h1 class="text-2xl font-bold">Repolizer</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-home mr-1"></i> Home
+                </a>
+                <a href="/scraper" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-search mr-1"></i> Scraper
+                </a>
+                <a href="/analyze" class="text-white hover:text-blue-300 transition-colors">
+                    <i class="fas fa-chart-line mr-1"></i> Analyzer
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6 text-center">
+            <i class="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Error</h2>
+            <p class="text-gray-600 mb-6">{{ error }}</p>
+            {% if suggestion %}
+            <p class="text-gray-600 mb-6">{{ suggestion }}</p>
+            {% endif %}
+            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md inline-flex items-center">
+                <i class="fas fa-home mr-2"></i> Go to Homepage
+            </a>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-auto py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>Repolizer - GitHub Repository Health Analyzer</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "github_token": "your-github-token-here",
+  "rate_limits": {
+    "github_api": 5000,
+    "github_search": 30
+  },
+  "retries": {
+    "max_attempts": 3,
+    "backoff_factor": 1.5
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "repolizer.log"
+  }
+}
