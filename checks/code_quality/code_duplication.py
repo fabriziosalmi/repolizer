@@ -7,8 +7,10 @@ import os
 import re
 import logging
 import hashlib
+import time
 from typing import Dict, Any, List, Set, Tuple
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -24,6 +26,7 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
     Returns:
         Dictionary with check results
     """
+    start_time = time.time()
     result = {
         "duplication_detected": False,
         "duplicate_blocks": [],
@@ -62,6 +65,13 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
     # Minimum block size to consider for duplication (in lines)
     MIN_BLOCK_SIZE = 5
     
+    # Maximum file size to analyze (in bytes) to prevent performance issues
+    MAX_FILE_SIZE = 1024 * 1024  # 1MB
+    
+    # Store excluded directory patterns as a set for faster lookup
+    excluded_dirs = {'/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/', 
+                     '/vendor/', '/venv/', '/.idea/', '/target/', '/out/'}
+    
     # Initialize language stats
     for lang in language_extensions:
         result["language_stats"][lang] = {
@@ -77,10 +87,38 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
     file_contents = defaultdict(list)
     files_checked = 0
     
-    # Extract file contents by language
+    def process_file(file_data):
+        file_path, file_language = file_data
+        try:
+            # Skip files that are too large
+            if os.path.getsize(file_path) > MAX_FILE_SIZE:
+                logger.info(f"Skipping large file: {file_path}")
+                return None
+                
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+                non_empty_lines = [line.strip() for line in lines if line.strip()]
+                
+                # Skip very small files
+                if len(non_empty_lines) < MIN_BLOCK_SIZE:
+                    return None
+                
+                return {
+                    "path": os.path.relpath(file_path, repo_path),
+                    "language": file_language,
+                    "lines": non_empty_lines
+                }
+                
+        except Exception as e:
+            logger.error(f"Error analyzing file {file_path}: {e}")
+            return None
+    
+    # Gather all files to analyze first
+    files_to_process = []
     for root, _, files in os.walk(repo_path):
-        # Skip node_modules, .git and other common directories
-        if any(skip_dir in root for skip_dir in ['/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/']):
+        # Skip excluded directories using normalized paths
+        normalized_root = root.replace('\\', '/')
+        if any(excluded in normalized_root for excluded in excluded_dirs):
             continue
             
         for file in files:
@@ -99,29 +137,28 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
             if not file_language:
                 continue
                 
-            try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    lines = f.readlines()
-                    non_empty_lines = [line.strip() for line in lines if line.strip()]
-                    
-                    # Skip very small files
-                    if len(non_empty_lines) < MIN_BLOCK_SIZE:
-                        continue
-                    
-                    file_contents[file_language].append({
-                        "path": os.path.relpath(file_path, repo_path),
-                        "lines": non_empty_lines
-                    })
-                    
-                    # Update language stats
-                    result["language_stats"][file_language]["files"] += 1
-                    result["language_stats"][file_language]["lines"] += len(non_empty_lines)
-                    result["total_lines_analyzed"] += len(non_empty_lines)
-                    
-                    files_checked += 1
-                    
-            except Exception as e:
-                logger.error(f"Error analyzing file {file_path}: {e}")
+            files_to_process.append((file_path, file_language))
+    
+    # Process files in parallel
+    max_workers = min(os.cpu_count() * 2, 16)  # Reasonable number of workers
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_file = {executor.submit(process_file, file_data): file_data for file_data in files_to_process}
+        
+        for future in as_completed(future_to_file):
+            file_info = future.result()
+            if file_info:
+                file_language = file_info["language"]
+                file_contents[file_language].append({
+                    "path": file_info["path"],
+                    "lines": file_info["lines"]
+                })
+                
+                # Update language stats
+                result["language_stats"][file_language]["files"] += 1
+                result["language_stats"][file_language]["lines"] += len(file_info["lines"])
+                result["total_lines_analyzed"] += len(file_info["lines"])
+                
+                files_checked += 1
     
     result["files_checked"] = files_checked
     
@@ -129,7 +166,7 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
     duplicate_blocks_by_lang = defaultdict(list)
     duplicate_lines_by_lang = defaultdict(int)
     
-    # Simple line-based duplicate code detection
+    # Process each language separately
     for lang, files in file_contents.items():
         # Create hash map of code blocks
         block_map = defaultdict(list)
@@ -141,6 +178,7 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
             # Slide a window of MIN_BLOCK_SIZE lines through the file
             for i in range(len(lines) - MIN_BLOCK_SIZE + 1):
                 block = "\n".join(lines[i:i+MIN_BLOCK_SIZE])
+                # Use a faster hashing algorithm for performance
                 block_hash = hashlib.md5(block.encode()).hexdigest()
                 
                 block_map[block_hash].append({
@@ -189,23 +227,26 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None) -> Dic
     if result["total_lines_analyzed"] > 0:
         result["duplication_percentage"] = round((result["duplicate_lines"] / result["total_lines_analyzed"]) * 100, 2)
     
-    # Calculate duplication score (0-100 scale, higher is better)
-    duplication_score = 100
+    # Calculate duplication score (1-100 scale, higher is better)
+    # Minimum score is 1 for a successful check with worst result
+    if result["duplication_percentage"] >= 40:
+        duplication_score = 1  # Critical issue: 40%+ duplication
+    elif result["duplication_percentage"] >= 30:
+        duplication_score = 20  # Severe issue: 30-40% duplication
+    elif result["duplication_percentage"] >= 20:
+        duplication_score = 40  # Major issue: 20-30% duplication
+    elif result["duplication_percentage"] >= 10:
+        duplication_score = 60  # Moderate issue: 10-20% duplication
+    elif result["duplication_percentage"] >= 5:
+        duplication_score = 80  # Minor issue: 5-10% duplication
+    elif result["duplication_percentage"] > 0:
+        duplication_score = 90  # Minimal issue: <5% duplication
+    else:
+        duplication_score = 100  # No duplication detected
     
-    if result["duplication_percentage"] > 0:
-        # Penalty based on duplication percentage
-        if result["duplication_percentage"] >= 40:
-            duplication_score = 0  # Critical issue: 40%+ duplication
-        elif result["duplication_percentage"] >= 30:
-            duplication_score = 20  # Severe issue: 30-40% duplication
-        elif result["duplication_percentage"] >= 20:
-            duplication_score = 40  # Major issue: 20-30% duplication
-        elif result["duplication_percentage"] >= 10:
-            duplication_score = 60  # Moderate issue: 10-20% duplication
-        elif result["duplication_percentage"] >= 5:
-            duplication_score = 80  # Minor issue: 5-10% duplication
-        else:
-            duplication_score = 90  # Minimal issue: <5% duplication
+    # Add execution time info
+    execution_time = time.time() - start_time
+    logger.info(f"Code duplication check completed in {execution_time:.2f} seconds, analyzed {files_checked} files")
     
     # Round and convert to integer if it's a whole number
     rounded_score = round(duplication_score, 1)
@@ -221,7 +262,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         repository: Repository data dictionary which might include a local_path
         
     Returns:
-        Check results with score on 0-100 scale
+        Check results with score on 1-100 scale (0 for failures)
     """
     try:
         # Check if we have a local path to the repository
@@ -238,10 +279,10 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             "errors": None
         }
     except Exception as e:
-        logger.error(f"Error running code duplication check: {e}")
+        logger.error(f"Error running code duplication check: {e}", exc_info=True)
         return {
             "status": "failed",
-            "score": 0,
-            "result": {},
+            "score": 0,  # Score 0 for failed checks
+            "result": {"error": str(e)},
             "errors": str(e)
         }

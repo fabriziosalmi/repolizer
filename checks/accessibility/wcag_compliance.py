@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, List, Tuple, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import fnmatch
+import time
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def check_wcag_compliance(repo_path: str = None, repo_data: Dict = None) -> Dict
     Returns:
         Dictionary with check results for WCAG accessibility standards compliance
     """
+    start_time = time.time()
     result = {
         "wcag_level": None,
         "passes": [],
@@ -50,7 +52,7 @@ def check_wcag_compliance(repo_path: str = None, repo_data: Dict = None) -> Dict
     # Combined list of all extensions
     all_extensions = html_extensions + css_extensions + js_extensions
     
-    # WCAG rules to check
+    # WCAG rules to check - Fix the problematic regex pattern
     wcag_rules = [
         # Perceivable - Information and UI must be presentable to users in ways they can perceive
         {
@@ -160,7 +162,8 @@ def check_wcag_compliance(repo_path: str = None, repo_data: Dict = None) -> Dict
             "name": "Parsing",
             "category": "robust",
             "pattern": r'<!DOCTYPE\s+html>',
-            "anti_pattern": r'<(?!area|base|br|col|embed|hr|img|input|keygen|link|meta|param|source|track|wbr)\w+[^>]*?>[^<]*?<\/\1>', # Simple nesting check
+            # Fix the pattern with invalid group reference
+            "anti_pattern": r'<(\w+)[^>]*?>[^<]*?</\w+>', # Simplified pattern to avoid group reference issues
             "file_types": html_extensions
         },
         {
@@ -235,12 +238,20 @@ def check_wcag_compliance(repo_path: str = None, repo_data: Dict = None) -> Dict
                     category = rule["category"]
                     
                     # Check positive pattern
-                    if rule["pattern"] and re.search(rule["pattern"], content, re.IGNORECASE):
-                        file_result["passes"].add((rule_id, category))
+                    if rule["pattern"]:
+                        try:
+                            if re.search(rule["pattern"], content, re.IGNORECASE):
+                                file_result["passes"].add((rule_id, category))
+                        except re.error as e:
+                            logger.error(f"Invalid regex pattern '{rule['pattern']}' for rule {rule_id}: {e}")
                     
                     # Check negative pattern
-                    if rule["anti_pattern"] and re.search(rule["anti_pattern"], content, re.IGNORECASE):
-                        file_result["failures"].add((rule_id, category))
+                    if rule["anti_pattern"]:
+                        try:
+                            if re.search(rule["anti_pattern"], content, re.IGNORECASE):
+                                file_result["failures"].add((rule_id, category))
+                        except re.error as e:
+                            logger.error(f"Invalid regex anti-pattern '{rule['anti_pattern']}' for rule {rule_id}: {e}")
         
         except Exception as e:
             logger.error(f"Error analyzing file {file_path}: {e}")
@@ -318,6 +329,10 @@ def check_wcag_compliance(repo_path: str = None, repo_data: Dict = None) -> Dict
     
     # Calculate score
     result["wcag_compliance_score"] = calculate_score(result)
+    
+    # Update execution time info
+    execution_time = time.time() - start_time
+    logger.info(f"WCAG compliance check completed in {execution_time:.2f}s, checked {files_checked} files")
     
     return result
 
@@ -468,7 +483,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         repository: Repository data dictionary which might include a local_path
         
     Returns:
-        Check results with score on 0-100 scale
+        Check results with score on 1-100 scale (0 for failures)
     """
     # Add cache for repeated checks on the same repository
     cache_key = f"wcag_compliance_{repository.get('id', '')}"
@@ -486,26 +501,18 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             logger.warning("No local repository path provided")
             return {
                 "status": "partial",
-                "score": 0,
+                "score": 1,  # Minimum score for successful execution
                 "result": {"message": "No local repository path available for analysis"},
                 "errors": "Missing repository path"
             }
         
-        # Track execution time
-        import time
-        start_time = time.time()
-        
         # Run the check
         result = check_wcag_compliance(local_path, repository)
-        
-        # Calculate execution time
-        execution_time = time.time() - start_time
-        logger.info(f"WCAG compliance check completed in {execution_time:.2f}s with score: {result.get('wcag_compliance_score', 0)}")
         
         # Return the result with enhanced metadata
         return {
             "status": "completed",
-            "score": result.get("wcag_compliance_score", 0),
+            "score": result.get("wcag_compliance_score", 1),  # Ensure minimum 1 for success
             "result": result,
             "metadata": {
                 "files_checked": result.get("files_checked", 0),
@@ -516,38 +523,18 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
                 "operable_compliance": get_category_compliance(result, "operable"),
                 "understandable_compliance": get_category_compliance(result, "understandable"),
                 "robust_compliance": get_category_compliance(result, "robust"),
-                "execution_time": f"{execution_time:.2f}s",
                 "score_breakdown": result.get("score_components", {}),
                 "recommendation": get_wcag_recommendation(result)
             },
             "errors": None
         }
-    except FileNotFoundError as e:
-        error_msg = f"Repository files not found: {e}"
-        logger.error(error_msg)
-        return {
-            "status": "failed",
-            "score": 0,
-            "result": {},
-            "errors": error_msg
-        }
-    except PermissionError as e:
-        error_msg = f"Permission denied accessing repository files: {e}"
-        logger.error(error_msg)
-        return {
-            "status": "failed",
-            "score": 0,
-            "result": {},
-            "errors": error_msg
-        }
     except Exception as e:
-        error_msg = f"Error running WCAG compliance check: {str(e)}"
-        logger.error(error_msg)
+        logger.error(f"Error running WCAG compliance check: {str(e)}", exc_info=True)
         return {
             "status": "failed",
-            "score": 0,
+            "score": 0,  # Score 0 for failed checks
             "result": {},
-            "errors": error_msg
+            "errors": str(e)
         }
 
 def get_category_compliance(result: Dict[str, Any], category: str) -> float:

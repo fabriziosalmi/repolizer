@@ -63,32 +63,31 @@ def is_dir_with_timeout(path: str, timeout: int = 5) -> bool:
         True if path is a directory, False otherwise or on timeout
     """
     logger.debug(f"Checking if path is a directory: {path} (timeout: {timeout}s)")
-    
-    # For Windows or non-main threads where signal can't be used
-    if platform.system() == 'Windows' or threading.current_thread() is not threading.main_thread():
-        # Simple implementation - can't use signals for interruption
-        # Not perfect but offers some protection
-        start_time = time.time()
-        try:
-            result = os.path.isdir(path)
-            elapsed = time.time() - start_time
-            if elapsed > timeout / 2:  # Log slowness even if it eventually completed
-                logger.warning(f"isdir check on {path} was slow but completed in {elapsed:.2f}s")
-            return result
-        except Exception as e:
-            logger.warning(f"Error checking if {path} is a directory: {e}")
-            return False
-    
-    # Use signals for Unix main thread
     try:
+        # For Windows or non-main threads where signal can't be used
+        if platform.system() == 'Windows' or threading.current_thread() is not threading.main_thread():
+            # Simple implementation - can't use signals for interruption
+            # Not perfect but offers some protection
+            start_time = time.time()
+            try:
+                result = os.path.isdir(path)
+                elapsed = time.time() - start_time
+                if elapsed > timeout / 2:  # Log slowness even if it eventually completed
+                    logger.warning(f"isdir check on {path} was slow but completed in {elapsed:.2f}s")
+                return result
+            except Exception as e:
+                logger.warning(f"Error checking if {path} is a directory: {e}")
+                return False
+        
+        # Use signals for Unix main thread
         with time_limit(timeout):
             result = os.path.isdir(path)
             return result
     except TimeoutException:
-        logger.warning(f"Timeout checking if {path} is a directory")
+        logger.error(f"Timeout occurred while checking if {path} is a directory")
         return False
     except Exception as e:
-        logger.warning(f"Error checking if {path} is a directory: {e}")
+        logger.error(f"Unexpected error checking if {path} is a directory: {e}")
         return False
 
 def is_file_with_timeout(path: str, timeout: int = 5) -> bool:
@@ -103,30 +102,29 @@ def is_file_with_timeout(path: str, timeout: int = 5) -> bool:
         True if path is a file, False otherwise or on timeout
     """
     logger.debug(f"Checking if path is a file: {path} (timeout: {timeout}s)")
-    
-    # For Windows or non-main threads where signal can't be used
-    if platform.system() == 'Windows' or threading.current_thread() is not threading.main_thread():
-        start_time = time.time()
-        try:
-            result = os.path.isfile(path)
-            elapsed = time.time() - start_time
-            if elapsed > timeout / 2:
-                logger.warning(f"isfile check on {path} was slow but completed in {elapsed:.2f}s")
-            return result
-        except Exception as e:
-            logger.warning(f"Error checking if {path} is a file: {e}")
-            return False
-    
-    # Use signals for Unix main thread
     try:
+        # For Windows or non-main threads where signal can't be used
+        if platform.system() == 'Windows' or threading.current_thread() is not threading.main_thread():
+            start_time = time.time()
+            try:
+                result = os.path.isfile(path)
+                elapsed = time.time() - start_time
+                if elapsed > timeout / 2:
+                    logger.warning(f"isfile check on {path} was slow but completed in {elapsed:.2f}s")
+                return result
+            except Exception as e:
+                logger.warning(f"Error checking if {path} is a file: {e}")
+                return False
+        
+        # Use signals for Unix main thread
         with time_limit(timeout):
             result = os.path.isfile(path)
             return result
     except TimeoutException:
-        logger.warning(f"Timeout checking if {path} is a file")
+        logger.error(f"Timeout occurred while checking if {path} is a file")
         return False
     except Exception as e:
-        logger.warning(f"Error checking if {path} is a file: {e}")
+        logger.error(f"Unexpected error checking if {path} is a file: {e}")
         return False
 
 def safe_read_file(path: str, max_size: int = None, timeout: int = 5, 
@@ -147,7 +145,6 @@ def safe_read_file(path: str, max_size: int = None, timeout: int = 5,
         File contents or None on error/timeout
     """
     logger.debug(f"Reading file: {path} (timeout: {timeout}s, binary: {binary})")
-    
     try:
         # Check file size first with timeout
         if max_size is not None:
@@ -178,23 +175,19 @@ def safe_read_file(path: str, max_size: int = None, timeout: int = 5,
                 return None
         
         # Use signals for Unix main thread
-        try:
-            with time_limit(timeout):
-                mode = 'rb' if binary else 'r'
-                kwargs = {} if binary else {'encoding': encoding, 'errors': errors}
-                
-                with open(path, mode, **kwargs) as f:
-                    contents = f.read()
-                
-                return contents
-        except TimeoutException:
-            logger.warning(f"Timeout reading file {path}")
-            return None
-        except Exception as e:
-            logger.warning(f"Error reading file {path}: {e}")
-            return None
+        with time_limit(timeout):
+            mode = 'rb' if binary else 'r'
+            kwargs = {} if binary else {'encoding': encoding, 'errors': errors}
+            
+            with open(path, mode, **kwargs) as f:
+                contents = f.read()
+            
+            return contents
+    except TimeoutException:
+        logger.error(f"Timeout occurred while reading file {path}")
+        return None
     except Exception as e:
-        logger.warning(f"Unexpected error reading file {path}: {e}")
+        logger.error(f"Unexpected error reading file {path}: {e}")
         return None
 
 def get_file_size_with_timeout(path: str, timeout: int = 5) -> Optional[int]:
@@ -209,30 +202,29 @@ def get_file_size_with_timeout(path: str, timeout: int = 5) -> Optional[int]:
         File size in bytes or None on error/timeout
     """
     logger.debug(f"Getting size of file: {path} (timeout: {timeout}s)")
-    
-    # For Windows or non-main threads where signal can't be used
-    if platform.system() == 'Windows' or threading.current_thread() is not threading.main_thread():
-        start_time = time.time()
-        try:
-            size = os.path.getsize(path)
-            elapsed = time.time() - start_time
-            if elapsed > timeout / 2:
-                logger.warning(f"getsize on {path} was slow but completed in {elapsed:.2f}s")
-            return size
-        except Exception as e:
-            logger.warning(f"Error getting size of file {path}: {e}")
-            return None
-    
-    # Use signals for Unix main thread
     try:
+        # For Windows or non-main threads where signal can't be used
+        if platform.system() == 'Windows' or threading.current_thread() is not threading.main_thread():
+            start_time = time.time()
+            try:
+                size = os.path.getsize(path)
+                elapsed = time.time() - start_time
+                if elapsed > timeout / 2:
+                    logger.warning(f"getsize on {path} was slow but completed in {elapsed:.2f}s")
+                return size
+            except Exception as e:
+                logger.warning(f"Error getting size of file {path}: {e}")
+                return None
+        
+        # Use signals for Unix main thread
         with time_limit(timeout):
             size = os.path.getsize(path)
             return size
     except TimeoutException:
-        logger.warning(f"Timeout getting size of file {path}")
+        logger.error(f"Timeout occurred while getting size of file {path}")
         return None
     except Exception as e:
-        logger.warning(f"Error getting size of file {path}: {e}")
+        logger.error(f"Unexpected error getting size of file {path}: {e}")
         return None
 
 def safe_walk(top: str, timeout: int = 10, max_depth: int = None, 
@@ -250,70 +242,32 @@ def safe_walk(top: str, timeout: int = 10, max_depth: int = None,
         List of (dirpath, dirnames, filenames) tuples or empty list on error
     """
     results = []
-    
-    if not is_dir_with_timeout(top, timeout):
-        logger.warning(f"Path doesn't exist or isn't a directory: {top}")
-        return results
-    
-    if skip_dirs is None:
-        skip_dirs = []
-    
-    # Custom implementation of directory walking for better control
-    # and timeout protection at each step
-    dirs_to_process = [(top, 0)]  # (path, depth)
-    
-    while dirs_to_process:
-        current_dir, current_depth = dirs_to_process.pop(0)
+    logger.debug(f"Starting safe_walk on {top} with timeout {timeout}s and max_depth {max_depth}")
+    try:
+        if not is_dir_with_timeout(top, timeout):
+            logger.warning(f"Path doesn't exist or isn't a directory: {top}")
+            return results
         
-        if max_depth is not None and current_depth > max_depth:
-            continue
+        if skip_dirs is None:
+            skip_dirs = []
         
-        try:
-            logger.debug(f"Scanning directory: {current_dir}")
+        # Custom implementation of directory walking for better control
+        # and timeout protection at each step
+        dirs_to_process = [(top, 0)]  # (path, depth)
+        
+        while dirs_to_process:
+            current_dir, current_depth = dirs_to_process.pop(0)
             
-            # For Windows or non-main threads where signal can't be used
-            if platform.system() == 'Windows' or threading.current_thread() is not threading.main_thread():
-                start_time = time.time()
-                try:
-                    # Get directory contents
-                    entries = list(os.scandir(current_dir))
-                    
-                    # Sort into files and subdirectories
-                    current_files = []
-                    current_dirs = []
-                    
-                    for entry in entries:
-                        try:
-                            if entry.is_dir():
-                                current_dirs.append(entry.name)
-                            else:
-                                current_files.append(entry.name)
-                        except (OSError, FileNotFoundError) as e:
-                            logger.debug(f"Error accessing entry {entry.path}: {e}")
-                            continue
-                    
-                    elapsed = time.time() - start_time
-                    if elapsed > timeout / 2:
-                        logger.warning(f"Directory scan on {current_dir} was slow but completed in {elapsed:.2f}s")
-                    
-                    # Store result in same format as os.walk
-                    results.append((current_dir, current_dirs.copy(), current_files))
-                    
-                    # Filter directories to skip
-                    current_dirs = [d for d in current_dirs if d not in skip_dirs and not d.startswith('.')]
-                    
-                    # Add subdirectories to processing queue
-                    for dirname in current_dirs:
-                        path = os.path.join(current_dir, dirname)
-                        dirs_to_process.append((path, current_depth + 1))
-                        
-                except (OSError, FileNotFoundError) as e:
-                    logger.warning(f"Error scanning directory {current_dir}: {e}")
-                    continue
-            else:
-                # Use signals for Unix main thread
-                try:
-                    with time_limit(timeout):
+            if max_depth is not None and current_depth > max_depth:
+                continue
+            
+            try:
+                logger.debug(f"Scanning directory: {current_dir}")
+                
+                # For Windows or non-main threads where signal can't be used
+                if platform.system() == 'Windows' or threading.current_thread() is not threading.main_thread():
+                    start_time = time.time()
+                    try:
                         # Get directory contents
                         entries = list(os.scandir(current_dir))
                         
@@ -331,6 +285,10 @@ def safe_walk(top: str, timeout: int = 10, max_depth: int = None,
                                 logger.debug(f"Error accessing entry {entry.path}: {e}")
                                 continue
                         
+                        elapsed = time.time() - start_time
+                        if elapsed > timeout / 2:
+                            logger.warning(f"Directory scan on {current_dir} was slow but completed in {elapsed:.2f}s")
+                        
                         # Store result in same format as os.walk
                         results.append((current_dir, current_dirs.copy(), current_files))
                         
@@ -341,16 +299,57 @@ def safe_walk(top: str, timeout: int = 10, max_depth: int = None,
                         for dirname in current_dirs:
                             path = os.path.join(current_dir, dirname)
                             dirs_to_process.append((path, current_depth + 1))
-                
-                except TimeoutException:
-                    logger.warning(f"Timeout scanning directory: {current_dir}")
-                    continue
-                except (OSError, FileNotFoundError) as e:
-                    logger.warning(f"Error scanning directory {current_dir}: {e}")
-                    continue
+                            
+                    except (OSError, FileNotFoundError) as e:
+                        logger.warning(f"Error scanning directory {current_dir}: {e}")
+                        continue
+                else:
+                    # Use signals for Unix main thread
+                    try:
+                        with time_limit(timeout):
+                            # Get directory contents
+                            entries = list(os.scandir(current_dir))
+                            
+                            # Sort into files and subdirectories
+                            current_files = []
+                            current_dirs = []
+                            
+                            for entry in entries:
+                                try:
+                                    if entry.is_dir():
+                                        current_dirs.append(entry.name)
+                                    else:
+                                        current_files.append(entry.name)
+                                except (OSError, FileNotFoundError) as e:
+                                    logger.debug(f"Error accessing entry {entry.path}: {e}")
+                                    continue
+                            
+                            # Store result in same format as os.walk
+                            results.append((current_dir, current_dirs.copy(), current_files))
+                            
+                            # Filter directories to skip
+                            current_dirs = [d for d in current_dirs if d not in skip_dirs and not d.startswith('.')]
+                            
+                            # Add subdirectories to processing queue
+                            for dirname in current_dirs:
+                                path = os.path.join(current_dir, dirname)
+                                dirs_to_process.append((path, current_depth + 1))
+                    
+                    except TimeoutException:
+                        logger.warning(f"Timeout scanning directory: {current_dir}")
+                        continue
+                    except (OSError, FileNotFoundError) as e:
+                        logger.warning(f"Error scanning directory {current_dir}: {e}")
+                        continue
+            
+            except Exception as e:
+                logger.warning(f"Unexpected error scanning directory {current_dir}: {e}")
+                continue
         
-        except Exception as e:
-            logger.warning(f"Unexpected error scanning directory {current_dir}: {e}")
-            continue
-    
-    return results
+        return results
+    except TimeoutException:
+        logger.error(f"Timeout occurred during safe_walk on {top}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error during safe_walk on {top}: {e}")
+        return []

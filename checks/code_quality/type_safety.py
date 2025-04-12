@@ -7,6 +7,8 @@ import os
 import re
 import logging
 from typing import Dict, Any, List, Set
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -22,6 +24,7 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     Returns:
         Dictionary with check results
     """
+    start_time = time.time()
     result = {
         "has_type_annotations": False,
         "has_type_checking": False,
@@ -137,10 +140,18 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     total_files_by_language = {}
     type_checker_found = set()
     
-    # Walk through repository files
+    # Use a set to track directories to skip for faster lookup
+    skip_dirs = {'/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/', '/vendor/', '/venv/'}
+    
+    # Maximum number of files to analyze per language to prevent performance issues
+    max_files_per_language = 500
+    files_per_language = {}
+    
+    # Get all eligible files first to improve performance
+    eligible_files = []
     for root, _, files in os.walk(repo_path):
-        # Skip node_modules, .git and other common directories
-        if any(skip_dir in root for skip_dir in ['/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/']):
+        # Skip excluded directories faster
+        if any(skip_dir in root.replace('\\', '/') for skip_dir in skip_dirs):
             continue
             
         for file in files:
@@ -187,68 +198,111 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
                         total_files_by_language[file_language] = 0
                     
                     total_files_by_language[file_language] += 1
-            
-            # Check file content for optionally typed languages
-            if typing_category == "optionally_typed":
-                try:
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read()
-                        files_checked += 1
-                        
-                        # Look for type annotations
-                        has_type_annotation = False
-                        if file_language in type_annotation_patterns:
-                            for pattern in type_annotation_patterns[file_language]:
-                                if re.search(pattern, content, re.MULTILINE):
-                                    has_type_annotation = True
-                                    type_annotations_counts[file_language] += 1
-                                    result["has_type_annotations"] = True
-                                    break
-                        
-                        # Check for type checker imports/usage
-                        if file_language in type_checkers:
-                            for checker in type_checkers[file_language]:
-                                checker_pattern = fr'\b{re.escape(checker)}\b'
-                                if re.search(checker_pattern, content, re.IGNORECASE):
-                                    type_checker_found.add(checker)
-                                    result["has_type_checking"] = True
-                        
-                        # Look for potential type issues in files with annotations
-                        if has_type_annotation:
-                            # Check for explicit 'Any' usage which bypasses type checking
-                            if file_language == "python" and re.search(r'\bAny\b', content):
-                                relative_path = os.path.relpath(file_path, repo_path)
-                                # Only include first 10 issues to avoid flooding the results
-                                if len(result["type_issues"]) < 10:
-                                    result["type_issues"].append({
-                                        "file": relative_path,
-                                        "issue": "Uses 'Any' type which bypasses type checking"
-                                    })
-                            
-                            # For TypeScript/JavaScript, look for 'any' usage
-                            if file_language in ["javascript", "typescript"] and re.search(r'\bany\b', content):
-                                relative_path = os.path.relpath(file_path, repo_path)
-                                if len(result["type_issues"]) < 10:
-                                    result["type_issues"].append({
-                                        "file": relative_path,
-                                        "issue": "Uses 'any' type which bypasses type checking"
-                                    })
-                            
-                            # For PHP, look for mixed type hints
-                            if file_language == "php" and re.search(r'\bmixed\b', content):
-                                relative_path = os.path.relpath(file_path, repo_path)
-                                if len(result["type_issues"]) < 10:
-                                    result["type_issues"].append({
-                                        "file": relative_path,
-                                        "issue": "Uses 'mixed' type which is less strict"
-                                    })
-                
-                except Exception as e:
-                    logger.error(f"Error analyzing file {file_path}: {e}")
+                    
+                    # Track files per language to limit analysis
+                    if file_language not in files_per_language:
+                        files_per_language[file_language] = 0
+                    
+                    if files_per_language[file_language] < max_files_per_language:
+                        files_per_language[file_language] += 1
+                        eligible_files.append((file_path, file_language, typing_category))
             
             # For statically typed languages, just count the file
-            else:
+            elif typing_category == "statically_typed":
                 files_checked += 1
+    
+    # Analyze files more efficiently with parallel processing
+    def analyze_file(file_data):
+        file_path, file_language, typing_category = file_data
+        file_result = {
+            "has_annotation": False,
+            "checker_tools": set(),
+            "issues": []
+        }
+        
+        # Only analyze optionally typed files
+        if typing_category == "optionally_typed":
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                    
+                    # Look for type annotations
+                    if file_language in type_annotation_patterns:
+                        for pattern in type_annotation_patterns[file_language]:
+                            if re.search(pattern, content, re.MULTILINE):
+                                file_result["has_annotation"] = True
+                                break
+                    
+                    # Check for type checker imports/usage
+                    if file_language in type_checkers:
+                        for checker in type_checkers[file_language]:
+                            checker_pattern = fr'\b{re.escape(checker)}\b'
+                            if re.search(checker_pattern, content, re.IGNORECASE):
+                                file_result["checker_tools"].add(checker)
+                    
+                    # Look for potential type issues in files with annotations
+                    if file_result["has_annotation"]:
+                        # Check for explicit 'Any' usage which bypasses type checking
+                        if file_language == "python" and re.search(r'\bAny\b', content):
+                            relative_path = os.path.relpath(file_path, repo_path)
+                            file_result["issues"].append({
+                                "file": relative_path,
+                                "issue": "Uses 'Any' type which bypasses type checking"
+                            })
+                        
+                        # For TypeScript/JavaScript, look for 'any' usage
+                        if file_language in ["javascript", "typescript"] and re.search(r'\bany\b', content):
+                            relative_path = os.path.relpath(file_path, repo_path)
+                            file_result["issues"].append({
+                                "file": relative_path,
+                                "issue": "Uses 'any' type which bypasses type checking"
+                            })
+                        
+                        # For PHP, look for mixed type hints
+                        if file_language == "php" and re.search(r'\bmixed\b', content):
+                            relative_path = os.path.relpath(file_path, repo_path)
+                            file_result["issues"].append({
+                                "file": relative_path,
+                                "issue": "Uses 'mixed' type which is less strict"
+                            })
+            
+            except Exception as e:
+                logger.error(f"Error analyzing file {file_path}: {e}")
+        
+        return file_path, file_language, file_result
+    
+    # Use ThreadPoolExecutor for parallelism with controlled concurrency
+    max_workers = min(20, os.cpu_count() * 2 + 4)  # Reasonable number of workers
+    analysis_results = []
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(analyze_file, file_data) for file_data in eligible_files]
+        
+        for future in as_completed(futures):
+            try:
+                result_data = future.result()
+                analysis_results.append(result_data)
+            except Exception as e:
+                logger.error(f"Error in file analysis thread: {e}")
+    
+    # Process analysis results
+    all_issues = []
+    for file_path, file_language, file_result in analysis_results:
+        files_checked += 1
+        
+        if file_result["has_annotation"]:
+            type_annotations_counts[file_language] += 1
+            result["has_type_annotations"] = True
+            result["type_metrics"]["files_with_annotations"] += 1
+        
+        for checker in file_result["checker_tools"]:
+            type_checker_found.add(checker)
+            result["has_type_checking"] = True
+        
+        all_issues.extend(file_result["issues"])
+    
+    # Only keep the first 10 issues to avoid flooding the results
+    result["type_issues"] = all_issues[:10]
     
     # Check for type checker config files
     for lang, patterns in type_check_config_patterns.items():
@@ -309,42 +363,53 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     
     if total_optional_files > 0:
         result["type_annotation_ratio"] = round(total_typed_files / total_optional_files, 2)
+        result["type_metrics"]["typed_code_coverage"] = result["type_annotation_ratio"] * 100
     
     result["files_checked"] = files_checked
     result["type_check_tools"] = sorted(list(type_checker_found))
     
-    # Calculate type safety score (0-100 scale)
-    score = 0
+    # Calculate type safety score (1-100 scale)
+    score = 1  # Minimum score for a successful check
     
     # Points for having static typing
     if result["typed_languages"]:
-        # 20 points for each statically typed language, but cap at 60
-        static_typed_count = len([lang for lang in result["typed_languages"] if lang in language_extensions["statically_typed"]])
-        static_typed_points = min(60, static_typed_count * 20)
+        # Base points for static typing (up to 40)
+        static_typed_langs = [lang for lang in result["typed_languages"] 
+                             if lang in language_extensions["statically_typed"]]
+        static_typed_points = min(40, len(static_typed_langs) * 15)
         score += static_typed_points
     
-    # Points for type annotations in optionally typed languages
+    # Points for type annotations in optionally typed languages (up to 35)
     if result["has_type_annotations"]:
-        # Up to 30 points based on type annotation ratio
-        annotation_ratio_points = min(30, int(result["type_annotation_ratio"] * 100))
-        score += annotation_ratio_points
+        ratio = result["type_annotation_ratio"]
+        if ratio >= 0.8:
+            score += 35  # Excellent type coverage
+        elif ratio >= 0.6:
+            score += 25  # Very good type coverage
+        elif ratio >= 0.4:
+            score += 15  # Good type coverage
+        elif ratio >= 0.2:
+            score += 8   # Moderate type coverage
+        else:
+            score += 4   # Minimal type coverage
     
-    # Points for using type checking tools
+    # Points for using type checking tools (up to 25)
     if result["has_type_checking"]:
-        # 10 points for each type checker, but cap at 30
-        type_checker_points = min(30, len(result["type_check_tools"]) * 10)
-        score += type_checker_points
+        checker_points = min(25, len(result["type_check_tools"]) * 8)
+        score += checker_points
     
-    # Penalty for type issues
-    issue_penalty = min(20, len(result["type_issues"]) * 2)
-    score = max(0, score - issue_penalty)
+    # Penalty for type issues (up to -15)
+    issue_count = len(result["type_issues"])
+    if issue_count > 0:
+        penalty = min(15, issue_count * 1.5)
+        score = max(1, score - penalty)  # Ensure score doesn't go below 1
     
-    # Ensure score doesn't exceed 100
-    score = min(100, score)
+    # Cap score at 100
+    result["type_safety_score"] = min(100, round(score, 1))
     
-    # Round and convert to integer if it's a whole number
-    rounded_score = round(score, 1)
-    result["type_safety_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
+    # Performance metrics
+    execution_time = time.time() - start_time
+    logger.info(f"Type safety check completed in {execution_time:.2f} seconds, analyzed {files_checked} files")
     
     return result
 
@@ -362,7 +427,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         repository: Repository data dictionary which might include a local_path
         
     Returns:
-        Check results with score on 0-100 scale
+        Check results with score on 1-100 scale
     """
     try:
         # Check if we have a local path to the repository
@@ -379,10 +444,10 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             "errors": None
         }
     except Exception as e:
-        logger.error(f"Error running type safety check: {e}")
+        logger.error(f"Error running type safety check: {e}", exc_info=True)
         return {
             "status": "failed",
-            "score": 0,
-            "result": {},
+            "score": 0,  # Score 0 for failed checks
+            "result": {"error": str(e)},
             "errors": str(e)
         }
