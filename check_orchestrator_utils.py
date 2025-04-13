@@ -774,120 +774,121 @@ def safe_fs_operation(func, *args, timeout=10, default=None, **kwargs):
     Execute a filesystem operation with timeout protection.
     
     Args:
-        func: Function to call
-        args: Arguments to pass to the function
+        func: Function to execute
+        args: Positional arguments for the function
         timeout: Timeout in seconds
-        default: Default return value on timeout/error
-        kwargs: Keyword arguments to pass to the function
+        default: Default value to return on timeout
+        kwargs: Keyword arguments for the function
         
     Returns:
-        Result of function or default on timeout/error
+        Result of the function or default value on timeout
     """
-    import time
-    import threading
-    import platform
-    import signal
-    from contextlib import contextmanager
-
     # Skip setting alarm on Windows or when not in main thread
     is_main_thread = threading.current_thread() is threading.main_thread()
     can_use_signal = platform.system() != 'Windows' and is_main_thread
-    
-    # For non-signal platforms, use a simple timeout approach
-    if not can_use_signal:
-        result = [default]
-        completed = [False]
-        exception = [None]
-        
-        def target():
-            try:
-                result[0] = func(*args, **kwargs)
-                completed[0] = True
-            except Exception as e:
-                exception[0] = e
-        
-        thread = threading.Thread(target=target)
-        thread.daemon = True
-        
-        start = time.time()
-        thread.start()
-        thread.join(timeout)
-        
-        if not completed[0]:
-            logger.warning(f"Filesystem operation timed out after {timeout}s: {func.__name__}")
-            return default
-        
-        if exception[0]:
-            logger.warning(f"Filesystem operation failed: {func.__name__}: {exception[0]}")
-            return default
-            
-        return result[0]
-    
-    # For Unix main thread, use signal-based timeout
-    @contextmanager
-    def time_limit(seconds):
-        def signal_handler(signum, frame):
-            raise TimeoutError(f"Filesystem operation timed out after {seconds}s")
-        
-        signal.signal(signal.SIGALRM, signal.SIGALRM)
-        signal.alarm(seconds)
-        try:
-            yield
-        finally:
-            signal.alarm(0)
-    
+
+    if can_use_signal:
+        def handler(signum, frame):
+            raise TimeoutException(f"Operation timed out after {timeout} seconds")
+
+        # Set the timeout handler
+        original_handler = signal.signal(signal.SIGALRM, handler)
+        signal.alarm(timeout)
+
     try:
-        with time_limit(timeout):
-            return func(*args, **kwargs)
-    except TimeoutError as e:
-        logger.warning(f"Filesystem operation timed out: {func.__name__}: {e}")
+        if can_use_signal:
+            # With signal timeout
+            result = func(*args, **kwargs)
+            signal.alarm(0)  # Disable the alarm
+            return result
+        else:
+            # Without signal timeout (simple execution)
+            start_time = time.time()
+            result = func(*args, **kwargs)
+            
+            # Log warning if operation was slow but didn't hit timeout
+            elapsed = time.time() - start_time
+            if elapsed > timeout * 0.8:  # If took more than 80% of timeout
+                logger.warning(f"Operation {func.__name__} was slow ({elapsed:.2f}s) but completed")
+                
+            return result
+    except TimeoutException:
+        logger.warning(f"Operation {func.__name__} timed out after {timeout}s")
         return default
     except Exception as e:
-        logger.warning(f"Filesystem operation failed: {func.__name__}: {e}")
+        logger.warning(f"Operation {func.__name__} failed: {e}")
         return default
+    finally:
+        if can_use_signal:
+            signal.alarm(0)  # Ensure the alarm is disabled
+            # Restore original handler
+            signal.signal(signal.SIGALRM, original_handler)
 
 def safe_isdir(path, timeout=5):
-    """Check if path is a directory with timeout protection."""
-    return safe_fs_operation(os.path.isdir, path, timeout=timeout, default=False)
+    """Safely check if a path is a directory with timeout protection."""
+    try:
+        return safe_fs_operation(os.path.isdir, path, timeout=timeout, default=False)
+    except Exception as e:
+        logger.warning(f"Error checking if {path} is directory: {e}")
+        return False
 
 def safe_isfile(path, timeout=5):
-    """Check if path is a file with timeout protection."""
-    return safe_fs_operation(os.path.isfile, path, timeout=timeout, default=False)
+    """Safely check if a path is a file with timeout protection."""
+    try:
+        return safe_fs_operation(os.path.isfile, path, timeout=timeout, default=False)
+    except Exception as e:
+        logger.warning(f"Error checking if {path} is file: {e}")
+        return False
 
 def safe_exists(path, timeout=5):
-    """Check if path exists with timeout protection."""
-    return safe_fs_operation(os.path.exists, path, timeout=timeout, default=False)
+    """Safely check if a path exists with timeout protection."""
+    try:
+        return safe_fs_operation(os.path.exists, path, timeout=timeout, default=False)
+    except Exception as e:
+        logger.warning(f"Error checking if {path} exists: {e}")
+        return False
 
 def safe_listdir(path, timeout=10):
-    """List directory contents with timeout protection."""
-    return safe_fs_operation(os.listdir, path, timeout=timeout, default=[])
+    """Safely list directory contents with timeout protection."""
+    try:
+        return safe_fs_operation(os.listdir, path, timeout=timeout, default=[])
+    except Exception as e:
+        logger.warning(f"Error listing directory {path}: {e}")
+        return []
 
 def safe_cleanup_directory(directory: str, timeout=30) -> bool:
     """
-    Remove a directory and its contents with timeout protection.
+    Safely clean up a directory with timeout protection.
     
     Args:
-        directory: Path to the directory to remove
+        directory: Path to the directory to clean
         timeout: Timeout in seconds
         
     Returns:
         True if successful, False otherwise
     """
     if not safe_exists(directory, timeout=5):
+        # Already gone, consider success
         return True
         
-    import shutil
-    
     try:
-        result = safe_fs_operation(shutil.rmtree, directory, timeout=timeout, default=False)
-        if result is not False:  # Could be None or True depending on rmtree implementation
-            logger.info(f"Removed directory: {directory}")
-            return True
-        else:
-            logger.error(f"Failed to remove directory {directory} (timeout or error)")
-            return False
+        # Define a cleanup function that will be executed with timeout
+        def do_cleanup(path):
+            import shutil
+            try:
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                elif os.path.isfile(path):
+                    os.remove(path)
+                return True
+            except Exception as e:
+                logger.error(f"Error cleaning up {path}: {e}")
+                return False
+                
+        # Execute with timeout protection
+        return safe_fs_operation(do_cleanup, directory, timeout=timeout, default=False)
     except Exception as e:
-        logger.error(f"Failed to remove directory {directory}: {e}")
+        logger.error(f"Error during cleanup of {directory}: {e}")
         return False
 
 # Initialize has_filesystem_utils before the try block

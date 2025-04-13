@@ -1,20 +1,71 @@
 """
-Dependency Licenses Check
+Dependency License Check
 
-Checks if the repository's dependencies have compatible licenses and are properly documented.
+Checks what dependencies the repository has and identifies their licenses.
 """
 import os
 import re
-import json
 import logging
-from typing import Dict, Any, List, Set, Tuple
+import time
+import threading
+import platform
+import signal
+import json
+from typing import Dict, Any, List, Set, Optional
+from datetime import datetime
+from contextlib import contextmanager
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
-def check_dependency_licenses(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
+# Add timeout handling like we've done for other checks
+class TimeoutException(Exception):
+    """Custom exception for timeouts."""
+    pass
+
+@contextmanager
+def time_limit(seconds):
+    """Context manager for setting a timeout on file operations (Unix/MainThread only)."""
+    # Skip setting alarm on Windows or when not in main thread
+    is_main_thread = threading.current_thread() is threading.main_thread()
+    can_use_signal = platform.system() != 'Windows' and is_main_thread
+
+    if can_use_signal:
+        def signal_handler(signum, frame):
+            logger.warning(f"File processing triggered timeout after {seconds} seconds.")
+            raise TimeoutException(f"File processing timed out after {seconds} seconds")
+
+        original_handler = signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+    else:
+        # If signals can't be used, this context manager does nothing for timeout.
+        original_handler = None  # To satisfy finally block
+
+    try:
+        yield
+    finally:
+        if can_use_signal:
+            signal.alarm(0)  # Disable the alarm
+            # Restore the original signal handler if there was one
+            if original_handler is not None:
+                signal.signal(signal.SIGALRM, original_handler)
+
+def safe_read_file(file_path, timeout=2):
+    """Safely read a file with timeout protection."""
+    try:
+        with time_limit(timeout):
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                return f.read()
+    except TimeoutException:
+        logger.warning(f"Timeout reading file: {file_path}")
+        return None
+    except Exception as e:
+        logger.warning(f"Error reading file {file_path}: {e}")
+        return None
+
+def check_dependency_licenses(repo_path: Optional[str] = None, repo_data: Optional[Dict] = None) -> Dict[str, Any]:
     """
-    Check dependency licenses in the repository
+    Check the licenses of dependencies used by the project
     
     Args:
         repo_path: Path to the repository on local filesystem
@@ -25,257 +76,374 @@ def check_dependency_licenses(repo_path: str = None, repo_data: Dict = None) -> 
     """
     result = {
         "has_dependencies": False,
-        "documented_dependencies": 0,
-        "undocumented_dependencies": 0,
-        "risky_licenses": 0,
+        "dependency_count": 0,
+        "dependencies_with_licenses": 0,
+        "dependencies_without_licenses": 0,
+        "license_compatibility_issues": 0,
         "dependency_files": [],
         "dependency_types": [],
-        "files_checked": 0,
-        "dependency_license_score": 0
+        "problematic_dependencies": [],
+        "dependency_license_score": 0,
+        "early_termination": None,
+        "errors": None
     }
     
-    # First check if repository is available locally for accurate analysis
-    if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path} for dependency licenses")
-        
-        # Files that might contain dependency information
-        dependency_files = {
-            "package.json": "npm",
-            "package-lock.json": "npm",
-            "yarn.lock": "yarn",
-            "requirements.txt": "python",
-            "setup.py": "python",
-            "Pipfile": "pipenv",
-            "Pipfile.lock": "pipenv",
-            "go.mod": "go",
-            "go.sum": "go",
-            "Gemfile": "ruby",
-            "Gemfile.lock": "ruby",
-            "pom.xml": "maven",
-            "build.gradle": "gradle",
-            "build.gradle.kts": "gradle",
-            "build.sbt": "sbt",
-            "cargo.toml": "cargo",
-            "cargo.lock": "cargo",
-            "composer.json": "composer",
-            "composer.lock": "composer",
-            "pubspec.yaml": "dart",
-            "pubspec.lock": "dart"
+    # Configuration constants
+    FILE_READ_TIMEOUT = 2  # seconds per file read
+    GLOBAL_ANALYSIS_TIMEOUT = 30  # 30 seconds total timeout for the entire analysis
+    MAX_FILES_TO_CHECK = 100  # Limit number of files to check
+    MAX_DIR_DEPTH = 5  # Maximum directory depth to traverse
+    
+    # Track analysis start time for global timeout
+    start_time = datetime.now()
+    analysis_terminated_early = False
+    
+    # Skip local analysis if no repo path provided
+    if not repo_path or not os.path.isdir(repo_path):
+        logger.warning("No local repository path provided or path is not a directory")
+        return result
+    
+    # Dependency patterns to look for by file type
+    dependency_patterns = {
+        "package.json": {
+            "type": "npm",
+            "parser": "json",
+            "dependencies_field": ["dependencies", "devDependencies", "peerDependencies"]
+        },
+        "requirements.txt": {
+            "type": "python",
+            "parser": "line",
+            "line_pattern": r"^([a-zA-Z0-9_.-]+).*$"
+        },
+        "Pipfile": {
+            "type": "python",
+            "parser": "toml",
+            "dependencies_field": ["packages", "dev-packages"]
+        },
+        "Pipfile.lock": {
+            "type": "python",
+            "parser": "json",
+            "dependencies_field": ["default", "develop"]
+        },
+        "pyproject.toml": {
+            "type": "python",
+            "parser": "toml",
+            "dependencies_field": ["tool.poetry.dependencies", "tool.poetry.dev-dependencies"]
+        },
+        "go.mod": {
+            "type": "go",
+            "parser": "line",
+            "line_pattern": r"^\s*([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)\s+.*$"
+        },
+        "Gemfile": {
+            "type": "ruby",
+            "parser": "line",
+            "line_pattern": r"^\s*gem\s+['\"]([a-zA-Z0-9_.-]+)['\"].*$"
+        },
+        "Cargo.toml": {
+            "type": "rust",
+            "parser": "toml",
+            "dependencies_field": ["dependencies", "dev-dependencies"]
+        },
+        "composer.json": {
+            "type": "php",
+            "parser": "json",
+            "dependencies_field": ["require", "require-dev"]
+        },
+        "pom.xml": {
+            "type": "maven",
+            "parser": "xml",
+            "xpath": "/project/dependencies/dependency/artifactId"
+        },
+        "build.gradle": {
+            "type": "gradle",
+            "parser": "line",
+            "line_pattern": r"^\s*implementation\s+['\"]([a-zA-Z0-9_.-]+:[a-zA-Z0-9_.-]+).*['\"].*$"
         }
-        
-        # Dependency documentation files
-        doc_files = [
-            "DEPENDENCIES.md", "dependencies.md", "NOTICE", "NOTICE.md", "THIRD_PARTY_LICENSES.md",
-            "third_party_licenses.md", "LICENSE-THIRD_PARTY", "THIRD_PARTY.md", "third_party.md",
-            "docs/dependencies.md", "docs/third_party.md", ".github/DEPENDENCIES.md"
-        ]
-        
-        # Risky license keywords to look for
-        risky_license_terms = [
-            "agpl", "affero", "commons clause", "non-commercial", "noncommercial", "no commercial", 
-            "not for commercial", "proprietary", "all rights reserved", "no license", "no-license",
-            "unlicensed"
-        ]
-        
+    }
+    
+    # License identification patterns
+    license_patterns = {
+        "MIT": r"mit license|mit|expat license",
+        "Apache-2.0": r"apache license 2.0|apache-2.0|apache 2.0|apache2",
+        "GPL-3.0": r"gnu general public license v3|gpl-3.0|gpl 3|gplv3",
+        "GPL-2.0": r"gnu general public license v2|gpl-2.0|gpl 2|gplv2",
+        "BSD-3-Clause": r"bsd 3-clause|bsd-3-clause|new bsd license|modified bsd license",
+        "BSD-2-Clause": r"bsd 2-clause|bsd-2-clause|simplified bsd license|freebsd license",
+        "ISC": r"isc license|isc",
+        "LGPL-3.0": r"gnu lesser general public license v3|lgpl-3.0|lgpl 3|lgplv3",
+        "LGPL-2.1": r"gnu lesser general public license v2.1|lgpl-2.1|lgpl 2.1|lgplv2.1",
+        "MPL-2.0": r"mozilla public license 2.0|mpl-2.0|mpl 2.0",
+        "Unlicense": r"unlicense|public domain",
+        "WTFPL": r"do what the fuck you want|wtfpl",
+        "CC0-1.0": r"creative commons zero|cc0|cc0-1.0",
+        "Zlib": r"zlib license|zlib"
+    }
+    
+    # Check repository for dependency files
+    dependencies = []
+    dependency_files_found = []
+    
+    try:
+        # Limit directory traversal to prevent hanging
         files_checked = 0
-        found_dependency_files = []
-        dependency_types_found = set()
         
-        # Check dependency files
-        for dep_file, dep_type in dependency_files.items():
-            file_path = os.path.join(repo_path, dep_file)
-            if os.path.isfile(file_path):
-                try:
-                    files_checked += 1
-                    relative_path = os.path.relpath(file_path, repo_path)
-                    found_dependency_files.append(relative_path)
-                    dependency_types_found.add(dep_type)
-                    result["has_dependencies"] = True
-                    
-                    # For some formats, we can check for license information
-                    if dep_file == "package.json":
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            try:
-                                pkg_data = json.load(f)
-                                deps = {}
-                                if "dependencies" in pkg_data:
-                                    deps.update(pkg_data["dependencies"])
-                                if "devDependencies" in pkg_data:
-                                    deps.update(pkg_data["devDependencies"])
-                                
-                                result["documented_dependencies"] += len(deps)
-                                
-                                # License information might be in package.json itself
-                                if "license" in pkg_data:
-                                    # Check for risky licenses
-                                    license_str = str(pkg_data["license"]).lower()
-                                    for risky_term in risky_license_terms:
-                                        if risky_term in license_str:
-                                            result["risky_licenses"] += 1
-                                            break
-                            except json.JSONDecodeError:
-                                logger.error(f"Error decoding JSON in {file_path}")
-                    
-                    elif dep_file == "requirements.txt":
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            lines = f.readlines()
-                            # Count non-empty, non-comment lines as dependencies
-                            deps = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
-                            result["documented_dependencies"] += len(deps)
-                    
-                    elif dep_file == "Gemfile":
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            content = f.read()
-                            # Count gem declarations
-                            gems = re.findall(r'gem\s+[\'"]([^\'"]+)[\'"]', content)
-                            result["documented_dependencies"] += len(gems)
-                    
-                    elif dep_file == "go.mod":
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            content = f.read()
-                            # Count require statements
-                            requires = re.findall(r'require\s+([^\s]+)', content)
-                            result["documented_dependencies"] += len(requires)
-                    
-                    elif dep_file == "pom.xml":
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            content = f.read()
-                            # Count dependency elements
-                            dependencies = re.findall(r'<dependency>', content)
-                            result["documented_dependencies"] += len(dependencies)
+        for root, dirs, files in os.walk(repo_path):
+            # Check if we've exceeded the global timeout
+            elapsed_time = (datetime.now() - start_time).total_seconds()
+            if elapsed_time > GLOBAL_ANALYSIS_TIMEOUT:
+                logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds. Stopping dependency file search.")
+                analysis_terminated_early = True
+                result["early_termination"] = {
+                    "reason": "global_timeout",
+                    "elapsed_seconds": round(elapsed_time, 1),
+                    "limit_seconds": GLOBAL_ANALYSIS_TIMEOUT
+                }
+                break
+            
+            # Limit directory depth
+            rel_path = os.path.relpath(root, repo_path)
+            depth = len(rel_path.split(os.sep)) if rel_path != '.' else 0
+            
+            if depth > MAX_DIR_DEPTH:
+                dirs[:] = []  # Don't go deeper
+                continue
+            
+            # Skip hidden directories and node_modules
+            dirs[:] = [d for d in dirs if not d.startswith('.') and d != 'node_modules']
+            
+            # Check for dependency files
+            for file in files:
+                # Check if we've reached the file limit
+                if files_checked >= MAX_FILES_TO_CHECK:
+                    logger.warning(f"Reached maximum file check limit ({MAX_FILES_TO_CHECK}). Limiting dependency file search.")
+                    analysis_terminated_early = True
+                    result["early_termination"] = {
+                        "reason": "max_files_reached",
+                        "limit": MAX_FILES_TO_CHECK
+                    }
+                    break
                 
-                except Exception as e:
-                    logger.error(f"Error reading dependency file {file_path}: {e}")
-        
-        # Check for dependency documentation
-        has_dependency_docs = False
-        for doc_file in doc_files:
-            file_path = os.path.join(repo_path, doc_file)
-            if os.path.isfile(file_path):
-                try:
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read().lower()
-                        files_checked += 1
-                        has_dependency_docs = True
-                        
-                        # Look for risky license mentions
-                        for risky_term in risky_license_terms:
-                            if risky_term in content:
-                                result["risky_licenses"] += 1
-                                break
-                        
-                        # Estimate documented dependencies from content
-                        dependency_mentions = re.findall(r'(dependency|package|library|module|component|gem|npm|pypi)', content, re.IGNORECASE)
-                        if dependency_mentions and result["documented_dependencies"] == 0:
-                            # Rough estimate of documented dependencies
-                            result["documented_dependencies"] += len(dependency_mentions) // 2
-                            
-                except Exception as e:
-                    logger.error(f"Error reading doc file {file_path}: {e}")
-        
-        # Check README for dependency documentation
-        if result["has_dependencies"] and not has_dependency_docs:
-            readme_files = ["README.md", "README", "README.txt", "docs/README.md"]
-            for readme in readme_files:
-                file_path = os.path.join(repo_path, readme)
-                if os.path.isfile(file_path):
-                    try:
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            content = f.read().lower()
-                            files_checked += 1
-                            
-                            # Check for dependency sections
-                            section_headers = [
-                                r'## dependencies',
-                                r'## requirements',
-                                r'## packages',
-                                r'## libraries',
-                                r'## third party'
-                            ]
-                            
-                            has_dependency_section = False
-                            for header in section_headers:
-                                if re.search(header, content, re.IGNORECASE):
-                                    has_dependency_section = True
-                                    break
-                            
-                            if has_dependency_section:
-                                # Estimate documented dependencies from content
-                                dependency_mentions = re.findall(r'(dependency|package|library|module|component|gem|npm|pypi)', content, re.IGNORECASE)
-                                if dependency_mentions and result["documented_dependencies"] == 0:
-                                    # Rough estimate of documented dependencies
-                                    result["documented_dependencies"] += len(dependency_mentions) // 2
-                                    has_dependency_docs = True
+                if file in dependency_patterns:
+                    file_path = os.path.join(root, file)
                     
+                    # Process dependency file with timeout protection
+                    logger.info(f"Found dependency file: {file_path}")
+                    dependency_files_found.append(os.path.relpath(file_path, repo_path))
+                    
+                    # Process dependencies based on file type
+                    pattern = dependency_patterns[file]
+                    dep_type = pattern["type"]
+                    
+                    if not dep_type in result["dependency_types"]:
+                        result["dependency_types"].append(dep_type)
+                    
+                    # Read file with timeout protection
+                    content = safe_read_file(file_path, timeout=FILE_READ_TIMEOUT)
+                    if content is None:
+                        logger.warning(f"Could not read dependency file: {file_path}")
+                        continue
+                    
+                    # Parse dependencies based on file format
+                    try:
+                        with time_limit(FILE_READ_TIMEOUT):  # Timeout for parsing
+                            if pattern["parser"] == "json":
+                                data = json.loads(content)
+                                for field in pattern["dependencies_field"]:
+                                    # Handle nested fields
+                                    if "." in field:
+                                        parts = field.split(".")
+                                        current = data
+                                        valid = True
+                                        for part in parts:
+                                            if part in current:
+                                                current = current[part]
+                                            else:
+                                                valid = False
+                                                break
+                                        if valid and isinstance(current, dict):
+                                            for dep_name, version in current.items():
+                                                dependencies.append({
+                                                    "name": dep_name,
+                                                    "type": dep_type,
+                                                    "version": version if isinstance(version, str) else None,
+                                                    "license": None  # Will try to identify later
+                                                })
+                                    elif field in data and isinstance(data[field], dict):
+                                        for dep_name, version in data[field].items():
+                                            dependencies.append({
+                                                "name": dep_name,
+                                                "type": dep_type,
+                                                "version": version if isinstance(version, str) else None,
+                                                "license": None  # Will try to identify later
+                                            })
+                            elif pattern["parser"] == "line":
+                                for line in content.splitlines():
+                                    line = line.strip()
+                                    if line and not line.startswith("#"):
+                                        if "line_pattern" in pattern:
+                                            match = re.match(pattern["line_pattern"], line)
+                                            if match:
+                                                dep_name = match.group(1)
+                                                dependencies.append({
+                                                    "name": dep_name,
+                                                    "type": dep_type,
+                                                    "version": None,  # Would need additional parsing
+                                                    "license": None
+                                                })
+                                        else:
+                                            # Simple line format (e.g., requirements.txt)
+                                            # Extract name (before any version specifier)
+                                            dep_name = re.split(r'[<>=!~]', line)[0].strip()
+                                            if dep_name:
+                                                dependencies.append({
+                                                    "name": dep_name,
+                                                    "type": dep_type,
+                                                    "version": None,
+                                                    "license": None
+                                                })
+                    except TimeoutException:
+                        logger.warning(f"Parsing dependency file timed out: {file_path}")
                     except Exception as e:
-                        logger.error(f"Error reading README file {file_path}: {e}")
-                        
-                    # Break after checking first found README
-                    if os.path.isfile(file_path):
-                        break
-        
-        # Estimate undocumented dependencies if we have dependencies but no docs
-        if result["has_dependencies"] and result["documented_dependencies"] == 0 and not has_dependency_docs:
-            result["undocumented_dependencies"] = len(found_dependency_files) * 5  # Rough estimate
+                        logger.error(f"Error parsing dependency file {file_path}: {e}")
+                
+                files_checked += 1
+            
+            # Break out of directory walk if we hit limits
+            if files_checked >= MAX_FILES_TO_CHECK or analysis_terminated_early:
+                break
         
         # Update result with findings
-        result["dependency_files"] = found_dependency_files
-        result["dependency_types"] = sorted(list(dependency_types_found))
-        result["files_checked"] = files_checked
+        result["has_dependencies"] = len(dependencies) > 0
+        result["dependency_count"] = len(dependencies)
+        result["dependency_files"] = dependency_files_found
         
-    # Only use API data if local analysis wasn't possible
-    elif repo_data and 'dependency_licenses' in repo_data:
-        logger.info("No local repository available. Using API data for dependency licenses check.")
+        # Try to identify licenses for dependencies (mock implementation)
+        # In a real implementation, this would query package registries
+        dependencies_with_licenses = 0
+        problematic_dependencies = []
         
-        dep_data = repo_data.get('dependency_licenses', {})
+        # Simple implementation using common license patterns
+        for dep in dependencies:
+            # Check if we've exceeded the global timeout
+            elapsed_time = (datetime.now() - start_time).total_seconds()
+            if elapsed_time > GLOBAL_ANALYSIS_TIMEOUT:
+                logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds. Stopping license identification.")
+                analysis_terminated_early = True
+                if "early_termination" not in result or result["early_termination"] is None:
+                    result["early_termination"] = {
+                        "reason": "global_timeout",
+                        "elapsed_seconds": round(elapsed_time, 1),
+                        "limit_seconds": GLOBAL_ANALYSIS_TIMEOUT
+                    }
+                break
+            
+            # Mock license identification - in a real implementation we would
+            # query package registries or scan node_modules, etc.
+            
+            # For NPM packages, look in package-lock.json for more detailed info
+            if dep["type"] == "npm" and os.path.exists(os.path.join(repo_path, "package-lock.json")):
+                try:
+                    with time_limit(FILE_READ_TIMEOUT):
+                        with open(os.path.join(repo_path, "package-lock.json"), 'r', encoding='utf-8', errors='ignore') as f:
+                            lock_data = json.loads(f.read())
+                            if "dependencies" in lock_data and dep["name"] in lock_data["dependencies"]:
+                                dep_info = lock_data["dependencies"][dep["name"]]
+                                if "license" in dep_info:
+                                    dep["license"] = dep_info["license"]
+                                    dependencies_with_licenses += 1
+                                    continue
+                except TimeoutException:
+                    logger.warning(f"Timeout reading package-lock.json")
+                except Exception as e:
+                    logger.error(f"Error reading package-lock.json: {e}")
+            
+            # Look for well-known packages
+            known_licenses = {
+                "react": "MIT",
+                "lodash": "MIT",
+                "express": "MIT",
+                "moment": "MIT",
+                "requests": "Apache-2.0",
+                "numpy": "BSD-3-Clause",
+                "pandas": "BSD-3-Clause",
+                "django": "BSD-3-Clause",
+                "flask": "BSD-3-Clause",
+                "tensorflow": "Apache-2.0",
+                "pytorch": "BSD-3-Clause",
+                "jquery": "MIT",
+                "bootstrap": "MIT",
+                "rails": "MIT",
+                "spring": "Apache-2.0",
+                "dotenv": "BSD-2-Clause",
+                "chalk": "MIT",
+                "commander": "MIT",
+                "axios": "MIT",
+                "mocha": "MIT",
+                "jest": "MIT",
+                "eslint": "MIT"
+            }
+            
+            # Check if this is a known package
+            for known_name, known_license in known_licenses.items():
+                if dep["name"].lower() == known_name.lower() or dep["name"].lower().startswith(f"{known_name}-"):
+                    dep["license"] = known_license
+                    dependencies_with_licenses += 1
+                    break
+            
+            # If license still unknown, mark as problematic
+            if dep["license"] is None:
+                problematic_dependencies.append({
+                    "name": dep["name"],
+                    "type": dep["type"],
+                    "reason": "unknown_license"
+                })
         
-        # Update result with dependency info from API
-        result["has_dependencies"] = dep_data.get('has_dependencies', False)
-        result["documented_dependencies"] = dep_data.get('documented_dependencies', 0)
-        result["undocumented_dependencies"] = dep_data.get('undocumented_dependencies', 0)
-        result["risky_licenses"] = dep_data.get('risky_licenses', 0)
-        result["dependency_files"] = dep_data.get('dependency_files', [])
-        result["dependency_types"] = dep_data.get('dependency_types', [])
-    else:
-        logger.warning("No local repository path or API data provided for dependency licenses check")
+        # Update result with license findings
+        result["dependencies_with_licenses"] = dependencies_with_licenses
+        result["dependencies_without_licenses"] = result["dependency_count"] - dependencies_with_licenses
+        result["problematic_dependencies"] = problematic_dependencies
+        
+        # Clean up early_termination if not needed
+        if "early_termination" in result and result["early_termination"] is None:
+            result.pop("early_termination")
+        if "errors" in result and result["errors"] is None:
+            result.pop("errors")
+        
+        # Calculate score
+        if result["dependency_count"] > 0:
+            license_coverage_ratio = dependencies_with_licenses / result["dependency_count"]
+            
+            # Base score out of 100
+            score = 50  # Start at 50
+            
+            # Add up to 40 points based on license coverage
+            score += min(40, int(license_coverage_ratio * 40))
+            
+            # Add 10 points if all dependencies have licenses
+            if license_coverage_ratio == 1.0:
+                score += 10
+            
+            # Ensure score is within 0-100 range
+            score = min(100, max(0, score))
+            
+            # Round and convert to integer if it's a whole number
+            rounded_score = round(score, 1)
+            result["dependency_license_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
+        else:
+            # No dependencies found, but that's not necessarily bad
+            result["dependency_license_score"] = 80
     
-    # Calculate dependency license score (0-100 scale)
-    score = 0
-    
-    # No dependencies is neither good nor bad, give a neutral score
-    if not result["has_dependencies"]:
-        score = 50
-    else:
-        # Base score for having dependencies
-        score += 20
-        
-        # Points for documenting dependencies
-        if result["documented_dependencies"] > 0:
-            doc_points = min(40, result["documented_dependencies"])
-            score += doc_points
-        
-        # Deduct points for undocumented dependencies
-        if result["undocumented_dependencies"] > 0:
-            undoc_penalty = min(30, result["undocumented_dependencies"] * 2)
-            score -= undoc_penalty
-        
-        # Deduct points for risky licenses
-        if result["risky_licenses"] > 0:
-            risky_penalty = min(40, result["risky_licenses"] * 10)
-            score -= risky_penalty
-    
-    # Ensure score is within 0-100 range
-    score = min(100, max(0, score))
-    
-    # Round and convert to integer if it's a whole number
-    rounded_score = round(score, 1)
-    result["dependency_license_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
+    except Exception as e:
+        logger.error(f"Error analyzing dependencies: {e}")
+        result["errors"] = str(e)
+        result["dependency_license_score"] = 0
     
     return result
 
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Verify dependency licenses
+    Check dependency licenses
     
     Args:
         repository: Repository data dictionary which might include a local_path
@@ -283,25 +451,58 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Check results with score on 0-100 scale
     """
+    repo_name = repository.get('name', 'unknown')
+    logger.info(f"Starting dependency licenses check for repository: {repo_name}")
+    
     try:
-        # Prioritize local path for analysis
+        # Check if we have a cached result
+        cache_key = f"dependency_licenses_{repository.get('id', repo_name)}"
+        cached_result = repository.get('_cache', {}).get(cache_key)
+        
+        if cached_result:
+            logger.info(f"Using cached dependency licenses check result for {repo_name}")
+            return cached_result
+        
+        # Check if we have a local path to the repository
         local_path = repository.get('local_path')
         
-        # Run the check
+        # Run the check with timeout protection
+        start_time = time.time()
         result = check_dependency_licenses(local_path, repository)
+        elapsed = time.time() - start_time
         
-        # Return the result with the score
-        return {
+        if elapsed > 5:  # Log if the check took more than 5 seconds
+            logger.warning(f"Dependency licenses check for {repo_name} took {elapsed:.2f} seconds")
+        
+        # Prepare the final result
+        final_result = {
             "status": "completed",
             "score": result.get("dependency_license_score", 0),
             "result": result,
-            "errors": None
+            "errors": result.get("errors")
         }
+        
+        # Clean up None errors
+        if final_result["errors"] is None:
+            final_result.pop("errors", None)
+        
+        # Add to cache if available
+        if '_cache' in repository:
+            repository['_cache'][cache_key] = final_result
+        
+        logger.info(f"Completed dependency licenses check for {repo_name} with score: {final_result['score']}")
+        return final_result
+        
     except Exception as e:
-        logger.error(f"Error running dependency licenses check: {e}")
+        logger.error(f"Error running dependency licenses check for {repo_name}: {e}", exc_info=True)
         return {
             "status": "failed",
             "score": 0,
-            "result": {},
+            "result": {
+                "has_dependencies": False,
+                "dependency_count": 0,
+                "dependency_license_score": 0,
+                "errors": str(e)
+            },
             "errors": str(e)
         }

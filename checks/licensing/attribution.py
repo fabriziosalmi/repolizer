@@ -90,10 +90,10 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
     }
     
     # Configuration constants
-    FILE_READ_TIMEOUT = 2  # seconds per file read
-    GLOBAL_ANALYSIS_TIMEOUT = 20  # 20 seconds total timeout for the entire analysis
-    MAX_SOURCE_FILES_TO_CHECK = 10  # Limit source file checking
-    MAX_SOURCE_READ_SIZE = 2000  # Bytes to read from source files
+    FILE_READ_TIMEOUT = 1  # Reduced from 2 to 1 second per file read
+    GLOBAL_ANALYSIS_TIMEOUT = 15  # Reduced from 20 to 15 seconds
+    MAX_SOURCE_FILES_TO_CHECK = 5  # Reduced from 10 to 5 files
+    MAX_SOURCE_READ_SIZE = 1000  # Reduced from 2000 to 1000 bytes
     
     # First check if repository is available locally for accurate analysis
     if not repo_path or not os.path.isdir(repo_path):
@@ -107,31 +107,28 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
             start_time = datetime.now()
             analysis_terminated_early = False
             
-            # Files that might contain attribution information
+            # Files that might contain attribution information - reduced list for efficiency
             attribution_files = [
-                "ATTRIBUTION.md", "attribution.md", "NOTICE", "NOTICE.md", "NOTICE.txt",
-                "THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.txt", "ThirdPartyNotices",
-                "CONTRIBUTORS.md", "CREDITS.md", "credits.md", "ACKNOWLEDGMENTS.md", 
-                "acknowledgments.md", "AUTHORS.md", "authors.md",
-                "LICENSE", "LICENSE.md", "LICENSE.txt",
-                ".github/ATTRIBUTION.md", ".github/NOTICE.md",
-                "docs/attribution.md", "docs/credits.md", "legal/NOTICE"
+                "ATTRIBUTION.md", "NOTICE", "NOTICE.md", "NOTICE.txt",
+                "THIRD_PARTY_NOTICES.md", "LICENSE", "LICENSE.md", 
+                "ACKNOWLEDGMENTS.md", "AUTHORS.md"
             ]
             
-            # Attribution terms to look for
+            # Attribution terms to look for - simplified list
             attribution_terms = {
-                "third_party": ["third party", "third-party", "3rd party", "external code", "external library"],
-                "derived_work": ["derived from", "based on", "adapted from", "inspired by"],
-                "copyright": ["copyright", "©", "(c)", "all rights reserved"],
-                "license_attribution": ["license", "under the terms", "permission is granted", "permitted by"],
-                "contributor": ["contributor", "author", "maintainer", "thanks to", "credit to"]
+                "third_party": ["third party", "third-party", "external"],
+                "derived_work": ["derived from", "based on"],
+                "copyright": ["copyright", "©", "(c)"],
+                "license_attribution": ["license", "permission"],
+                "contributor": ["contributor", "author"]
             }
             
             files_checked = 0
             attribution_types_found = set()
             found_attribution_files = []
             
-            # Check specific attribution files with timeout protection
+            # First pass - only check explicit attribution files with aggressive timeouts
+            # This gives us a quick result for common cases
             for attr_file in attribution_files:
                 # Check if we've exceeded the global timeout
                 elapsed_time = (datetime.now() - start_time).total_seconds()
@@ -147,17 +144,27 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
                 
                 file_path = os.path.join(repo_path, attr_file)
                 if os.path.isfile(file_path):
-                    # Use safe_read_file with timeout
+                    # Check file size before reading to avoid huge files
+                    try:
+                        file_size = os.path.getsize(file_path)
+                        if file_size > 500000:  # Skip files larger than 500KB
+                            logger.info(f"Skipping large attribution file: {file_path} ({file_size} bytes)")
+                            continue
+                    except OSError as e:
+                        logger.warning(f"Could not check size of {file_path}: {e}")
+                        continue
+                        
+                    # Use safe_read_file with even shorter timeout
                     content = safe_read_file(file_path, timeout=FILE_READ_TIMEOUT)
                     if content is not None:
                         content = content.lower()  # Convert to lowercase for easier matching
                         files_checked += 1
                         relative_path = os.path.relpath(file_path, repo_path)
                         
-                        # Check for attribution mentions
+                        # Fast check for attribution mentions (stopping at first match)
                         has_attribution_content = False
                         
-                        # Look for attribution types
+                        # Look for attribution types - stopping at first match for each type
                         for attr_type, terms in attribution_terms.items():
                             for term in terms:
                                 if term in content:
@@ -171,17 +178,22 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
                                         result["has_license_attributions"] = True
                                     elif attr_type == "contributor":
                                         result["has_contributor_attributions"] = True
+                                    
+                                    # Stop searching for this term type once found
+                                    break
                         
                         if has_attribution_content:
                             result["has_attribution"] = True
                             found_attribution_files.append(relative_path)
             
-            # Next check README and other files if no attribution found yet and not terminated early
-            if not result["has_attribution"] and not analysis_terminated_early:
-                additional_files = [
-                    "README.md", "docs/README.md", 
-                    "CONTRIBUTING.md", ".github/CONTRIBUTING.md"
-                ]
+            # If we've found attribution in the primary files, we can skip the more expensive checks
+            # This helps avoid hanging on the more expensive secondary checks
+            if result["has_attribution"] and len(attribution_types_found) >= 2:
+                logger.info("Found solid attribution evidence in primary files. Skipping additional checks.")
+            # Only continue with additional checks if we haven't found attribution yet and haven't terminated early
+            elif not result["has_attribution"] and not analysis_terminated_early:
+                # Reduced list of additional files to check
+                additional_files = ["README.md", "CONTRIBUTING.md"]
                 
                 for add_file in additional_files:
                     # Check if we've exceeded the global timeout
@@ -198,33 +210,30 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
                     
                     file_path = os.path.join(repo_path, add_file)
                     if os.path.isfile(file_path):
-                        # Use safe_read_file with timeout
+                        # Check file size before reading
+                        try:
+                            file_size = os.path.getsize(file_path)
+                            if file_size > 500000:  # Skip files larger than 500KB
+                                logger.info(f"Skipping large additional file: {file_path} ({file_size} bytes)")
+                                continue
+                        except OSError as e:
+                            logger.warning(f"Could not check size of {file_path}: {e}")
+                            continue
+                            
+                        # Use safe_read_file with short timeout
                         content = safe_read_file(file_path, timeout=FILE_READ_TIMEOUT)
                         if content is not None:
                             content = content.lower()  # Convert to lowercase for matching
                             files_checked += 1
                             relative_path = os.path.relpath(file_path, repo_path)
                             
-                            # Check for attribution sections using simpler string matching
-                            section_headers = [
-                                '## attribution',
-                                '## credits',
-                                '## acknowledgments',
-                                '## third party',
-                                '## third-party',
-                                '## licenses',
-                                '## authors',
-                                '## contributors'
-                            ]
-                            
+                            # Check only for the most important keywords to avoid expensive regex
                             has_attribution_section = False
-                            for header in section_headers:
-                                if header in content:
-                                    has_attribution_section = True
-                                    break
+                            if 'attribution' in content or 'credit' in content or 'acknowledge' in content or 'third party' in content:
+                                has_attribution_section = True
                             
                             if has_attribution_section:
-                                # If there's a relevant section, check its content for attribution terms
+                                # If there's a relevant section, check for attribution terms (stopping at first match per type)
                                 for attr_type, terms in attribution_terms.items():
                                     for term in terms:
                                         if term in content:
@@ -237,20 +246,26 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
                                                 result["has_license_attributions"] = True
                                             elif attr_type == "contributor":
                                                 result["has_contributor_attributions"] = True
+                                            
+                                            # Stop searching for this term type once found
+                                            break
                                 
                                 # If we found at least one attribution type, mark as having attribution
                                 if attribution_types_found:
                                     result["has_attribution"] = True
                                     found_attribution_files.append(relative_path)
             
-            # Finally, check actual source code for copyright headers or attribution
-            # Skip if we've already found solid attribution elsewhere or terminated early
-            if len(attribution_types_found) < 2 and not analysis_terminated_early:
-                source_extensions = ['.py', '.js', '.java', '.c', '.cpp', '.h', '.cs', '.go', '.php', '.rb']
+            # Only check source files if absolutely necessary and if we haven't already terminated
+            if not result["has_attribution"] and not analysis_terminated_early and files_checked < 5:
+                # Limit to a very small set of source extensions that are most likely to have headers
+                source_extensions = ['.py', '.js', '.java', '.cpp', '.c']
                 source_files_checked = 0
                 source_files_with_attribution = 0
                 
-                # Check up to MAX_SOURCE_FILES_TO_CHECK source files
+                # Use a very limited directory scan to avoid hanging
+                scanned_directories = 0
+                MAX_DIRECTORIES = 5  # Only check 5 directories maximum
+                
                 for root, dirs, files in os.walk(repo_path):
                     # Check if we've exceeded the global timeout
                     elapsed_time = (datetime.now() - start_time).total_seconds()
@@ -267,18 +282,44 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
                     # Skip .git and other hidden directories
                     dirs[:] = [d for d in dirs if not d.startswith('.')]
                     
-                    # Limit depth for large repositories
+                    # Count directories and limit depth
+                    scanned_directories += 1
+                    if scanned_directories > MAX_DIRECTORIES:
+                        logger.info(f"Reached maximum directory limit ({MAX_DIRECTORIES}). Stopping source file analysis.")
+                        break
+                    
+                    # Limit depth for large repositories - more aggressive limit
                     rel_path = os.path.relpath(root, repo_path)
                     depth = len(rel_path.split(os.sep)) if rel_path != '.' else 0
-                    if depth > 3:  # Don't go too deep
+                    if depth > 2:  # Only go 2 levels deep maximum
                         dirs[:] = []
                         continue
                     
+                    # Limit to only scanning 5 files per directory maximum
+                    files_in_dir = 0
+                    
                     for file in files:
+                        # Check our source files checked limit
+                        if source_files_checked >= MAX_SOURCE_FILES_TO_CHECK:
+                            break
+                            
+                        # Check files per directory limit    
+                        files_in_dir += 1
+                        if files_in_dir > 5:
+                            break
+                            
                         _, ext = os.path.splitext(file)
-                        if ext.lower() in source_extensions and source_files_checked < MAX_SOURCE_FILES_TO_CHECK:
+                        if ext.lower() in source_extensions:
                             source_files_checked += 1
                             file_path = os.path.join(root, file)
+                            
+                            # Check file size before reading
+                            try:
+                                file_size = os.path.getsize(file_path)
+                                if file_size > 100000:  # Skip files larger than 100KB
+                                    continue
+                            except OSError:
+                                continue
                             
                             # Read only the beginning of the file with timeout
                             content = safe_read_file(file_path, timeout=FILE_READ_TIMEOUT, read_bytes=MAX_SOURCE_READ_SIZE)
@@ -295,11 +336,15 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
                     
                     # Stop if we've checked enough files
                     if source_files_checked >= MAX_SOURCE_FILES_TO_CHECK:
+                        logger.info(f"Reached maximum source files limit ({MAX_SOURCE_FILES_TO_CHECK}). Stopping source file analysis.")
                         break
                 
-                # If at least 25% of checked source files have attribution, consider it present
-                if source_files_checked > 0 and source_files_with_attribution / source_files_checked >= 0.25:
-                    result["has_attribution"] = True
+                # If we've checked any source files and some have attribution, consider it present
+                if source_files_checked > 0 and source_files_with_attribution > 0:
+                    # Require at least 40% coverage (was 25%)
+                    if source_files_with_attribution / source_files_checked >= 0.4:
+                        result["has_attribution"] = True
+                        files_checked += source_files_checked
             
             # Update result with findings
             result["attribution_files"] = found_attribution_files
@@ -388,9 +433,31 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Prioritize local path for analysis
         local_path = repository.get('local_path')
         
-        # Run the check with timeout protection
+        # Run the check with an overall timeout for the entire function
+        # This is in addition to the timeouts inside check_attribution
         start_time = time.time()
-        result = check_attribution(local_path, repository)
+        
+        # Set a reasonable overall timeout limit
+        overall_timeout = 30  # 30 seconds maximum for the entire check
+        
+        # Run the check with timeout protection
+        try:
+            with time_limit(overall_timeout):
+                result = check_attribution(local_path, repository)
+        except TimeoutException:
+            logger.error(f"Overall timeout reached for attribution check for {repo_name}")
+            # Return a basic result with error information
+            return {
+                "status": "timeout",
+                "score": 0,
+                "result": {
+                    "has_attribution": False,
+                    "attribution_score": 0,
+                    "errors": f"Check timed out after {overall_timeout} seconds"
+                },
+                "errors": f"Check timed out after {overall_timeout} seconds"
+            }
+            
         elapsed = time.time() - start_time
         
         if elapsed > 5:  # Log if the check took more than 5 seconds

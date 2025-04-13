@@ -351,27 +351,27 @@ class CheckOrchestrator:
             # Skip if category filtering is enabled and this category is not included
             if categories and category.lower() not in [c.lower() for c in categories]:
                 continue
-                
+            
             for check in category_checks:
-                # Skip if check filtering is enabled and this check is not included
-                check_name = check.get('name', '').lower()
-                if checks and not any(c.lower() in check_name for c in checks):
+                # Skip if specific check filtering is enabled and this check is not included
+                if checks and check['name'].lower() not in [c.lower() for c in checks]:
                     continue
-                    
-                if requires_local_access(check):
+                
+                # Add if check requires local access
+                if self._check_requires_local_access(check):
                     local_checks.append((category, check))
         
         if not local_checks:
-            self.logger.info(f"No local checks found for {repository.get('name', 'Unknown')}")
+            self.logger.info(f"No local checks to run for {repository.get('name', 'Unknown')}")
             return results
         
         # Calculate optimal number of workers
         # For local checks, having too many workers can cause disk contention
         # so we'll use a more conservative approach than for API checks
         optimal_workers = min(
-            self.max_parallel_analysis,  # Don't exceed max configured parallel
-            max(4, os.cpu_count() or 4),  # Use at least 4, but consider CPU count
-            len(local_checks)  # Don't create more workers than checks
+            self.max_parallel_analysis,
+            max(4, os.cpu_count() or 4),
+            len(local_checks)
         )
         
         self.logger.info(f"Running {len(local_checks)} local checks for {repository.get('name', 'Unknown')} with {optimal_workers} workers")
@@ -385,29 +385,41 @@ class CheckOrchestrator:
         progress_lock = threading.Lock()
         
         def execute_check_with_progress(repo, cat, chk):
-            """Execute a check and update progress"""
-            nonlocal completed_checks
-            
             try:
+                # Run the check with timeout protection
                 result = self._execute_check(repo, cat, chk)
                 
-                # Thread-safe append to results
+                # Update the progress counter safely
+                nonlocal completed_checks
+                with progress_lock:
+                    completed_checks += 1
+                    progress = (completed_checks / total_checks) * 100
+                    if completed_checks % max(1, total_checks // 10) == 0 or completed_checks == total_checks:
+                        self.logger.info(f"Local checks progress: {completed_checks}/{total_checks} ({progress:.1f}%)")
+                
+                # Safely append to results
                 with results_lock:
                     results.append(result)
                 
-                # Update and log progress
-                with progress_lock:
-                    completed_checks += 1
-                    if completed_checks % max(1, total_checks // 10) == 0 or completed_checks == total_checks:
-                        self.logger.info(f"Local check progress: {completed_checks}/{total_checks} checks completed")
-                
                 return result
             except Exception as e:
-                self.logger.error(f"Check execution failed for {cat}/{chk['name']}: {e}")
-                # Still increment counter even if check fails
-                with progress_lock:
-                    completed_checks += 1
-                raise
+                self.logger.error(f"Error executing check {chk['name']}: {e}", exc_info=True)
+                # Return a failure result that won't break the execution
+                failure_result = {
+                    "repo_id": repo['id'],
+                    "repo_name": repo.get('name', 'unknown'),
+                    "category": cat,
+                    "check_name": chk['name'],
+                    "status": "failed",
+                    "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
+                    "validation_errors": f"Execution error: {str(e)}",
+                    "duration": 0,
+                    "score": 0,
+                    "details": {}
+                }
+                with results_lock:
+                    results.append(failure_result)
+                return failure_result
         
         # Group checks by estimated weight (complexity)
         # This helps distribute work more evenly
@@ -425,19 +437,19 @@ class CheckOrchestrator:
         
         with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
             # Submit all checks to the executor
-            futures = [
-                executor.submit(execute_check_with_progress, repository, category, check)
+            futures = {
+                executor.submit(execute_check_with_progress, repository, category, check): (category, check['name'])
                 for category, check in balanced_checks
-            ]
+            }
             
-            # Wait for all futures to complete
-            for future in as_completed(futures):
+            # Process results as they complete
+            for future in concurrent.futures.as_completed(futures):
+                category, check_name = futures[future]
                 try:
-                    # Results are already added in the execute_check_with_progress function
-                    future.result()
-                except Exception:
-                    # Already logged in execute_check_with_progress
-                    pass
+                    # Result is already added to results list in execute_check_with_progress
+                    _ = future.result()
+                except Exception as e:
+                    self.logger.error(f"Unhandled exception in check {category}/{check_name}: {e}", exc_info=True)
         
         self.logger.info(f"Completed {len(results)}/{total_checks} local checks for {repository.get('name', 'Unknown')}")
         return results
