@@ -359,7 +359,7 @@
                 console.error('Error loading repositories:', error);
                 loadingIndicator.classList.add('hidden');
                 noResults.classList.remove('hidden');
-                noResults.querySelector('p').textContent = `Error loading repositories: ${error.message}. Please make sure your repository data files are accessible.`;
+                noResults.querySelector('p').textContent = `Error loading repository data. Please make sure your results.jsonl file is accessible.`;
             }
 
             // Event listener for search input
