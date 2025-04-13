@@ -5,6 +5,7 @@ import time
 import signal
 from typing import Dict, Any, List, Tuple, Optional
 from functools import wraps
+from datetime import datetime
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -564,33 +565,39 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         
         # Return the result with the score and metadata
         return {
+            "status": "completed",
             "score": result["api_docs_score"],
             "result": result,
+            "errors": None,
+            "processing_time_seconds": processing_time,
             "suggestions": result.get("suggestions", []),
-            "processing_time": processing_time,
-            "success": True
+            "timestamp": datetime.now().isoformat()
         }
     except TimeoutError as e:
         logger.error(f"API documentation check timed out: {e}")
         return {
+            "status": "failed",
             "score": 0,
             "result": {
                 "error": "Check timed out after 60 seconds",
                 "processing_time": time.time() - start_time
             },
+            "errors": str(e),
+            "processing_time_seconds": time.time() - start_time,
             "suggestions": ["Try optimizing your API documentation for easier parsing"],
-            "processing_time": time.time() - start_time,
-            "success": False
+            "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         logger.error(f"Error running API documentation check: {e}")
         return {
+            "status": "failed",
             "score": 0,
             "result": {
                 "error": str(e),
                 "processing_time": time.time() - start_time
             },
+            "errors": str(e),
+            "processing_time_seconds": time.time() - start_time,
             "suggestions": ["Fix the encountered error to properly analyze API documentation"],
-            "processing_time": time.time() - start_time,
-            "success": False
+            "timestamp": datetime.now().isoformat()
         }
