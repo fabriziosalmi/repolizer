@@ -149,7 +149,6 @@ disallow_untyped_defs = True
         self.assertEqual(result['has_type_annotations'], False)
         self.assertEqual(result['has_type_checking'], False)
 
-    @unittest.skip("Skip due to timing-related issues in test environment")
     @mock.patch('signal.alarm')
     def test_check_type_safety_timeout(self, mock_alarm):
         """Test that type safety check handles timeouts"""
@@ -208,64 +207,64 @@ disallow_untyped_defs = True
         repository = {
             'local_path': self.temp_dir
         }
-        on being tested
-        # Patch the result to have expected error message
-        with patch('checks.code_quality.type_safety.run_check', autospec=True) as mock_run:
-            mock_run.return_value = {esult
-                "status": "failed",sult['status'], 'failed')
-                "score": 0,
-                "result": {"error": "Check timed out - timeout occurred"},ult'])
-                "errors": "Thread timeout"ck for either "timeout" or "timed out" in the error message
-            }r_text = result['result']['error'].lower()
-            _text or "timed out" in error_text,
-            result = run_check(repository)           f"Expected 'timeout' or 'timed out' in error message, but got: {error_text}")
-            
-            # Should return a failure result
-            self.assertEqual(result['status'], 'failed')
-            self.assertEqual(result['score'], 0)
-            self.assertIn('error', result['result'])
-            self.assertIn('timeout', result['result']['error'].lower())            result = check_type_safety(empty_dir)
+        
+        # Use a direct approach mocking the actual function being tested
+        result = run_check(repository)
+        
+        # Should return a failure result
+        self.assertEqual(result['status'], 'failed')
+        self.assertEqual(result['score'], 0)
+        self.assertIn('error', result['result'])
+        # Check for either "timeout" or "timed out" in the error message
+        error_text = result['result']['error'].lower()
+        self.assertTrue("timeout" in error_text or "timed out" in error_text,
+                       f"Expected 'timeout' or 'timed out' in error message, but got: {error_text}")
 
-    def test_with_empty_repo(self):t with minimum score
-        """Test with an empty repository"""lt, dict)
-        empty_dir = tempfile.mkdtemp()self.assertEqual(result['has_type_annotations'], False)
-        try:cking'], False)
-            result = check_type_safety(empty_dir)self.assertEqual(result['files_checked'], 0)
+    def test_with_empty_repo(self):
+        """Test with an empty repository"""
+        empty_dir = tempfile.mkdtemp()
+        try:
+            result = check_type_safety(empty_dir)
             
             # Should return a default result with minimum score
             self.assertIsInstance(result, dict)
             self.assertEqual(result['has_type_annotations'], False)
-            self.assertEqual(result['has_type_checking'], False)ed"""
-            self.assertEqual(result['files_checked'], 0) check_type_safety(self.temp_dir)
+            self.assertEqual(result['has_type_checking'], False)
+            self.assertEqual(result['files_checked'], 0)
         finally:
-            shutil.rmtree(empty_dir)        # Check performance info
-nfo', result)
-    def test_performance_info(self):nfo'])
-        """Test that performance info is correctly tracked"""rformance_info'])
+            shutil.rmtree(empty_dir)
+
+    def test_performance_info(self):
+        """Test that performance info is correctly tracked"""
         result = check_type_safety(self.temp_dir)
-        able
-        # Check performance infoce_info']['file_scan_time'], 0)
-        self.assertIn('performance_info', result)s_time'], 0)
+        
+        # Check performance info
+        self.assertIn('performance_info', result)
         self.assertIn('file_scan_time', result['performance_info'])
-        self.assertIn('analysis_time', result['performance_info'])test_small_repo_analysis_path(self):
-        all repos (<=5 files)"""
+        self.assertIn('analysis_time', result['performance_info'])
+        
         # Times should be reasonable
         self.assertGreaterEqual(result['performance_info']['file_scan_time'], 0)
-        self.assertGreaterEqual(result['performance_info']['analysis_time'], 0)            # Create just 2 files to trigger fast path
-ir, "src"), exist_ok=True)
+        self.assertGreaterEqual(result['performance_info']['analysis_time'], 0)
+
     def test_small_repo_analysis_path(self):
         """Test the fast-path for small repos (<=5 files)"""
-        small_dir = tempfile.mkdtemp()with open(os.path.join(small_dir, "src", "typed.py"), 'w') as f:
-        try:f func(x: int) -> int: return x")
+        small_dir = tempfile.mkdtemp()
+        try:
             # Create just 2 files to trigger fast path
-            os.makedirs(os.path.join(small_dir, "src"), exist_ok=True)result = check_type_safety(small_dir)
+            os.makedirs(os.path.join(small_dir, "src"), exist_ok=True)
             
             # One typed python file
             with open(os.path.join(small_dir, "src", "typed.py"), 'w') as f:
-                f.write("from typing import List\n\ndef func(x: int) -> int: return x")self.assertIn('python', result['typed_languages'])
+                f.write("from typing import List\n\ndef func(x: int) -> int: return x")
             
-            result = check_type_safety(small_dir)shutil.rmtree(small_dir)
+            result = check_type_safety(small_dir)
             
             # Should detect the typing import and annotations
-            self.assertTrue(result['has_type_annotations'])            self.assertIn('python', result['typed_languages'])        finally:            shutil.rmtree(small_dir)if __name__ == '__main__':
+            self.assertTrue(result['has_type_annotations'])
+            self.assertIn('python', result['typed_languages'])
+        finally:
+            shutil.rmtree(small_dir)
+
+if __name__ == '__main__':
     unittest.main()
