@@ -6,10 +6,48 @@ Analyzes the repository's CI/CD notification and alerting mechanisms.
 import os
 import re
 import logging
+import time
+import signal
 from typing import Dict, Any, List
+from functools import wraps
+from datetime import datetime
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+class TimeoutError(Exception):
+    """Exception raised when a function times out."""
+    pass
+
+def timeout(seconds=60):
+    """
+    Decorator to timeout a function after specified seconds.
+    
+    Args:
+        seconds: Maximum seconds to allow function to run
+        
+    Returns:
+        Decorated function with timeout capability
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def handle_timeout(signum, frame):
+                raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
+            
+            # Set the timeout handler
+            original_handler = signal.signal(signal.SIGALRM, handle_timeout)
+            signal.alarm(seconds)
+            
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                # Reset the alarm and restore the original handler
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, original_handler)
+            return result
+        return wrapper
+    return decorator
 
 def check_notification_system(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
     """
@@ -253,38 +291,153 @@ def check_notification_system(repo_path: str = None, repo_data: Dict = None) -> 
         len(result["notification_channels"]) >= 2):
         result["comprehensive_alerts"] = True
     
-    # Calculate notification system score (0-100 scale)
-    score = 0
+    # Calculate notification system score with enhanced logic (0-100 scale)
+    return calculate_notification_score(result)
+
+def calculate_notification_score(result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Calculate a more nuanced score for the notification system.
     
-    # Points for having any notifications
+    Args:
+        result: The result dictionary with notification analysis
+        
+    Returns:
+        Updated result dictionary with calculated score
+    """
+    # Start with base score - adjust the floor to 1 (not 0) for existing systems
+    base_score = 1
+    
+    # Store scoring components for transparency
+    scoring_components = []
+
+    # Base points for having any notifications
     if result["has_notifications"]:
-        score += 30
+        base_points = 25
+        base_score += base_points
+        scoring_components.append(f"Base notification system: +{base_points}")
         
-        # Points for specific notification types
+        # First dimension: notification types
+        type_score = 0
+        
+        # Critical alerts - failure notifications are essential
         if result["has_failure_notifications"]:
-            score += 20  # Important to be notified of failures
+            failure_points = 20
+            type_score += failure_points
+            scoring_components.append(f"Failure notifications: +{failure_points}")
         
+        # Success notifications are good practice but less critical
         if result["has_success_notifications"]:
-            score += 10  # Good to know about successes too
+            success_points = 10
+            type_score += success_points
+            scoring_components.append(f"Success notifications: +{success_points}")
         
-        # Points for multiple notification channels
-        channel_points = min(20, len(result["notification_channels"]) * 5)
-        score += channel_points
+        # Additional notification types beyond basic success/failure
+        additional_types = [t for t in result["notification_types"] 
+                           if t not in ["build_success", "build_failure"]]
+        additional_type_points = min(15, len(additional_types) * 3)
+        if additional_type_points > 0:
+            type_score += additional_type_points
+            scoring_components.append(f"Additional notification types: +{additional_type_points}")
         
-        # Points for comprehensive alerts
-        if result["comprehensive_alerts"]:
-            score += 15
+        # Second dimension: notification channels
+        channel_score = 0
         
-        # Points for custom notifications
+        # Points for primary communication channels
+        primary_channels = ["email", "slack", "teams", "discord"]
+        has_primary = any(channel in result["notification_channels"] for channel in primary_channels)
+        if has_primary:
+            primary_points = 10
+            channel_score += primary_points
+            scoring_components.append(f"Primary notification channel: +{primary_points}")
+        
+        # Points for multiple channels - redundancy is good
+        if len(result["notification_channels"]) > 1:
+            multi_channel_points = min(15, (len(result["notification_channels"]) - 1) * 5)
+            channel_score += multi_channel_points
+            scoring_components.append(f"Multiple notification channels: +{multi_channel_points}")
+        
+        # Points for specialized channels
+        specialized_channels = ["pagerduty", "sms", "mobile_notifications"]
+        specialized_points = min(10, sum(2 for c in specialized_channels if c in result["notification_channels"]))
+        if specialized_points > 0:
+            channel_score += specialized_points
+            scoring_components.append(f"Specialized notification channels: +{specialized_points}")
+        
+        # Points for custom notifications - shows maturity
         if result["has_custom_notifications"]:
-            score += 5
+            custom_points = 5
+            channel_score += custom_points
+            scoring_components.append(f"Custom notification setup: +{custom_points}")
+        
+        # Third dimension: comprehensive alerting
+        if result["comprehensive_alerts"]:
+            comprehensive_points = 15
+            scoring_components.append(f"Comprehensive alert system: +{comprehensive_points}")
+            
+            # Add total score from all dimensions
+            total_dimension_score = min(75, type_score + channel_score + comprehensive_points)
+            base_score += total_dimension_score
+        else:
+            # Add total score from just type and channel dimensions
+            total_dimension_score = min(60, type_score + channel_score)
+            base_score += total_dimension_score
     
-    # Round and convert to integer if it's a whole number
-    rounded_score = round(score, 1)
-    result["notification_system_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
+    # Final score should be between 1-100
+    final_score = min(100, max(1, base_score))
+    
+    # Determine notification maturity category
+    if final_score >= 85:
+        maturity_category = "excellent"
+        maturity_description = "Comprehensive notification system with multiple channels and alert types"
+    elif final_score >= 70:
+        maturity_category = "good"
+        maturity_description = "Solid notification system covering critical alerts"
+    elif final_score >= 50:
+        maturity_category = "moderate"
+        maturity_description = "Basic notification system with room for improvement"
+    elif final_score >= 30:
+        maturity_category = "basic"
+        maturity_description = "Minimal notification capability present"
+    else:
+        maturity_category = "limited"
+        maturity_description = "Very limited or no notification system detected"
+    
+    # Generate suggestions based on the analysis
+    suggestions = []
+    
+    if not result["has_notifications"]:
+        suggestions.append("Implement a basic notification system for your CI/CD pipeline")
+    else:
+        if not result["has_failure_notifications"]:
+            suggestions.append("Add failure notifications to quickly address build/deployment issues")
+        
+        if not result["has_success_notifications"]:
+            suggestions.append("Consider adding success notifications to track successful builds/deployments")
+        
+        if len(result["notification_channels"]) < 2:
+            suggestions.append("Add multiple notification channels for redundancy")
+        
+        if not any(channel in result["notification_channels"] for channel in ["slack", "teams", "discord"]):
+            suggestions.append("Consider adding team messaging platform integration (Slack/Teams/Discord)")
+        
+        if not any(channel in result["notification_channels"] for channel in ["pagerduty", "sms"]):
+            suggestions.append("For critical systems, consider adding urgent notification channels (PagerDuty/SMS)")
+    
+    # Round score to nearest integer
+    result["notification_system_score"] = round(final_score)
+    
+    # Add metadata to result
+    result["metadata"] = {
+        "score_components": scoring_components,
+        "maturity_category": maturity_category,
+        "maturity_description": maturity_description,
+        "suggestions": suggestions,
+        "analysis_timestamp": datetime.now().isoformat(),
+    }
     
     return result
 
+@timeout(60)  # Apply 1-minute timeout to the check function
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
     Run the notification system check
@@ -295,6 +448,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Check results with score on 0-100 scale
     """
+    start_time = time.time()
     try:
         # Prioritize local path for analysis
         local_path = repository.get('local_path')
@@ -302,18 +456,39 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_notification_system(local_path, repository)
         
-        # Return the result with the score
+        # Calculate processing time
+        processing_time = time.time() - start_time
+        
+        # Return the result with the score and metadata
         return {
             "status": "completed",
             "score": result.get("notification_system_score", 0),
             "result": result,
-            "errors": None
+            "errors": None,
+            "processing_time_seconds": round(processing_time, 2),
+            "suggestions": result.get("metadata", {}).get("suggestions", []),
+            "timestamp": datetime.now().isoformat()
+        }
+    except TimeoutError as e:
+        logger.error(f"Timeout error in notification system check: {e}")
+        return {
+            "status": "timeout",
+            "score": 0,
+            "result": {},
+            "errors": str(e),
+            "processing_time_seconds": 60.0,
+            "suggestions": ["Consider optimizing repository structure to improve check performance"],
+            "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Error running notification system check: {e}")
+        logger.error(f"Error running notification system check: {e}", exc_info=True)
+        processing_time = time.time() - start_time
         return {
             "status": "failed",
             "score": 0,
             "result": {},
-            "errors": str(e)
+            "errors": f"{type(e).__name__}: {str(e)}",
+            "processing_time_seconds": round(processing_time, 2),
+            "suggestions": ["Fix errors in repository configuration to enable proper notification analysis"],
+            "timestamp": datetime.now().isoformat()
         }

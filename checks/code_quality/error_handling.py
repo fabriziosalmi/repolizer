@@ -10,11 +10,48 @@ import random
 import time
 import threading
 import concurrent.futures
+import signal
 from typing import Dict, Any, List, Set, Tuple, Pattern
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from functools import wraps
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+class TimeoutError(Exception):
+    """Exception raised when a function times out."""
+    pass
+
+def timeout(seconds=60):
+    """
+    Decorator to timeout a function after specified seconds.
+    
+    Args:
+        seconds: Maximum seconds to allow function to run
+        
+    Returns:
+        Decorated function with timeout capability
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def handle_timeout(signum, frame):
+                raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
+            
+            # Set the timeout handler
+            original_handler = signal.signal(signal.SIGALRM, handle_timeout)
+            signal.alarm(seconds)
+            
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                # Reset the alarm and restore the original handler
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, original_handler)
+            return result
+        return wrapper
+    return decorator
 
 class GracefulTimeout(Exception):
     """Custom exception for graceful timeout handling."""
@@ -42,13 +79,13 @@ def check_error_handling(repo_path: str = None, repo_data: Dict = None) -> Dict[
     worker_thread.daemon = True  # Allow the thread to be killed if needed
     worker_thread.start()
     
-    # Wait for the worker to complete, with a maximum timeout of 5 minutes
-    max_wait_time = 300  # 5 minutes absolute maximum
+    # Wait for the worker to complete, with a maximum timeout of 60 seconds (reduced from 5 minutes)
+    max_wait_time = 60  # 1 minute maximum to match other checks
     start_time = time.time()
     
     while worker_thread.is_alive():
-        # Check every 5 seconds if we need to abort
-        worker_thread.join(timeout=5)
+        # Check every 2 seconds if we need to abort (more responsive)
+        worker_thread.join(timeout=2)
         
         # If we've waited too long, stop waiting
         if time.time() - start_time > max_wait_time:
@@ -95,8 +132,8 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
     cancel_event = threading.Event()  # Event to signal cancellation
     
     try:
-        # Global timeout value in seconds
-        GLOBAL_TIMEOUT = 180  # 3 minutes
+        # Global timeout value in seconds (reducing from 3 minutes to 50 seconds)
+        GLOBAL_TIMEOUT = 50  # 50 seconds to leave buffer for cleanup
         
         result = {
             "has_error_handling": False,
@@ -186,17 +223,9 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
         compiled_default_patterns = {k: re.compile(v, re.DOTALL) for k, v in default_patterns.items()}
         
         # Performance optimization parameters
-        MAX_FILES_TO_CHECK = 80  # Even smaller limit
-        MAX_FILE_SIZE = 128 * 1024  # Further reduced to 128KB
-        SAMPLE_RATIO = 0.15  # Further reduced sampling ratio
-        MINIMUM_SAMPLE = 15
-        MAX_TIME_SECONDS = 30  # Reduced runtime limit (30 seconds)
-        FILE_PROCESSING_TIMEOUT = 1.5  # Shorter timeout per file
-        SUFFICIENT_DATA_THRESHOLD = {
-            "files": 15,  # Further reduced thresholds
-            "try_catch": 8,
-            "proper_handling": 4
-        }
+        MAX_FILES_TO_CHECK = 75  # Slightly lower but still reasonable
+        MAX_FILE_SIZE = 100 * 1024  # 100KB 
+        FILE_PROCESSING_TIMEOUT = 1.0  # 1 second timeout per file
         
         # Additional directories to skip
         skip_dirs = [
@@ -250,7 +279,7 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     # Read the file in small chunks to avoid memory issues
                     content = ""
-                    chunk_size = 32 * 1024  # Smaller 32KB chunks
+                    chunk_size = 32 * 1024  # 32KB chunks
                     
                     # Only read for a limited time
                     while time.time() - file_start_time < FILE_PROCESSING_TIMEOUT:
@@ -353,7 +382,7 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
             total_files = 0
             files_by_language = {}
             scan_start_time = time.time()
-            MAX_SCAN_TIME = 8  # seconds (reduced from 10)
+            MAX_SCAN_TIME = 8  # seconds
             MAX_FILES_PER_LANGUAGE = MAX_FILES_TO_CHECK // 4  # Limit files per language
             
             # Use a walk_generator to avoid getting stuck in large repos
@@ -484,7 +513,7 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
             files_to_check = []
             for file_path in selected_files:
                 _, ext = os.path.splitext(file_path)
-                ext = ext.lower()  # Fix: Call the string method lower() on ext
+                ext = ext.lower()
                 
                 # Find language
                 file_language = None
@@ -538,12 +567,12 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
         timeout_count = 0
         
         # Process in smaller batches
-        batch_size = 5  # Even smaller batches
+        batch_size = 5  # Small batches
         max_batches = (len(files_to_check) + batch_size - 1) // batch_size
         
         for batch_num in range(max_batches):
             # Check for timeout or cancellation
-            if is_timed_out() or time.time() - start_time > MAX_TIME_SECONDS:
+            if is_timed_out():
                 logger.info(f"Time limit reached after {batch_num} batches")
                 result["timeout_occurred"] = True
                 break
@@ -562,12 +591,12 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
                 }
                 
                 # Use a very short timeout for future.result()
-                future_timeout = min(FILE_PROCESSING_TIMEOUT * 1.2, 3)  # Max 3 seconds
+                future_timeout = min(FILE_PROCESSING_TIMEOUT * 1.2, 2)  # Max 2 seconds
                 
                 # Process completed futures
                 for future in as_completed(future_to_file):
                     # Check timeouts regularly
-                    if is_timed_out() or time.time() - start_time > MAX_TIME_SECONDS:
+                    if is_timed_out():
                         logger.info(f"Time limit reached during batch {batch_num+1}")
                         result["timeout_occurred"] = True
                         break
@@ -632,12 +661,11 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
                 result["timeout_occurred"] = True
                 break
             
-            # Extremely aggressive early stopping
+            # Early stopping if we have enough data
             has_enough_data = (
-                files_checked >= SUFFICIENT_DATA_THRESHOLD["files"] and
-                proper_error_handling >= SUFFICIENT_DATA_THRESHOLD["proper_handling"] and
-                sum([metrics.get("try_catch", 0) for metrics in metrics_by_language.values()]) >= 
-                SUFFICIENT_DATA_THRESHOLD["try_catch"]
+                files_checked >= 15 and
+                proper_error_handling >= 4 and
+                sum([metrics.get("try_catch", 0) for metrics in metrics_by_language.values()]) >= 8
             )
             
             if has_enough_data and has_error_handling:
@@ -657,48 +685,8 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
         result["total_files_estimated"] = total_files_count
         result["timeout_count"] = timeout_count
         
-        # Calculate score only if we have data
-        if files_checked > 0:
-            score = 50  # Base score
-            
-            if has_error_handling:
-                # Points for proper error handling (up to 25 points)
-                if proper_error_handling > 0:
-                    proper_handling_score = min(25, proper_error_handling)
-                    score += proper_handling_score
-                
-                # Points for error logging (up to 15 points)
-                if error_logging > 0:
-                    error_logging_score = min(15, error_logging)
-                    score += error_logging_score
-                
-                # Points for custom error types (up to 10 points)
-                if custom_error_types > 0:
-                    custom_error_score = min(10, custom_error_types * 2)
-                    score += custom_error_score
-            else:
-                # No error handling found
-                score = 10
-            
-            # Penalty for empty catch blocks
-            if empty_catch_blocks > 0 and proper_error_handling > 0:
-                empty_ratio = empty_catch_blocks / proper_error_handling
-                if empty_ratio > 0.5:
-                    score = max(0, score - 30)
-                elif empty_ratio > 0.25:
-                    score = max(0, score - 20)
-                elif empty_ratio > 0.1:
-                    score = max(0, score - 10)
-            elif empty_catch_blocks > 0:
-                # Only empty catch blocks
-                score = max(0, score - 40)
-            
-            # Round score
-            rounded_score = round(score, 1)
-            result["error_handling_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
-        else:
-            # No files checked
-            result["error_handling_score"] = 0
+        # Calculate more nuanced error handling score
+        result = calculate_error_handling_score(result)
         
         # Store result
         result_container["result"] = result
@@ -712,6 +700,172 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
         # Ensure we always signal cancellation to clean up any running tasks
         cancel_event.set()
 
+def calculate_error_handling_score(result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Calculate a more nuanced score for error handling practices.
+    
+    Args:
+        result: The result dictionary with error handling analysis
+        
+    Returns:
+        Updated result dictionary with calculated score and metadata
+    """
+    # Only calculate score if we have data
+    if result["files_checked"] == 0:
+        result["error_handling_score"] = 0
+        result["metadata"] = {
+            "score_components": [],
+            "maturity_category": "unknown",
+            "maturity_description": "No files analyzed",
+            "suggestions": ["No files were analyzed. Check if repository contains code in supported languages."],
+            "analysis_timestamp": datetime.now().isoformat(),
+        }
+        return result
+    
+    # Store scoring components for transparency
+    scoring_components = []
+    
+    # Start with base score - minimum of 1 if we have any data
+    base_score = 1
+    
+    # Dimension 1: Basic error handling presence (30 points)
+    if result["has_error_handling"]:
+        presence_points = 30
+        base_score += presence_points
+        scoring_components.append(f"Basic error handling present: +{presence_points}")
+    
+    # Dimension 2: Quality of error handling (45 points max)
+    quality_score = 0
+    
+    # Proper error handling (vs just try/catch)
+    if result["proper_error_handling"] > 0:
+        if result["proper_error_handling"] >= 20:
+            proper_points = 20
+        elif result["proper_error_handling"] >= 10:
+            proper_points = 15
+        elif result["proper_error_handling"] >= 5:
+            proper_points = 10
+        else:
+            proper_points = 5
+        
+        quality_score += proper_points
+        scoring_components.append(f"Proper error handling ({result['proper_error_handling']}): +{proper_points}")
+    
+    # Error logging
+    if result["error_logging"] > 0:
+        if result["error_logging"] >= 15:
+            logging_points = 15
+        elif result["error_logging"] >= 8:
+            logging_points = 10
+        elif result["error_logging"] >= 3:
+            logging_points = 5
+        else:
+            logging_points = 3
+        
+        quality_score += logging_points
+        scoring_components.append(f"Error logging ({result['error_logging']}): +{logging_points}")
+    
+    # Custom error types
+    if result["custom_error_types"] > 0:
+        if result["custom_error_types"] >= 5:
+            custom_points = 10
+        elif result["custom_error_types"] >= 2:
+            custom_points = 5
+        else:
+            custom_points = 3
+        
+        quality_score += custom_points
+        scoring_components.append(f"Custom error types ({result['custom_error_types']}): +{custom_points}")
+    
+    # Dimension 3: Penalties for bad practices (up to -30 points)
+    penalties = 0
+    
+    # Empty catch blocks are bad practice
+    if result["empty_catch_blocks"] > 0:
+        # Calculate ratio of empty to proper handling
+        empty_ratio = (
+            result["empty_catch_blocks"] / 
+            max(1, result["proper_error_handling"] + result["empty_catch_blocks"])
+        )
+        
+        if empty_ratio >= 0.5:  # More than half are empty
+            empty_penalty = -25
+            penalties += empty_penalty
+            scoring_components.append(f"High ratio of empty catch blocks ({empty_ratio:.1%}): {empty_penalty}")
+        elif empty_ratio >= 0.25:  # Quarter to half are empty
+            empty_penalty = -15
+            penalties += empty_penalty
+            scoring_components.append(f"Moderate ratio of empty catch blocks ({empty_ratio:.1%}): {empty_penalty}")
+        elif empty_ratio >= 0.1:  # 10% to 25% are empty
+            empty_penalty = -5
+            penalties += empty_penalty
+            scoring_components.append(f"Low ratio of empty catch blocks ({empty_ratio:.1%}): {empty_penalty}")
+    
+    # No error logging with proper handling is a small issue
+    if result["proper_error_handling"] > 0 and result["error_logging"] == 0:
+        logging_penalty = -5
+        penalties += logging_penalty
+        scoring_components.append(f"No error logging detected: {logging_penalty}")
+    
+    # Calculate final score
+    total_score = base_score + quality_score + penalties
+    
+    # Ensure score is within 1-100 range
+    final_score = min(100, max(1, total_score))
+    
+    # Determine error handling maturity category
+    if final_score >= 85:
+        maturity_category = "excellent"
+        maturity_description = "Comprehensive error handling with proper practices and custom error types"
+    elif final_score >= 70:
+        maturity_category = "good"
+        maturity_description = "Good error handling with proper practices"
+    elif final_score >= 50:
+        maturity_category = "moderate"
+        maturity_description = "Basic error handling present but with some issues"
+    elif final_score >= 30:
+        maturity_category = "basic"
+        maturity_description = "Minimal error handling capabilities"
+    else:
+        maturity_category = "poor"
+        maturity_description = "Very limited or problematic error handling"
+    
+    # Generate suggestions based on the analysis
+    suggestions = []
+    
+    if not result["has_error_handling"]:
+        suggestions.append("Implement try-catch blocks or exception handling to handle errors gracefully")
+    else:
+        if result["empty_catch_blocks"] > 0:
+            suggestions.append("Avoid empty catch blocks - handle or at least log exceptions")
+        
+        if result["proper_error_handling"] == 0:
+            suggestions.append("Implement proper error recovery or fallback mechanisms in catch blocks")
+        
+        if result["error_logging"] == 0:
+            suggestions.append("Add error logging to track and diagnose issues in production")
+        
+        if result["custom_error_types"] == 0:
+            suggestions.append("Consider creating custom error types for application-specific errors")
+        
+        if result.get("issues"):
+            suggestions.append("Fix specific error handling issues highlighted in the analysis")
+    
+    # Round score to integer
+    result["error_handling_score"] = round(final_score)
+    
+    # Add metadata to result
+    result["metadata"] = {
+        "score_components": scoring_components,
+        "maturity_category": maturity_category,
+        "maturity_description": maturity_description,
+        "suggestions": suggestions,
+        "analysis_timestamp": datetime.now().isoformat(),
+    }
+    
+    return result
+
+@timeout(60)  # Apply 1-minute timeout to the check function
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
     Run the error handling check
@@ -722,32 +876,59 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Check results with score on 0-100 scale
     """
+    start_time = time.time()
     try:
         # Check if we have a local path to the repository
         local_path = repository.get('local_path')
         
-        # Set a maximum execution time using a timer
-        start_time = time.time()
+        if not local_path or not os.path.isdir(local_path):
+            logger.warning("No local repository path available for error handling check")
+            return {
+                "status": "skipped",
+                "score": 0,
+                "result": {"message": "No local repository path available"},
+                "errors": "Local repository path is required for this check",
+                "processing_time_seconds": round(time.time() - start_time, 2),
+                "suggestions": ["Ensure repository is properly cloned for complete analysis"],
+                "timestamp": datetime.now().isoformat()
+            }
         
         # Run the check with guaranteed timeout behavior
         result = check_error_handling(local_path, repository)
         
-        # Always make sure we have a score
-        if "error_handling_score" not in result:
-            result["error_handling_score"] = 0
+        # Calculate processing time
+        processing_time = time.time() - start_time
         
         # Return the result
         return {
             "status": "completed" if not result.get("timeout_occurred", False) else "completed_with_timeout",
             "score": result.get("error_handling_score", 0),
             "result": result,
-            "errors": None
+            "errors": None,
+            "processing_time_seconds": round(processing_time, 2),
+            "suggestions": result.get("metadata", {}).get("suggestions", []),
+            "timestamp": datetime.now().isoformat()
+        }
+    except TimeoutError as e:
+        logger.error(f"Timeout error in error handling check: {e}")
+        return {
+            "status": "timeout",
+            "score": 0,
+            "result": {},
+            "errors": str(e),
+            "processing_time_seconds": 60.0,
+            "suggestions": ["Consider optimizing repository structure to improve check performance"],
+            "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Error running error handling check: {e}")
+        logger.error(f"Error running error handling check: {e}", exc_info=True)
+        processing_time = time.time() - start_time
         return {
             "status": "failed",
             "score": 0,
             "result": {},
-            "errors": str(e)
+            "errors": f"{type(e).__name__}: {str(e)}",
+            "processing_time_seconds": round(processing_time, 2),
+            "suggestions": ["Fix errors in repository configuration to enable proper error handling analysis"],
+            "timestamp": datetime.now().isoformat()
         }

@@ -59,7 +59,7 @@ logging:
   format: "json"  # text or json
   destinations:
     - type: "file"
-      path: "logs/system.log"
+      path: "logs/debug.log"
       max_size_mb: 50
       retention_days: 30
     - type: "console"

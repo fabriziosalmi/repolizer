@@ -7,11 +7,48 @@ import os
 import re
 import logging
 import datetime
+import time
+import signal
 from typing import Dict, Any, List
 from collections import defaultdict
+from functools import wraps
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+class TimeoutError(Exception):
+    """Exception raised when a function times out."""
+    pass
+
+def timeout(seconds=60):
+    """
+    Decorator to timeout a function after specified seconds.
+    
+    Args:
+        seconds: Maximum seconds to allow function to run
+        
+    Returns:
+        Decorated function with timeout capability
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def handle_timeout(signum, frame):
+                raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
+            
+            # Set the timeout handler
+            original_handler = signal.signal(signal.SIGALRM, handle_timeout)
+            signal.alarm(seconds)
+            
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                # Reset the alarm and restore the original handler
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, original_handler)
+            return result
+        return wrapper
+    return decorator
 
 def check_deployment_frequency(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
     """
@@ -529,7 +566,15 @@ def check_deployment_frequency(repo_path: str = None, repo_data: Dict = None) ->
     return calculate_deployment_metrics(result)
 
 def calculate_deployment_metrics(result: Dict[str, Any]) -> Dict[str, Any]:
-    """Calculate metrics based on deployment history."""
+    """
+    Calculate metrics based on deployment history with enhanced scoring logic.
+    
+    Args:
+        result: The result dictionary with deployment analysis
+        
+    Returns:
+        Updated result dictionary with calculated metrics and score
+    """
     # Calculate average deployments per month
     if result["deployment_frequency_per_month"]:
         total_deployments = sum(result["deployment_frequency_per_month"].values())
@@ -574,6 +619,157 @@ def calculate_deployment_metrics(result: Dict[str, Any]) -> Dict[str, Any]:
         else:
             result["deployment_trend"] = "not_enough_data"
     
+    # Store scoring components for transparency
+    scoring_components = []
+    
+    # Start with base score - minimum of 1 if we have any data at all
+    base_score = 1 if result["deployments_detected"] > 0 else 1
+    
+    # First dimension: CI/CD infrastructure (max 30 points)
+    infra_score = 0
+    
+    # Points for having a CD pipeline
+    if result["cd_pipeline_detected"]:
+        infra_points = 20
+        infra_score += infra_points
+        scoring_components.append(f"CD pipeline detected: +{infra_points}")
+    
+    # Points for release tags or deployment workflow
+    if result["has_release_tags"]:
+        tag_points = 5
+        infra_score += tag_points
+        scoring_components.append(f"Release tags: +{tag_points}")
+    
+    if result["has_deployment_workflow"]:
+        workflow_points = 5
+        infra_score += workflow_points
+        scoring_components.append(f"Deployment workflow: +{workflow_points}")
+    
+    # Second dimension: Deployment frequency (max 40 points)
+    frequency_score = 0
+    
+    # Points based on deployment frequency
+    if result["average_deployments_per_month"] >= 30:
+        # Excellent: Daily or more (30+ per month)
+        freq_points = 40
+        frequency_score += freq_points
+        scoring_components.append(f"Excellent deployment frequency (daily+): +{freq_points}")
+    elif result["average_deployments_per_month"] >= 20:
+        # Very good: Every few days (20+ per month)
+        freq_points = 35
+        frequency_score += freq_points
+        scoring_components.append(f"Very good deployment frequency (multiple times per week): +{freq_points}")
+    elif result["average_deployments_per_month"] >= 4:
+        # Good: Weekly (4+ per month)
+        freq_points = 25
+        frequency_score += freq_points
+        scoring_components.append(f"Good deployment frequency (weekly): +{freq_points}")
+    elif result["average_deployments_per_month"] >= 1:
+        # Fair: Monthly (1+ per month)
+        freq_points = 15
+        frequency_score += freq_points
+        scoring_components.append(f"Fair deployment frequency (monthly): +{freq_points}")
+    elif result["average_deployments_per_month"] > 0:
+        # Poor: Less than monthly
+        freq_points = 5
+        frequency_score += freq_points
+        scoring_components.append(f"Limited deployment frequency (less than monthly): +{freq_points}")
+    
+    # Third dimension: Deployment practices (max 30 points)
+    practices_score = 0
+    
+    # Points for advanced deployment capabilities
+    if result["deployment_maturity"]["rollback_capability"]:
+        rollback_points = 5
+        practices_score += rollback_points
+        scoring_components.append(f"Rollback capability: +{rollback_points}")
+        
+    if result["deployment_maturity"]["zero_downtime_deployments"]:
+        zero_downtime_points = 5
+        practices_score += zero_downtime_points
+        scoring_components.append(f"Zero-downtime deployments: +{zero_downtime_points}")
+        
+    if result["deployment_maturity"]["feature_flags_detected"]:
+        ff_points = 5
+        practices_score += ff_points
+        scoring_components.append(f"Feature flags: +{ff_points}")
+        
+    if result["deployment_maturity"]["progressive_delivery"] or result["deployment_maturity"]["canary_deployments"]:
+        progressive_points = 5
+        practices_score += progressive_points
+        scoring_components.append(f"Progressive/canary deployments: +{progressive_points}")
+        
+    if result["deployment_maturity"]["blue_green_detected"]:
+        blue_green_points = 5
+        practices_score += blue_green_points
+        scoring_components.append(f"Blue-green deployments: +{blue_green_points}")
+    
+    # Points for deployment environment maturity
+    env_count = len(result["deployment_environments"])
+    if env_count >= 3:
+        env_points = 5
+        practices_score += env_points
+        scoring_components.append(f"Multiple deployment environments ({env_count}): +{env_points}")
+    elif env_count >= 1:
+        env_points = 3
+        practices_score += env_points
+        scoring_components.append(f"Basic deployment environments ({env_count}): +{env_points}")
+    
+    # Calculate deployment consistency bonus
+    if result["deployment_details"]["deployment_consistency"] > 0.8:
+        consistency_points = 5
+        practices_score += consistency_points
+        scoring_components.append(f"High deployment consistency: +{consistency_points}")
+    elif result["deployment_details"]["deployment_consistency"] > 0.5:
+        consistency_points = 3
+        practices_score += consistency_points
+        scoring_components.append(f"Moderate deployment consistency: +{consistency_points}")
+    
+    # Combine all dimensions for total score
+    total_score = infra_score + frequency_score + practices_score
+    
+    # Bonus/penalty for deployment trend
+    if result["deployment_trend"] == "increasing":
+        trend_bonus = 5
+        total_score += trend_bonus
+        scoring_components.append(f"Increasing deployment trend: +{trend_bonus}")
+    elif result["deployment_trend"] == "decreasing":
+        trend_penalty = -5
+        total_score += trend_penalty
+        scoring_components.append(f"Decreasing deployment trend: {trend_penalty}")
+    
+    # Ensure score is within 1-100 range
+    final_score = min(100, max(1, total_score))
+    
+    # Determine deployment frequency category
+    if result["average_deployments_per_month"] >= 30:
+        frequency_category = "high (daily or more)"
+    elif result["average_deployments_per_month"] >= 20:
+        frequency_category = "good (multiple times per week)"
+    elif result["average_deployments_per_month"] >= 4:
+        frequency_category = "moderate (weekly)"
+    elif result["average_deployments_per_month"] >= 1:
+        frequency_category = "low (monthly)"
+    else:
+        frequency_category = "very low (less than monthly)"
+    
+    # Determine maturity category
+    if final_score >= 85:
+        maturity_category = "excellent"
+        maturity_description = "Elite level continuous deployment with advanced deployment practices"
+    elif final_score >= 70:
+        maturity_category = "good"
+        maturity_description = "High-performing deployment pipeline with good frequency"
+    elif final_score >= 50:
+        maturity_category = "moderate"
+        maturity_description = "Functional deployment process with room for improvement"
+    elif final_score >= 30:
+        maturity_category = "basic"
+        maturity_description = "Basic deployment capability but limited frequency"
+    else:
+        maturity_category = "limited"
+        maturity_description = "Minimal deployment processes detected"
+    
     # Generate recommendations based on findings
     recommendations = []
     
@@ -600,84 +796,32 @@ def calculate_deployment_metrics(result: Dict[str, Any]) -> Dict[str, Any]:
     if not result["deployment_maturity"]["feature_flags_detected"] and result["average_deployments_per_month"] >= 10:
         recommendations.append("Consider using feature flags to decouple deployment from feature release")
     
+    # Add a recommendation about modern deployment approaches if they're missing but would be beneficial
+    if (not result["deployment_maturity"]["blue_green_detected"] and 
+        not result["deployment_maturity"]["canary_deployments"] and
+        result["average_deployments_per_month"] >= 8):
+        recommendations.append("Implement blue-green or canary deployment approaches to reduce deployment risk")
+    
+    # Add recommendations about deployment consistency if it's low
+    if (result["deployment_details"]["deployment_consistency"] < 0.3 and 
+        result["deployments_detected"] >= 5):
+        recommendations.append("Improve deployment consistency by establishing regular deployment schedules")
+    
     result["recommendations"] = recommendations
+    result["deployment_frequency_score"] = round(final_score)
+    result["deployment_frequency_category"] = frequency_category
     
-    # Calculate deployment frequency score (0-100 scale)
-    score = 0
-    
-    # Points for having a CD pipeline
-    if result["cd_pipeline_detected"]:
-        score += 20
-    
-    # Points for release tags or deployment workflow
-    if result["has_release_tags"] or result["has_deployment_workflow"]:
-        score += 10
-    
-    # Points based on deployment frequency
-    if result["average_deployments_per_month"] >= 30:
-        # Excellent: Daily or more (30+ per month)
-        score += 40
-    elif result["average_deployments_per_month"] >= 20:
-        # Very good: Every few days (20+ per month)
-        score += 30
-    elif result["average_deployments_per_month"] >= 4:
-        # Good: Weekly (4+ per month)
-        score += 20
-    elif result["average_deployments_per_month"] >= 1:
-        # Fair: Monthly (1+ per month)
-        score += 10
-    elif result["average_deployments_per_month"] > 0:
-        # Poor: Less than monthly
-        score += 5
-    
-    # Points for deployment maturity (max 20)
-    maturity_score = 0
-    if result["deployment_maturity"]["rollback_capability"]:
-        maturity_score += 4
-    if result["deployment_maturity"]["zero_downtime_deployments"]:
-        maturity_score += 4
-    if result["deployment_maturity"]["feature_flags_detected"]:
-        maturity_score += 4
-    if result["deployment_maturity"]["progressive_delivery"] or result["deployment_maturity"]["canary_deployments"]:
-        maturity_score += 4
-    if result["deployment_maturity"]["blue_green_detected"]:
-        maturity_score += 4
-    
-    score += min(20, maturity_score)
-    
-    # Points for environment maturity (max 10)
-    env_score = min(10, len(result["deployment_environments"]) * 3)
-    score += env_score
-    
-    # Bonus for increasing trend
-    if result["deployment_trend"] == "increasing":
-        score = min(100, score + 10)
-    
-    # Penalty for decreasing trend
-    if result["deployment_trend"] == "decreasing":
-        score = max(0, score - 10)
-    
-    # Ensure score is capped at 100
-    score = min(100, score)
-    
-    # Round and convert to integer if it's a whole number
-    rounded_score = round(score, 1)
-    result["deployment_frequency_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
-    
-    # Add deployment frequency category
-    if result["average_deployments_per_month"] >= 30:
-        result["deployment_frequency_category"] = "high (daily or more)"
-    elif result["average_deployments_per_month"] >= 20:
-        result["deployment_frequency_category"] = "good (multiple times per week)"
-    elif result["average_deployments_per_month"] >= 4:
-        result["deployment_frequency_category"] = "moderate (weekly)"
-    elif result["average_deployments_per_month"] >= 1:
-        result["deployment_frequency_category"] = "low (monthly)"
-    else:
-        result["deployment_frequency_category"] = "very low (less than monthly)"
+    # Add metadata for better reporting
+    result["metadata"] = {
+        "score_components": scoring_components,
+        "maturity_category": maturity_category,
+        "maturity_description": maturity_description,
+        "analysis_timestamp": datetime.datetime.now().isoformat(),
+    }
     
     return result
 
+@timeout(60)  # Apply 1-minute timeout to the check function
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
     Run the deployment frequency check
@@ -688,33 +832,59 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Check results with score on 0-100 scale
     """
+    start_time = time.time()
     try:
         # Check if we have a local path to the repository
         local_path = repository.get('local_path')
         
         if not local_path or not os.path.isdir(local_path):
+            logger.warning("No local repository path available for deployment frequency check")
             return {
                 "status": "skipped",
                 "score": 0,
                 "result": {"message": "No local repository path available"},
-                "errors": "Local repository path is required for this check"
+                "errors": "Local repository path is required for this check",
+                "processing_time_seconds": round(time.time() - start_time, 2),
+                "suggestions": ["Ensure repository is properly cloned for complete analysis"],
+                "timestamp": datetime.datetime.now().isoformat()
             }
         
         # Run the check
         result = check_deployment_frequency(local_path, repository)
         
-        # Return the result with the score
+        # Calculate processing time
+        processing_time = time.time() - start_time
+        
+        # Return the result with the score and metadata
         return {
             "status": "completed",
             "score": result.get("deployment_frequency_score", 0),
             "result": result,
-            "errors": None
+            "errors": None,
+            "processing_time_seconds": round(processing_time, 2),
+            "suggestions": result.get("recommendations", []),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    except TimeoutError as e:
+        logger.error(f"Timeout error in deployment frequency check: {e}")
+        return {
+            "status": "timeout",
+            "score": 0,
+            "result": {},
+            "errors": str(e),
+            "processing_time_seconds": 60.0,
+            "suggestions": ["Consider optimizing repository structure to improve check performance"],
+            "timestamp": datetime.datetime.now().isoformat()
         }
     except Exception as e:
         logger.error(f"Error running deployment frequency check: {str(e)}", exc_info=True)
+        processing_time = time.time() - start_time
         return {
             "status": "failed",
             "score": 0,
             "result": {"partial_results": result if 'result' in locals() else {}},
-            "errors": f"{type(e).__name__}: {str(e)}"
+            "errors": f"{type(e).__name__}: {str(e)}",
+            "processing_time_seconds": round(processing_time, 2),
+            "suggestions": ["Fix errors in repository configuration to enable proper deployment analysis"],
+            "timestamp": datetime.datetime.now().isoformat()
         }

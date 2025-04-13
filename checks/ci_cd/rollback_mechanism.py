@@ -6,10 +6,48 @@ Checks if the repository has robust rollback capabilities for deployments.
 import os
 import re
 import logging
+import time
+import signal
 from typing import Dict, Any, List
+from functools import wraps
+from datetime import datetime
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+class TimeoutError(Exception):
+    """Exception raised when a function times out."""
+    pass
+
+def timeout(seconds=60):
+    """
+    Decorator to timeout a function after specified seconds.
+    
+    Args:
+        seconds: Maximum seconds to allow function to run
+        
+    Returns:
+        Decorated function with timeout capability
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def handle_timeout(signum, frame):
+                raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
+            
+            # Set the timeout handler
+            original_handler = signal.signal(signal.SIGALRM, handle_timeout)
+            signal.alarm(seconds)
+            
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                # Reset the alarm and restore the original handler
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, original_handler)
+            return result
+        return wrapper
+    return decorator
 
 def check_rollback_mechanism(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
     """
@@ -364,42 +402,137 @@ def check_rollback_mechanism(repo_path: str = None, repo_data: Dict = None) -> D
         logger.debug("Using primarily local analysis for rollback mechanism check")
         logger.warning("No local repository path or API data provided for rollback mechanism check")
     
-    # Calculate rollback mechanism score (0-100 scale)
-    score = 0
+    # Calculate rollback mechanism score with enhanced logic
+    return calculate_rollback_score(result)
+
+def calculate_rollback_score(result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Calculate a more nuanced score for the rollback mechanisms.
     
-    # Points for having rollback capability
+    Args:
+        result: The result dictionary with rollback mechanism analysis
+        
+    Returns:
+        Updated result dictionary with calculated score
+    """
+    # Start with base score - adjust the floor to 1 (not 0) for existing systems
+    base_score = 1
+    
+    # Store scoring components for transparency
+    scoring_components = []
+    
+    # Base points for having any rollback capability
     if result["has_rollback_capability"]:
-        score += 20
+        base_points = 20
+        base_score += base_points
+        scoring_components.append(f"Base rollback capability: +{base_points}")
     
-    # Points for version control in deployments
+    # First dimension: Rollback foundation 
+    foundation_score = 0
+    
+    # Version control in deployments is crucial for rollbacks
     if result["has_version_control"]:
-        score += 15
+        version_points = 15
+        foundation_score += version_points
+        scoring_components.append(f"Version-controlled deployments: +{version_points}")
     
-    # Points for immutable artifacts
+    # Immutable artifacts ensure consistent rollbacks
     if result["has_immutable_artifacts"]:
-        score += 15
+        immutable_points = 15
+        foundation_score += immutable_points
+        scoring_components.append(f"Immutable deployment artifacts: +{immutable_points}")
     
-    # Points for database migrations
+    # Second dimension: Advanced rollback techniques
+    techniques_score = 0
+    
+    # Database migrations with rollback capability
     if result["has_database_migrations"]:
-        score += 15
+        db_points = 10
+        techniques_score += db_points
+        scoring_components.append(f"Database migration rollbacks: +{db_points}")
     
-    # Points for advanced deployment strategies
+    # Modern deployment strategies with built-in rollback
     if result["has_canary_deployments"]:
-        score += 15
+        canary_points = 10
+        techniques_score += canary_points
+        scoring_components.append(f"Canary deployment rollbacks: +{canary_points}")
     
     if result["has_blue_green_deployments"]:
-        score += 15
+        blue_green_points = 10
+        techniques_score += blue_green_points
+        scoring_components.append(f"Blue-green deployment rollbacks: +{blue_green_points}")
     
-    # Bonus for multiple rollback methods
-    method_count_bonus = min(20, len(result["rollback_methods"]) * 5)
-    score = min(100, score + method_count_bonus)
+    # Third dimension: Rollback method diversity
+    methods_count = len(result.get("rollback_methods", []))
+    if methods_count > 0:
+        # Give points for each method, but cap at 20
+        methods_points = min(20, methods_count * 4)
+        scoring_components.append(f"Multiple rollback methods ({methods_count}): +{methods_points}")
+        
+        # Add total score from all dimensions
+        total_dimension_score = min(80, foundation_score + techniques_score + methods_points)
+        base_score += total_dimension_score
+    else:
+        # Add total score from just foundation and techniques dimensions
+        total_dimension_score = min(60, foundation_score + techniques_score)
+        base_score += total_dimension_score
     
-    # Round and convert to integer if it's a whole number
-    rounded_score = round(score, 1)
-    result["rollback_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
+    # Final score should be between 1-100
+    final_score = min(100, max(1, base_score))
+    
+    # Determine rollback maturity category
+    if final_score >= 85:
+        maturity_category = "excellent"
+        maturity_description = "Comprehensive rollback system with multiple methods and advanced deployment strategies"
+    elif final_score >= 70:
+        maturity_category = "good"
+        maturity_description = "Solid rollback capability with version control and at least one advanced deployment strategy"
+    elif final_score >= 50:
+        maturity_category = "moderate"
+        maturity_description = "Basic rollback system with version control but limited advanced capabilities"
+    elif final_score >= 30:
+        maturity_category = "basic"
+        maturity_description = "Minimal rollback capability present but lacking robust mechanisms"
+    else:
+        maturity_category = "limited"
+        maturity_description = "Very limited or no rollback capability detected"
+    
+    # Generate suggestions based on the analysis
+    suggestions = []
+    
+    if not result["has_rollback_capability"]:
+        suggestions.append("Implement basic rollback mechanisms for your deployments")
+    else:
+        if not result["has_version_control"]:
+            suggestions.append("Implement version control for deployments to enable reliable rollbacks")
+        
+        if not result["has_immutable_artifacts"]:
+            suggestions.append("Use immutable artifacts (e.g., versioned Docker images) to ensure consistent rollbacks")
+        
+        if not result["has_database_migrations"]:
+            suggestions.append("Add database migration rollback capability to prevent data inconsistencies")
+        
+        if not result["has_blue_green_deployments"] and not result["has_canary_deployments"]:
+            suggestions.append("Consider implementing blue-green or canary deployments for safer rollbacks")
+        
+        if len(result.get("rollback_methods", [])) < 2:
+            suggestions.append("Implement multiple rollback methods for different failure scenarios")
+    
+    # Round score to nearest integer
+    result["rollback_score"] = round(final_score)
+    
+    # Add metadata to result
+    result["metadata"] = {
+        "score_components": scoring_components,
+        "maturity_category": maturity_category,
+        "maturity_description": maturity_description,
+        "suggestions": suggestions,
+        "analysis_timestamp": datetime.now().isoformat(),
+    }
     
     return result
 
+@timeout(60)  # Apply 1-minute timeout to the check function
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
     Run the rollback mechanism check
@@ -410,6 +543,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Check results with score on 0-100 scale
     """
+    start_time = time.time()
     try:
         # Prioritize local path for analysis
         local_path = repository.get('local_path')
@@ -417,18 +551,39 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_rollback_mechanism(local_path, repository)
         
-        # Return the result with the score
+        # Calculate processing time
+        processing_time = time.time() - start_time
+        
+        # Return the result with the score and metadata
         return {
             "status": "completed",
             "score": result.get("rollback_score", 0),
             "result": result,
-            "errors": None
+            "errors": None,
+            "processing_time_seconds": round(processing_time, 2),
+            "suggestions": result.get("metadata", {}).get("suggestions", []),
+            "timestamp": datetime.now().isoformat()
         }
-    except Exception as e:
-        logger.error(f"Error running rollback mechanism check: {e}")
+    except TimeoutError as e:
+        logger.error(f"Timeout error in rollback mechanism check: {e}")
         return {
-            "status": "failed",
+            "status": "timeout",
             "score": 0,
             "result": {},
-            "errors": str(e)
+            "errors": str(e),
+            "processing_time_seconds": 60.0,
+            "suggestions": ["Consider optimizing repository structure to improve check performance"],
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error running rollback mechanism check: {e}", exc_info=True)
+        processing_time = time.time() - start_time
+        return {
+            "status": "failed", 
+            "score": 0,
+            "result": {},
+            "errors": f"{type(e).__name__}: {str(e)}",
+            "processing_time_seconds": round(processing_time, 2),
+            "suggestions": ["Fix errors in repository configuration to enable proper rollback analysis"],
+            "timestamp": datetime.now().isoformat()
         }

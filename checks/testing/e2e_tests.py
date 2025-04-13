@@ -7,11 +7,48 @@ import os
 import re
 import logging
 import random
+import time
+import signal
 from typing import Dict, Any, List
 from datetime import datetime
+from functools import wraps
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+class TimeoutError(Exception):
+    """Exception raised when a function times out."""
+    pass
+
+def timeout(seconds=60):
+    """
+    Decorator to add timeout functionality to a function.
+    
+    Args:
+        seconds: Maximum execution time in seconds
+        
+    Returns:
+        Decorated function with timeout capability
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def handle_timeout(signum, frame):
+                raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
+            
+            # Set the timeout handler
+            original_handler = signal.signal(signal.SIGALRM, handle_timeout)
+            signal.alarm(seconds)
+            
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                # Reset the alarm and restore the original handler
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, original_handler)
+            return result
+        return wrapper
+    return decorator
 
 def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
     """
@@ -24,6 +61,8 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
     Returns:
         Dictionary with check results
     """
+    start_time = time.time()
+    
     result = {
         "has_e2e_tests": False,
         "e2e_files_count": 0,
@@ -58,7 +97,12 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
             "sampled": False,
             "early_stopped": False,
             "elapsed_time_ms": 0
-        }
+        },
+        "e2e_tests_score": 0,
+        "score_breakdown": {},
+        "processing_time": 0,
+        "quality_rating": "none",
+        "suggestions": []
     }
     
     # Performance optimization parameters
@@ -78,11 +122,14 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
                 frontend_langs = ["javascript", "typescript", "html", "css"]
                 if any(lang.lower() in frontend_langs for lang in repo_data.get("languages", [])):
                     result["recommendations"].append("Consider adding end-to-end tests for your frontend application")
+                    result["suggestions"].append("Add end-to-end tests for frontend components")
             
             # Check for CI workflows in the API data
             if repo_data.get("workflows") or repo_data.get("actions"):
                 result["recommendations"].append("Integrate E2E tests into your existing CI workflows")
+                result["suggestions"].append("Configure your CI pipeline to run E2E tests")
         
+        result["processing_time"] = time.time() - start_time
         return result
     
     # Prioritize local analysis - common patterns for e2e test directories and files
@@ -218,63 +265,72 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
     missing_test_areas = set(expected_test_areas.keys())
     
     # First pass: find e2e directories and potential e2e files (fast pass)
-    for root, dirs, files in os.walk(repo_path):
-        # Skip irrelevant directories
-        dirs[:] = [d for d in dirs if d not in skip_dirs]
-        
-        rel_root = os.path.relpath(root, repo_path)
-        
-        # Check if current directory matches e2e pattern
-        if e2e_dir_regex.search(rel_root):
-            e2e_dir_path = os.path.join(root)
-            e2e_directories.append(os.path.relpath(e2e_dir_path, repo_path))
-            result["has_e2e_tests"] = True
-            logger.debug(f"Found e2e directory: {rel_root}")
-        
-        # Look for e2e files
-        for file in files:
-            # Track files scanned
-            result["analysis_details"]["files_scanned"] += 1
+    try:
+        for root, dirs, files in os.walk(repo_path):
+            # Skip irrelevant directories
+            dirs[:] = [d for d in dirs if d not in skip_dirs]
             
-            # Check file size first
-            file_path = os.path.join(root, file)
-            try:
-                if os.path.getsize(file_path) > MAX_FILE_SIZE:
-                    continue
-            except:
-                continue
-                
-            # Check for e2e file patterns
-            if e2e_file_regex.search(file):
-                rel_path = os.path.relpath(file_path, repo_path)
-                e2e_files.append(rel_path)
+            rel_root = os.path.relpath(root, repo_path)
+            
+            # Check if current directory matches e2e pattern
+            if e2e_dir_regex.search(rel_root):
+                e2e_dir_path = os.path.join(root)
+                e2e_directories.append(os.path.relpath(e2e_dir_path, repo_path))
                 result["has_e2e_tests"] = True
-                logger.debug(f"Found e2e file: {rel_path}")
+                logger.debug(f"Found e2e directory: {rel_root}")
+            
+            # Look for e2e files
+            for file in files:
+                # Track files scanned
+                result["analysis_details"]["files_scanned"] += 1
                 
-                # Add to candidates for content analysis
-                candidate_files.append(file_path)
-                
-            # For non-e2e named files, check if they're test files in e2e directories
-            elif any(ext in file for ext in ['.js', '.ts', '.jsx', '.tsx', '.py', '.rb', '.feature']):
-                if any(e2e_dir in rel_root for e2e_dir in e2e_directories):
+                # Check file size first
+                file_path = os.path.join(root, file)
+                try:
+                    if os.path.getsize(file_path) > MAX_FILE_SIZE:
+                        continue
+                except:
+                    continue
+                    
+                # Check for e2e file patterns
+                if e2e_file_regex.search(file):
                     rel_path = os.path.relpath(file_path, repo_path)
                     e2e_files.append(rel_path)
                     result["has_e2e_tests"] = True
-                    logger.debug(f"Found test file in e2e directory: {rel_path}")
+                    logger.debug(f"Found e2e file: {rel_path}")
                     
                     # Add to candidates for content analysis
                     candidate_files.append(file_path)
-        
-        # Early stopping if we've found sufficient e2e files
-        if len(e2e_files) >= SUFFICIENT_EVIDENCE_THRESHOLD and result["framework_used"]:
-            result["analysis_details"]["early_stopped"] = True
-            logger.debug(f"Early stopping analysis after finding {len(e2e_files)} e2e files")
-            break
+                    
+                # For non-e2e named files, check if they're test files in e2e directories
+                elif any(ext in file for ext in ['.js', '.ts', '.jsx', '.tsx', '.py', '.rb', '.feature']):
+                    if any(e2e_dir in rel_root for e2e_dir in e2e_directories):
+                        rel_path = os.path.relpath(file_path, repo_path)
+                        e2e_files.append(rel_path)
+                        result["has_e2e_tests"] = True
+                        logger.debug(f"Found test file in e2e directory: {rel_path}")
+                        
+                        # Add to candidates for content analysis
+                        candidate_files.append(file_path)
+            
+            # Early stopping if we've found sufficient e2e files
+            if len(e2e_files) >= SUFFICIENT_EVIDENCE_THRESHOLD and result["framework_used"]:
+                result["analysis_details"]["early_stopped"] = True
+                logger.debug(f"Early stopping analysis after finding {len(e2e_files)} e2e files")
+                break
+                    
+            # Limit number of files scanned
+            if result["analysis_details"]["files_scanned"] >= MAX_FILES_TO_SCAN:
+                result["analysis_details"]["early_stopped"] = True
+                break
                 
-        # Limit number of files scanned
-        if result["analysis_details"]["files_scanned"] >= MAX_FILES_TO_SCAN:
-            result["analysis_details"]["early_stopped"] = True
-            break
+            # Check for timeout
+            if (time.time() - start_time) > 45:  # Keep 15s buffer from the 60s timeout
+                logger.warning("E2E test analysis approaching timeout, stopping early")
+                result["analysis_details"]["early_stopped"] = True
+                break
+    except Exception as e:
+        logger.error(f"Error during filesystem scan: {e}")
     
     # If we have too many candidate files, sample them
     content_analysis_files = candidate_files
@@ -367,19 +423,22 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
     # Use a fast approach first - just check for existence of GitHub workflow files
     if os.path.isdir(os.path.join(repo_path, ".github/workflows")):
         # Just check if any workflow file mentions e2e
-        for file in os.listdir(os.path.join(repo_path, ".github/workflows")):
-            if file.endswith('.yml') or file.endswith('.yaml'):
-                file_path = os.path.join(repo_path, ".github/workflows", file)
-                if os.path.getsize(file_path) < MAX_FILE_SIZE:
-                    try:
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            content = f.read().lower()
-                            if any(term in content for term in ["e2e", "end-to-end", "cypress", "playwright", "selenium"]):
-                                result["has_ci_integration"] = True
-                                logger.debug(f"Found CI integration in {file}")
-                                break
-                    except:
-                        pass
+        try:
+            for file in os.listdir(os.path.join(repo_path, ".github/workflows")):
+                if file.endswith('.yml') or file.endswith('.yaml'):
+                    file_path = os.path.join(repo_path, ".github/workflows", file)
+                    if os.path.getsize(file_path) < MAX_FILE_SIZE:
+                        try:
+                            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                content = f.read().lower()
+                                if any(term in content for term in ["e2e", "end-to-end", "cypress", "playwright", "selenium"]):
+                                    result["has_ci_integration"] = True
+                                    logger.debug(f"Found CI integration in {file}")
+                                    break
+                        except:
+                            pass
+        except Exception as e:
+            logger.debug(f"Error checking GitHub workflows: {e}")
     
     # If we still don't have CI integration info, check the other files
     if not result["has_ci_integration"]:
@@ -408,7 +467,7 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
         readable_area = area.replace("_", " ").title()
         result["examples"]["missing_areas"].append(readable_area)
     
-    # Calculate completeness based on found aspects (but more efficiently)
+    # Calculate completeness based on found aspects and convert to percentage
     completeness_factors = []
     if result["has_e2e_tests"]: completeness_factors.append(True)
     if result["has_ci_integration"]: completeness_factors.append(True)
@@ -421,12 +480,16 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
     if scenario_count >= 10: completeness_factors.append(True)
     if result["has_performance_tests"]: completeness_factors.append(True)
     
-    # Count factors that are False
-    false_factors = 10 - len(completeness_factors)
-    
-    # Calculate completeness percentage
+    # Calculate completeness percentage (0.0-1.0)
     if completeness_factors:
-        result["e2e_coverage_completeness"] = len(completeness_factors) / 10
+        result["e2e_coverage_completeness"] = round(len(completeness_factors) / 10, 2)
+    
+    # Calculate a more nuanced score with detailed breakdown
+    score_details = calculate_e2e_score(result)
+    result.update(score_details)
+    
+    # Add quality rating based on score
+    result["quality_rating"] = get_quality_rating(result["e2e_tests_score"])
     
     # Generate recommendations (only the most relevant ones)
     recommendations = []
@@ -449,32 +512,241 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
     
     result["recommendations"] = recommendations
     
-    # Calculate e2e testing score (0-100 scale) using a simplified approach
-    if result["has_e2e_tests"]:
-        # Base score from completeness
-        score = int(result["e2e_coverage_completeness"] * 100)
-    else:
-        score = 0
+    # Add actionable suggestions (for consistency with other checks)
+    suggestions = generate_suggestions(result)
+    result["suggestions"] = suggestions
     
-    # Ensure score is within 0-100 range
-    score = min(100, max(0, score))
-    
-    # Round and convert to integer if it's a whole number
-    rounded_score = round(score, 1)
-    result["e2e_tests_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
+    # Record processing time
+    result["processing_time"] = time.time() - start_time
+    result["analysis_details"]["elapsed_time_ms"] = int((time.time() - start_time) * 1000)
     
     return result
 
+def calculate_e2e_score(result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Calculate a more nuanced E2E testing score with detailed breakdown
+    
+    Args:
+        result: Analysis results
+        
+    Returns:
+        Dictionary with score and breakdown details
+    """
+    score_details = {
+        "e2e_tests_score": 0,
+        "score_breakdown": {}
+    }
+    
+    # No E2E tests means a minimal score of 1 (not 0)
+    if not result["has_e2e_tests"]:
+        score_details["e2e_tests_score"] = 1
+        score_details["score_breakdown"] = {"no_e2e_tests": 1}
+        return score_details
+    
+    # Base score components
+    base_score = 0
+    breakdown = {}
+    
+    # Points for having any E2E tests (20 points)
+    base_score += 20
+    breakdown["tests_exist"] = 20
+    
+    # Framework-specific bonuses (up to 15 points)
+    framework_scores = {
+        "cypress": 15,     # Modern, comprehensive
+        "playwright": 15,  # Modern, comprehensive
+        "selenium": 12,    # Established but older
+        "puppeteer": 10,   # Good but less comprehensive
+        "testcafe": 10,    # Good but less popular
+        None: 5            # Custom/unknown framework
+    }
+    
+    framework_score = framework_scores.get(result.get("framework_used"), 5)
+    base_score += framework_score
+    breakdown["framework"] = framework_score
+    
+    # Test quantity points (up to 15 points)
+    if result["e2e_files_count"] >= 20:
+        quantity_score = 15
+    elif result["e2e_files_count"] >= 10:
+        quantity_score = 12
+    elif result["e2e_files_count"] >= 5:
+        quantity_score = 9
+    elif result["e2e_files_count"] > 1:
+        quantity_score = 6
+    else:
+        quantity_score = 3
+    
+    base_score += quantity_score
+    breakdown["test_quantity"] = quantity_score
+    
+    # Test scenario points (up to 15 points)
+    if result["test_scenarios_count"] >= 50:
+        scenario_score = 15
+    elif result["test_scenarios_count"] >= 25:
+        scenario_score = 12
+    elif result["test_scenarios_count"] >= 10:
+        scenario_score = 9
+    elif result["test_scenarios_count"] >= 5:
+        scenario_score = 6
+    else:
+        scenario_score = 3
+        
+    base_score += scenario_score
+    breakdown["test_scenarios"] = scenario_score
+    
+    # CI integration (10 points)
+    if result["has_ci_integration"]:
+        base_score += 10
+        breakdown["ci_integration"] = 10
+    
+    # Test types coverage (up to 25 points)
+    test_types_score = 0
+    test_types_breakdown = {}
+    
+    # Browser tests (8 points)
+    if result["has_browser_tests"]:
+        test_types_score += 8
+        test_types_breakdown["browser"] = 8
+    
+    # API tests (5 points)
+    if result["has_api_tests"]:
+        test_types_score += 5
+        test_types_breakdown["api"] = 5
+    
+    # Visual testing (4 points)
+    if result["has_visual_testing"]:
+        test_types_score += 4
+        test_types_breakdown["visual"] = 4
+    
+    # Accessibility testing (3 points)
+    if result["has_accessibility_tests"]:
+        test_types_score += 3
+        test_types_breakdown["accessibility"] = 3
+    
+    # Performance testing (3 points)
+    if result["has_performance_tests"]:
+        test_types_score += 3
+        test_types_breakdown["performance"] = 3
+    
+    # Mobile testing (2 points)
+    if result["has_mobile_tests"]:
+        test_types_score += 2
+        test_types_breakdown["mobile"] = 2
+    
+    base_score += test_types_score
+    breakdown["test_types"] = {
+        "score": test_types_score,
+        "details": test_types_breakdown
+    }
+    
+    # Coverage completeness - already calculated in the main function
+    completeness_score = int(result["e2e_coverage_completeness"] * 15)  # Up to 15 points
+    base_score += completeness_score
+    breakdown["coverage_completeness"] = completeness_score
+    
+    # Ensure final score is between 1-100
+    final_score = max(1, min(100, base_score))
+    
+    score_details["e2e_tests_score"] = final_score
+    score_details["score_breakdown"] = breakdown
+    
+    return score_details
+
+def get_quality_rating(score: float) -> str:
+    """
+    Get a qualitative rating based on the score
+    
+    Args:
+        score: Numerical score (1-100)
+        
+    Returns:
+        String rating (excellent, good, fair, poor, none)
+    """
+    if score >= 80:
+        return "excellent"
+    elif score >= 60:
+        return "good"
+    elif score >= 40:
+        return "fair"
+    elif score > 1:
+        return "poor"
+    else:
+        return "none"
+
+def generate_suggestions(result: Dict[str, Any]) -> List[str]:
+    """
+    Generate actionable suggestions based on analysis results
+    
+    Args:
+        result: Analysis results dictionary
+        
+    Returns:
+        List of suggestion strings
+    """
+    suggestions = []
+    
+    if not result["has_e2e_tests"]:
+        suggestions.append("Implement end-to-end tests for critical user flows and features")
+        
+        # Framework suggestions based on repository context
+        if result.get("examples", {}).get("framework_recommendation"):
+            framework = result.get("examples", {}).get("framework_recommendation")
+            suggestions.append(f"Consider using {framework} for your E2E testing needs")
+        else:
+            suggestions.append("Consider using Cypress or Playwright for modern E2E testing")
+        
+        return suggestions
+    
+    # Improve test quantity
+    if result["e2e_files_count"] < 5:
+        suggestions.append("Increase the number of E2E test files to improve coverage")
+    
+    # Improve test scenarios
+    if result["test_scenarios_count"] < 10:
+        suggestions.append("Add more test scenarios to validate different user flows")
+    
+    # Framework recommendation
+    if not result["framework_used"]:
+        suggestions.append("Adopt a modern E2E testing framework like Cypress or Playwright")
+    
+    # CI integration
+    if not result["has_ci_integration"]:
+        suggestions.append("Set up CI pipeline integration to run E2E tests automatically")
+    
+    # Test type suggestions
+    if not result["has_browser_tests"]:
+        suggestions.append("Add browser-based E2E tests to validate UI interactions")
+    
+    if not result["has_api_tests"]:
+        suggestions.append("Include API tests in your E2E test suite")
+    
+    if not result["has_visual_testing"]:
+        suggestions.append("Incorporate visual testing to catch UI regressions")
+    
+    if not result["has_accessibility_tests"] and result["e2e_tests_score"] > 40:
+        suggestions.append("Add accessibility testing to ensure your application is usable by everyone")
+    
+    # Missing test areas
+    if result["examples"]["missing_areas"]:
+        for area in result["examples"]["missing_areas"][:3]:  # Limit to top 3
+            suggestions.append(f"Add E2E tests for {area} functionality")
+    
+    return suggestions
+
+@timeout(60)
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Run the end-to-end tests check
+    Run the end-to-end tests check with timeout protection
     
     Args:
         repository: Repository data dictionary which might include a local_path
         
     Returns:
-        Check results with score on 0-100 scale
+        Check results with score on 1-100 scale and metadata
     """
+    start_time = time.time()
+    
     try:
         # Check if we have a local path to the repository
         local_path = repository.get('local_path')
@@ -485,27 +757,49 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             repo_data = repository.get('api_data', {})
             result = check_e2e_tests(None, repo_data)
             return {
-                "status": "partial",
-                "score": 0,
+                "score": max(1, result.get("e2e_tests_score", 1)),  # Ensure minimum score of 1
                 "result": result,
-                "errors": "Local repository path not available, analysis limited to API data"
+                "suggestions": result.get("suggestions", []),
+                "processing_time": time.time() - start_time,
+                "success": True
             }
         
         # Run the check
         result = check_e2e_tests(local_path, repository.get('api_data'))
         
-        # Return the result with the score
+        # Calculate processing time
+        processing_time = time.time() - start_time
+        
+        # Return the result with the score and metadata
         return {
-            "status": "completed",
             "score": result.get("e2e_tests_score", 0),
             "result": result,
-            "errors": None
+            "suggestions": result.get("suggestions", []),
+            "processing_time": processing_time,
+            "success": True
+        }
+    except TimeoutError as e:
+        logger.error(f"E2E tests check timed out: {e}")
+        return {
+            "score": 0,
+            "result": {
+                "error": "Check timed out after 60 seconds",
+                "processing_time": time.time() - start_time
+            },
+            "suggestions": ["Optimize your repository structure to allow faster E2E test analysis"],
+            "processing_time": time.time() - start_time,
+            "success": False
         }
     except Exception as e:
-        logger.error(f"Error running e2e tests check: {str(e)}", exc_info=True)
+        logger.error(f"Error running E2E tests check: {e}", exc_info=True)
         return {
-            "status": "failed",
             "score": 0,
-            "result": {"partial_results": result if 'result' in locals() else {}},
-            "errors": f"{type(e).__name__}: {str(e)}"
+            "result": {
+                "error": str(e),
+                "processing_time": time.time() - start_time,
+                "partial_results": result if 'result' in locals() else {}
+            },
+            "suggestions": ["Fix the encountered error to properly analyze E2E tests"],
+            "processing_time": time.time() - start_time,
+            "success": False
         }

@@ -237,6 +237,16 @@ class GitHubApiHandler:
                 
                 # Non-retryable error
                 self.logger.error(f"GitHub API request failed with status {response.status_code}: {response.text}")
+                # For certain status codes, provide more specific error information
+                if response.status_code == 401:
+                    self.logger.error("Authentication failed. Check your GitHub token.")
+                elif response.status_code == 404:
+                    self.logger.error("Resource not found. Check the API endpoint URL.")
+                elif response.status_code == 403 and 'abuse' in response.text.lower():
+                    self.logger.error("GitHub abuse detection triggered. Consider reducing request frequency.")
+                elif response.status_code >= 500:
+                    self.logger.error("GitHub server error. The service might be experiencing issues.")
+                
                 return response
                 
             except (requests.ConnectionError, requests.Timeout) as e:
