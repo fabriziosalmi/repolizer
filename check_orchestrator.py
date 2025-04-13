@@ -337,79 +337,53 @@ class CheckOrchestrator:
         return categorized_results
     
     def _run_local_checks(self, repository: Dict, categories: Optional[List[str]] = None, checks: Optional[List[str]] = None) -> List[Dict]:
-        """Run checks that require local repository evaluation, with optional filtering"""
+        """Run checks that require local repository evaluation sequentially, with optional filtering"""
         results = []
-        
+        repo_name = repository.get('name', 'Unknown')
+
         # Skip local checks if no local path is available
         if not repository.get('local_path'):
-            self.logger.warning(f"Skipping local checks for {repository.get('name', 'Unknown')} - no local path available")
+            self.logger.warning(f"Skipping local checks for {repo_name} - no local path available")
             return results
-        
-        # Gather all local checks first to better distribute workload
+
+        # Gather all local checks
         local_checks = []
         for category, category_checks in self.checks.items():
             # Skip if category filtering is enabled and this category is not included
             if categories and category.lower() not in [c.lower() for c in categories]:
                 continue
-            
+
             for check in category_checks:
                 # Skip if specific check filtering is enabled and this check is not included
                 if checks and check['name'].lower() not in [c.lower() for c in checks]:
                     continue
-                
+
                 # Add if check requires local access
                 if self._check_requires_local_access(check):
                     local_checks.append((category, check))
-        
+
         if not local_checks:
-            self.logger.info(f"No local checks to run for {repository.get('name', 'Unknown')}")
+            self.logger.info(f"No local checks to run for {repo_name}")
             return results
-        
-        # Calculate optimal number of workers
-        # For local checks, having too many workers can cause disk contention
-        # so we'll use a more conservative approach than for API checks
-        optimal_workers = min(
-            self.max_parallel_analysis,
-            max(4, os.cpu_count() or 4),
-            len(local_checks)
-        )
-        
-        self.logger.info(f"Running {len(local_checks)} local checks for {repository.get('name', 'Unknown')} with {optimal_workers} workers")
-        
-        # Create a lock for thread-safe appending to results
-        results_lock = threading.Lock()
-        
-        # Create a progress counter for logging
-        completed_checks = 0
-        total_checks = len(local_checks)
-        progress_lock = threading.Lock()
-        
-        def execute_check_with_progress(repo, cat, chk):
+
+        self.logger.info(f"Running {len(local_checks)} local checks sequentially for {repo_name}")
+
+        # Run checks sequentially
+        for i, (category, check) in enumerate(local_checks):
+            check_name = check['name']
+            self.logger.info(f"Running local check {i+1}/{len(local_checks)}: {category}/{check_name}")
             try:
                 # Run the check with timeout protection
-                result = self._execute_check(repo, cat, chk)
-                
-                # Update the progress counter safely
-                nonlocal completed_checks
-                with progress_lock:
-                    completed_checks += 1
-                    progress = (completed_checks / total_checks) * 100
-                    if completed_checks % max(1, total_checks // 10) == 0 or completed_checks == total_checks:
-                        self.logger.info(f"Local checks progress: {completed_checks}/{total_checks} ({progress:.1f}%)")
-                
-                # Safely append to results
-                with results_lock:
-                    results.append(result)
-                
-                return result
+                result = self._execute_check(repository, category, check)
+                results.append(result)
             except Exception as e:
-                self.logger.error(f"Error executing check {chk['name']}: {e}", exc_info=True)
-                # Return a failure result that won't break the execution
+                self.logger.error(f"Error executing check {check_name}: {e}", exc_info=True)
+                # Append a failure result
                 failure_result = {
-                    "repo_id": repo['id'],
-                    "repo_name": repo.get('name', 'unknown'),
-                    "category": cat,
-                    "check_name": chk['name'],
+                    "repo_id": repository['id'],
+                    "repo_name": repository.get('name', 'unknown'),
+                    "category": category,
+                    "check_name": check_name,
                     "status": "failed",
                     "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
                     "validation_errors": f"Execution error: {str(e)}",
@@ -417,43 +391,11 @@ class CheckOrchestrator:
                     "score": 0,
                     "details": {}
                 }
-                with results_lock:
-                    results.append(failure_result)
-                return failure_result
-        
-        # Group checks by estimated weight (complexity)
-        # This helps distribute work more evenly
-        light_checks = [c for c in local_checks if 'documentation' in c[0] or 'community' in c[0]]
-        heavy_checks = [c for c in local_checks if c not in light_checks]
-        
-        # Interleave light and heavy checks to balance worker loads
-        # Start with heavy checks so they get processed earlier
-        balanced_checks = []
-        while heavy_checks or light_checks:
-            if heavy_checks:
-                balanced_checks.append(heavy_checks.pop(0))
-            if light_checks:
-                balanced_checks.append(light_checks.pop(0))
-        
-        with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
-            # Submit all checks to the executor
-            futures = {
-                executor.submit(execute_check_with_progress, repository, category, check): (category, check['name'])
-                for category, check in balanced_checks
-            }
-            
-            # Process results as they complete
-            for future in as_completed(futures):
-                category, check_name = futures[future]
-                try:
-                    # Result is already added to results list in execute_check_with_progress
-                    _ = future.result()
-                except Exception as e:
-                    self.logger.error(f"Unhandled exception in check {category}/{check_name}: {e}", exc_info=True)
-        
-        self.logger.info(f"Completed {len(results)}/{total_checks} local checks for {repository.get('name', 'Unknown')}")
+                results.append(failure_result)
+
+        self.logger.info(f"Completed {len(results)} local checks for {repo_name}")
         return results
-    
+
     def _check_requires_local_access(self, check: Dict) -> bool:
         """
         Determine if a check requires local repository access
@@ -462,42 +404,63 @@ class CheckOrchestrator:
         # Use the utility function for consistency
         from check_orchestrator_utils import requires_local_access
         return requires_local_access(check)
-    
+
     def _run_api_checks(self, repository: Dict, categories: Optional[List[str]] = None, checks: Optional[List[str]] = None) -> List[Dict]:
-        """Run checks that can be done via API, with optional filtering"""
+        """Run checks that can be done via API sequentially, with optional filtering"""
         results = []
-        
-        # Set max_workers for API checks
-        with ThreadPoolExecutor(max_workers=self.max_parallel_analysis) as executor:
-            futures = []
-            for category, category_checks in self.checks.items():
-                # Skip if category filtering is enabled and this category is not included
-                if categories and category.lower() not in [c.lower() for c in categories]:
+        repo_name = repository.get('name', 'Unknown')
+
+        # Gather API checks
+        api_checks = []
+        for category, category_checks in self.checks.items():
+            # Skip if category filtering is enabled and this category is not included
+            if categories and category.lower() not in [c.lower() for c in categories]:
+                continue
+
+            for check in category_checks:
+                # Skip if check filtering is enabled and this check is not included
+                check_name = check.get('name', '').lower()
+                if checks and not any(c.lower() in check_name for c in checks):
                     continue
-                    
-                for check in category_checks:
-                    # Skip if check filtering is enabled and this check is not included
-                    check_name = check.get('name', '').lower()
-                    if checks and not any(c.lower() in check_name for c in checks):
-                        continue
-                        
-                    # Only run checks that don't require local access
-                    if not requires_local_access(check):
-                        futures.append(executor.submit(
-                            self._execute_check,
-                            repository,
-                            category,
-                            check
-                        ))
-            
-            for future in futures:
-                try:
-                    results.append(future.result())
-                except Exception as e:
-                    self.logger.error(f"API check execution failed: {e}")
-        
+
+                # Only run checks that don't require local access
+                if not requires_local_access(check):
+                    api_checks.append((category, check))
+
+        if not api_checks:
+            self.logger.info(f"No API checks to run for {repo_name}")
+            return results
+
+        self.logger.info(f"Running {len(api_checks)} API checks sequentially for {repo_name}")
+
+        # Run checks sequentially
+        for i, (category, check) in enumerate(api_checks):
+            check_name = check['name']
+            self.logger.info(f"Running API check {i+1}/{len(api_checks)}: {category}/{check_name}")
+            try:
+                # Run the check with timeout protection
+                result = self._execute_check(repository, category, check)
+                results.append(result)
+            except Exception as e:
+                self.logger.error(f"API check execution failed for {check_name}: {e}", exc_info=True)
+                # Append a failure result
+                failure_result = {
+                    "repo_id": repository['id'],
+                    "repo_name": repository.get('name', 'unknown'),
+                    "category": category,
+                    "check_name": check_name,
+                    "status": "failed",
+                    "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
+                    "validation_errors": f"Execution error: {str(e)}",
+                    "duration": 0,
+                    "score": 0,
+                    "details": {}
+                }
+                results.append(failure_result)
+
+        self.logger.info(f"Completed {len(results)} API checks for {repo_name}")
         return results
-    
+
     def _execute_check(self, repository: Dict, category: str, check: Dict) -> Dict:
         """Execute a single check"""
         

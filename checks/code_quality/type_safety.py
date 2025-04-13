@@ -25,6 +25,10 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
         Dictionary with check results
     """
     start_time = time.time()
+    
+    # Overall execution timeout - halt processing if it takes too long
+    max_execution_time = 120  # 2 minutes maximum for the entire check
+    
     result = {
         "has_type_annotations": False,
         "has_type_checking": False,
@@ -141,11 +145,12 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     type_checker_found = set()
     
     # Use a set to track directories to skip for faster lookup
-    skip_dirs = {'/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/', '/vendor/', '/venv/'}
+    skip_dirs = {'/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/', '/vendor/', '/venv/',
+                '/cache/', '/.pytest_cache/', '/coverage/', '/target/', '/out/', '/.idea/', '/.vscode/'}
     
     # Maximum number of files to analyze per language to prevent performance issues
-    max_files_per_language = 200  # Reduced from 500 to improve performance
-    max_total_files = 1000  # Added overall limit
+    max_files_per_language = 150  # Reduced to improve performance
+    max_total_files = 800  # Overall file limit
     files_per_language = {}
     
     # Get all eligible files first to improve performance
@@ -153,18 +158,27 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     total_file_count = 0
     
     # Use a timeout for the file discovery to prevent hanging
-    file_discovery_timeout = 30  # 30 seconds max for file discovery
+    file_discovery_timeout = 20  # 20 seconds max for file discovery
     file_discovery_start = time.time()
+    
+    # Maximum file size to analyze (in bytes) - skip larger files
+    max_file_size = 500 * 1024  # 500KB maximum file size
     
     try:
         for root, _, files in os.walk(repo_path):
+            # Check if overall execution timeout has been reached
+            if time.time() - start_time > max_execution_time:
+                logger.warning(f"Overall execution timeout reached after {max_execution_time}s. Finalizing results.")
+                break
+                
             # Check timeout for file discovery
             if time.time() - file_discovery_start > file_discovery_timeout:
                 logger.warning(f"File discovery timeout after {file_discovery_timeout}s. Proceeding with files found so far.")
                 break
-                
-            # Skip excluded directories faster
-            if any(skip_dir in root.replace('\\', '/') for skip_dir in skip_dirs):
+            
+            # Normalize path for directory skipping check
+            normalized_root = root.replace('\\', '/')
+            if any(skip_dir in normalized_root for skip_dir in skip_dirs):
                 continue
                 
             for file in files:
@@ -248,6 +262,8 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
             # Check if we've reached the max total files limit (after inner loop)
             if total_file_count >= max_total_files:
                 break
+    except (PermissionError, OSError) as e:
+        logger.error(f"File system access error during file discovery: {e}")
     except Exception as e:
         logger.error(f"Error during file discovery: {e}")
     
@@ -266,14 +282,26 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
         # Only analyze optionally typed files
         if typing_category == "optionally_typed":
             try:
+                # Check if file still exists and is accessible before reading
+                if not os.path.exists(file_path) or not os.path.isfile(file_path):
+                    logger.debug(f"File no longer exists or is not accessible: {file_path}")
+                    return file_path, file_language, file_result
+                
                 # Use a timeout for file reading to prevent hanging
-                file_read_timeout = 2  # 2 seconds max per file read
+                file_read_timeout = 1.5  # 1.5 seconds max per file read
                 
                 # Read file with timeout
                 content = None
                 try:
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read(1024 * 1024)  # Read at most 1MB
+                        # Use a limited read to avoid memory issues with large files
+                        content = f.read(max_file_size)
+                except UnicodeDecodeError:
+                    logger.debug(f"Unicode decode error in file {file_path}")
+                    return file_path, file_language, file_result
+                except (PermissionError, OSError) as e:
+                    logger.debug(f"File system error reading {file_path}: {e}")
+                    return file_path, file_language, file_result
                 except Exception as e:
                     logger.debug(f"Error reading file {file_path}: {e}")
                     return file_path, file_language, file_result
@@ -325,15 +353,15 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
         return file_path, file_language, file_result
     
     # Use ThreadPoolExecutor for parallelism with controlled concurrency and timeouts
-    max_workers = min(10, os.cpu_count() * 2)  # Reduced worker count
+    max_workers = min(8, os.cpu_count() or 4)  # Optimized worker count
     analysis_results = []
     
     # Use a per-file timeout
-    file_analysis_timeout = 5  # 5 seconds max per file analysis
+    file_analysis_timeout = 3  # 3 seconds max per file analysis
     
     # Set overall analysis timeout
     analysis_start_time = time.time()
-    analysis_timeout = 45  # 45 seconds max for entire analysis
+    analysis_timeout = 40  # 40 seconds max for entire analysis
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all file analysis tasks
@@ -341,6 +369,12 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
         
         # Process results as they complete, with timeout
         for future in as_completed(future_to_file):
+            # Check if overall execution timeout has been reached
+            if time.time() - start_time > max_execution_time:
+                logger.warning(f"Overall execution timeout reached. Processing results collected so far.")
+                executor.shutdown(wait=False)  # Stop processing remaining files
+                break
+                
             # Check if overall analysis timeout has been reached
             if time.time() - analysis_start_time > analysis_timeout:
                 logger.warning(f"Analysis timeout after {analysis_timeout}s. Processing results collected so far.")
@@ -354,7 +388,8 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
                 file_data = future_to_file[future]
                 logger.warning(f"Timeout analyzing file: {file_data[0]}")
             except Exception as e:
-                logger.error(f"Error in file analysis thread: {e}")
+                file_data = future_to_file[future]
+                logger.error(f"Error analyzing file {file_data[0]}: {e}")
     
     # Process analysis results
     all_issues = []
@@ -376,12 +411,17 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     result["type_issues"] = all_issues[:10]
     
     # Check for type checker config files with a timeout
-    config_check_timeout = 5  # 5 seconds max for config file checks
+    config_check_timeout = 3  # 3 seconds max for config file checks
     config_check_start = time.time()
     
     try:
         for lang, patterns in type_check_config_patterns.items():
-            # Check timeout
+            # Check if overall execution timeout has been reached
+            if time.time() - start_time > max_execution_time:
+                logger.warning("Overall execution timeout reached during config checks.")
+                break
+                
+            # Check timeout for config file checks
             if time.time() - config_check_start > config_check_timeout:
                 logger.warning(f"Config file check timeout after {config_check_timeout}s.")
                 break
@@ -427,6 +467,8 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
                                 break
                     except (FileNotFoundError, PermissionError) as e:
                         logger.debug(f"Could not access directory {config_path}: {e}")
+                    except Exception as e:
+                        logger.debug(f"Error listing files in {config_path}: {e}")
     except Exception as e:
         logger.error(f"Error during config file checks: {e}")
 
@@ -501,13 +543,21 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     execution_time = time.time() - start_time
     logger.info(f"Type safety check completed in {execution_time:.2f} seconds, analyzed {files_checked} files")
     
+    # If execution timeout was reached, add a note to results
+    if execution_time >= max_execution_time:
+        result["execution_note"] = "Check was stopped due to timeout. Results may be incomplete."
+    
     return result
 
 def glob_match(pattern: str, filename: str) -> bool:
     """Simple glob pattern matching for configuration files"""
-    import re
-    pattern_regex = pattern.replace('.', r'\.').replace('*', r'.*')
-    return bool(re.match(f"^{pattern_regex}$", filename))
+    try:
+        import re
+        pattern_regex = pattern.replace('.', r'\.').replace('*', r'.*')
+        return bool(re.match(f"^{pattern_regex}$", filename))
+    except Exception as e:
+        logger.debug(f"Error in glob matching: {e}")
+        return False
 
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
