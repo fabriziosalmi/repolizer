@@ -34,29 +34,35 @@ def timeout(seconds=60):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # Skip using SIGALRM on Windows as it's not supported
-            if platform.system() == 'Windows':
-                # Simple timeout approach for Windows
+            # Skip using SIGALRM on non-Unix platforms or if signal module is problematic
+            if platform.system() == 'Windows' or not hasattr(signal, 'SIGALRM'):
+                # Simple timeout approach for platforms without proper signal support
                 start_time = time.time()
                 result = func(*args, **kwargs)
                 if time.time() - start_time > seconds:
-                    logger.warning(f"Function {func.__name__} took longer than {seconds} seconds, but timeout couldn't be enforced on Windows")
+                    logger.warning(f"Function {func.__name__} took longer than {seconds} seconds, but timeout couldn't be enforced")
                 return result
             
-            def handle_timeout(signum, frame):
-                raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
-            
-            # Set the timeout handler
-            original_handler = signal.signal(signal.SIGALRM, handle_timeout)
-            signal.alarm(seconds)
-            
+            # Use a try-except to gracefully handle signal issues
             try:
-                result = func(*args, **kwargs)
-            finally:
-                # Reset the alarm and restore the original handler
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, original_handler)
-            return result
+                def handle_timeout(signum, frame):
+                    raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
+                
+                # Set the timeout handler
+                original_handler = signal.signal(signal.SIGALRM, handle_timeout)
+                signal.alarm(seconds)
+                
+                try:
+                    result = func(*args, **kwargs)
+                finally:
+                    # Reset the alarm and restore the original handler
+                    signal.alarm(0)
+                    signal.signal(signal.SIGALRM, original_handler)
+                return result
+            except (ValueError, TypeError, AttributeError) as e:
+                # Signal handling failed, fall back to no timeout
+                logger.warning(f"Timeout mechanism failed: {e}. Running without timeout.")
+                return func(*args, **kwargs)
         return wrapper
     return decorator
 
@@ -820,8 +826,9 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Check if we have a local path to the repository
         local_path = repository.get('local_path')
         
-        # For Windows, use a simple timeout approach
-        if platform.system() == 'Windows':
+        # Use a simpler approach without depending on signal module
+        # This avoids issues with SIGALRM on certain platforms
+        try:
             # Prioritize local analysis but don't fail if not available
             if not local_path or not os.path.isdir(local_path):
                 logger.warning("No local repository path available, using API data if possible")
@@ -835,122 +842,44 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
                     "success": True
                 }
             
-            # Run the check with a time limit
-            timeout_seconds = 55  # Leave some margin
-            result = None
+            # Run the check with time tracking
+            check_start = time.time()
+            result = check_e2e_tests(local_path, repository.get('api_data'))
+            check_duration = time.time() - check_start
             
-            try:
-                # Set a simple timer
-                check_start = time.time()
-                result = check_e2e_tests(local_path, repository.get('api_data'))
-                check_duration = time.time() - check_start
-                
-                if check_duration > timeout_seconds:
-                    logger.warning(f"E2E tests check took {check_duration}s which exceeds recommended limit")
-            except Exception as e:
-                logger.error(f"Error running E2E tests check: {e}", exc_info=True)
-                # Return minimal result with error
-                return {
-                    "score": 1,  # Minimum score
-                    "result": {
-                        "error": str(e),
-                        "processing_time": time.time() - start_time
-                    },
-                    "suggestions": ["Fix encountered errors to properly analyze E2E tests"],
-                    "processing_time": time.time() - start_time,
-                    "success": False
-                }
+            # Log warning if it took too long
+            if check_duration > 55:  # Leave buffer from 60s timeout
+                logger.warning(f"E2E tests check took {check_duration:.2f}s which is close to timeout limit")
             
             # Calculate processing time
             processing_time = time.time() - start_time
             
-            if result:
-                # Return the result with the score and metadata
-                return {
-                    "score": result.get("e2e_tests_score", 1),
-                    "result": result,
-                    "suggestions": result.get("suggestions", []),
-                    "processing_time": processing_time,
-                    "success": True
-                }
-            else:
-                # This should not happen normally, but just in case
-                return {
-                    "score": 1,
-                    "result": {
-                        "error": "Check produced no results",
-                        "processing_time": processing_time
-                    },
-                    "suggestions": ["Try running the check again or fix repository access issues"],
-                    "processing_time": processing_time,
-                    "success": False
-                }
-        else:
-            # For Unix-like systems, use the timeout decorator
-            return timeout_protected_check(repository, start_time)
-        
+            # Return the result with the score and metadata
+            return {
+                "score": max(1, result.get("e2e_tests_score", 1)),
+                "result": result,
+                "suggestions": result.get("suggestions", []),
+                "processing_time": processing_time,
+                "success": True
+            }
+        except Exception as e:
+            logger.error(f"Error running E2E tests check: {e}", exc_info=True)
+            return {
+                "score": 1,  # Minimum score
+                "result": {
+                    "error": str(e),
+                    "processing_time": time.time() - start_time
+                },
+                "suggestions": ["Fix encountered errors to properly analyze E2E tests"],
+                "processing_time": time.time() - start_time,
+                "success": False
+            }
     except Exception as e:
         logger.error(f"Unexpected error in run_check: {e}", exc_info=True)
         return {
             "score": 1,  # Minimum score instead of 0
             "result": {
                 "error": f"Unexpected error: {str(e)}",
-                "processing_time": time.time() - start_time
-            },
-            "suggestions": ["Fix encountered errors to properly analyze E2E tests"],
-            "processing_time": time.time() - start_time,
-            "success": False
-        }
-
-@timeout(60)
-def timeout_protected_check(repository: Dict[str, Any], start_time: float) -> Dict[str, Any]:
-    """
-    Run the check with timeout protection (for Unix-like systems)
-    
-    Args:
-        repository: Repository data dictionary
-        start_time: Time when the check started
-        
-    Returns:
-        Check results dictionary
-    """
-    try:
-        # Check if we have a local path to the repository
-        local_path = repository.get('local_path')
-        
-        # Prioritize local analysis but don't fail if not available
-        if not local_path or not os.path.isdir(local_path):
-            logger.warning("No local repository path available, using API data if possible")
-            repo_data = repository.get('api_data', {})
-            result = check_e2e_tests(None, repo_data)
-            return {
-                "score": max(1, result.get("e2e_tests_score", 1)),  # Ensure minimum score of 1
-                "result": result,
-                "suggestions": result.get("suggestions", []),
-                "processing_time": time.time() - start_time,
-                "success": True
-            }
-        
-        # Run the check
-        result = check_e2e_tests(local_path, repository.get('api_data'))
-        
-        # Calculate processing time
-        processing_time = time.time() - start_time
-        
-        # Return the result with the score and metadata
-        return {
-            "score": result.get("e2e_tests_score", 1),
-            "result": result,
-            "suggestions": result.get("suggestions", []),
-            "processing_time": processing_time,
-            "success": True
-        }
-    except Exception as e:
-        logger.error(f"Error in timeout_protected_check: {e}", exc_info=True)
-        return {
-            "score": 1,
-            "result": {
-                "error": str(e),
                 "processing_time": time.time() - start_time
             },
             "suggestions": ["Fix encountered errors to properly analyze E2E tests"],

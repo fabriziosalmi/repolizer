@@ -360,6 +360,23 @@ def get_screen_reader_recommendation(result: Dict[str, Any]) -> str:
     
     return " ".join(recommendations)
 
+def normalize_score(score: float) -> int:
+    """
+    Normalize score to be between 1-100, with 0 reserved for errors/skipped checks.
+    
+    Args:
+        score: Raw score value
+        
+    Returns:
+        Normalized score between 1-100
+    """
+    if score <= 0:
+        return 1  # Minimum score for completed checks
+    elif score > 100:
+        return 100  # Maximum score
+    else:
+        return int(round(score))
+
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
     Run the screen reader compatibility check
@@ -400,12 +417,17 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         
         # Calculate execution time
         execution_time = time.time() - start_time
-        logger.info(f"Screen reader compatibility check completed in {execution_time:.2f}s with score: {result.get('screen_reader_score', 0)}")
+        
+        # Get score, ensuring a minimum of 1 for completed checks
+        score = result.get("screen_reader_score", 0)
+        final_score = normalize_score(score)
+        
+        logger.info(f"Screen reader compatibility check completed in {execution_time:.2f}s with score: {final_score}")
         
         # Return the result with enhanced metadata
         return {
             "status": "completed",
-            "score": result.get("screen_reader_score", 0),
+            "score": final_score,
             "result": result,
             "metadata": {
                 "files_checked": result.get("files_checked", 0),
