@@ -79,69 +79,66 @@
     </header>
 
     <main class="container mx-auto p-4">
-        <!-- Add back search/sort controls here, below the header -->
-        <div class="mb-6 bg-white rounded-lg shadow-md p-4 flex flex-wrap items-center gap-4"> <!-- Adjusted flex classes -->
-            <div class="relative flex-grow md:flex-grow-0"> <!-- Adjusted flex-grow -->
-                <input id="search-input" type="text" placeholder="Search repositories..."
-                       class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+        <!-- Updated search/sort/filter controls - all in one row -->
+        <div class="mb-6 bg-white rounded-lg shadow-md p-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Search input - adaptive width -->
+                <div class="relative w-full sm:w-64 lg:w-72">
+                    <input id="search-input" type="text" placeholder="Search repositories..."
+                           class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                    <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                </div>
+                
+                <!-- Sort dropdown -->
+                <select id="sort-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
+                    <option value="overall_score_desc">Sort by Overall Score (High to Low)</option>
+                    <option value="overall_score_asc">Sort by Overall Score (Low to High)</option>
+                    <option value="stars">Sort by Stars</option>
+                    <option value="forks">Sort by Forks</option>
+                    <option value="updated">Sort by Updated</option>
+                    <option value="name">Sort by Name</option>
+                </select>
+
+                <!-- Filters now on same line -->
+                <div class="flex items-center flex-wrap gap-2">
+                    <span class="text-xs text-gray-600 font-medium hidden sm:inline">Filters:</span>
+                    
+                    <!-- Language Filter Dropdown -->
+                    <select id="language-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
+                        <option value="all">All Languages</option>
+                        <option value="Python">Python</option>
+                        <option value="JavaScript">JavaScript</option>
+                        <option value="Java">Java</option>
+                        <option value="Go">Go</option>
+                        <option value="TypeScript">TypeScript</option>
+                    </select>
+
+                    <!-- Category Filter Dropdown -->
+                    <select id="category-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
+                        <option value="all">All Categories</option>
+                        <option value="documentation">Documentation</option>
+                        <option value="security">Security</option>
+                        <option value="code_quality">Code Quality</option>
+                        <option value="performance">Performance</option>
+                        <option value="accessibility">Accessibility</option>
+                        <option value="ci_cd">CI/CD</option>
+                        <option value="maintainability">Maintainability</option>
+                        <option value="testing">Testing</option>
+                        <option value="licensing">Licensing</option>
+                        <option value="community">Community</option>
+                    </select>
+
+                    <!-- Min Score Filter Dropdown -->
+                    <select id="score-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
+                        <option value="0">Min Score: 0+</option>
+                        <option value="25">Min Score: 25+</option>
+                        <option value="50">Min Score: 50+</option>
+                        <option value="75">Min Score: 75+</option>
+                        <option value="90">Min Score: 90+</option>
+                    </select>
+                </div>
             </div>
-            <select id="sort-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-auto flex-grow md:flex-grow-0"> <!-- Adjusted flex-grow -->
-                <option value="overall_score_desc">Sort by Overall Score (High to Low)</option>
-                <option value="overall_score_asc">Sort by Overall Score (Low to High)</option>
-                <option value="stars">Sort by Stars</option>
-                <option value="forks">Sort by Forks</option>
-                <option value="updated">Sort by Updated</option>
-                <option value="name">Sort by Name</option>
-            </select>
-
-            <!-- Moved Filters Start -->
-            <div class="w-full border-t border-gray-200 pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-4 flex flex-wrap gap-4 items-center"> <!-- Adjusted gap -->
-                <span class="text-sm text-gray-600 font-medium">Filters:</span>
-                <!-- Language Filter Dropdown -->
-                <select id="language-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto flex-grow sm:flex-grow-0">
-                    <option value="all">All Languages</option>
-                    <option value="Python">Python</option>
-                    <option value="JavaScript">JavaScript</option>
-                    <option value="Java">Java</option>
-                    <option value="Go">Go</option>
-                    <option value="TypeScript">TypeScript</option>
-                    <!-- Add more languages if needed -->
-                </select>
-
-                <!-- Category Filter Dropdown -->
-                <select id="category-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto flex-grow sm:flex-grow-0">
-                    <option value="all">All Categories</option>
-                    <option value="documentation">Documentation</option>
-                    <option value="security">Security</option>
-                    <option value="code_quality">Code Quality</option>
-                    <option value="performance">Performance</option>
-                    <option value="accessibility">Accessibility</option>
-                    <option value="ci_cd">CI/CD</option>
-                    <option value="maintainability">Maintainability</option>
-                    <option value="testing">Testing</option>
-                    <option value="licensing">Licensing</option>
-                    <option value="community">Community</option>
-                </select>
-
-                <!-- Min Score Filter Dropdown -->
-                <select id="score-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto flex-grow sm:flex-grow-0">
-                    <option value="0">Min Score: 0+</option>
-                    <option value="25">Min Score: 25+</option>
-                    <option value="50">Min Score: 50+</option>
-                    <option value="75">Min Score: 75+</option>
-                    <option value="90">Min Score: 90+</option>
-                </select>
-
-                <!-- Removed old filter buttons and slider -->
-                <!-- <div class="flex gap-2 flex-wrap"> ... </div> -->
-                <!-- <div class="flex gap-2 flex-wrap"> ... </div> -->
-                <!-- <div class="flex items-center gap-2 flex-wrap"> ... </div> -->
-            </div>
-            <!-- Moved Filters End -->
         </div>
-
-        <!-- Removed the old filter container -->
 
         <div class="mb-6 flex justify-between items-center"> <!-- Simple container for title and count -->
             <h2 class="text-xl font-bold text-gray-800">Repository Health Analysis</h2>
@@ -227,10 +224,17 @@
 
             // Load repositories from the JSONL file
             try {
+                // First try results.jsonl (analyzed repos)
                 const response = await fetch('results.jsonl');
                 const text = await response.text();
                 
+                if (!text.trim()) {
+                    throw new Error('No data in results.jsonl');
+                }
+                
                 // Parse JSONL (one JSON object per line)
+                const processedRepoIds = new Set(); // Track processed repos to avoid duplicates
+                
                 allRepos = text.split('\n')
                     .filter(line => line.trim() !== '')
                     .map(line => {
@@ -241,7 +245,42 @@
                             return null;
                         }
                     })
-                    .filter(repo => repo !== null);
+                    .filter(repo => repo !== null && repo.repository)  // Ensure repo object has repository data
+                    .filter(repo => {
+                        // Only include each repository once (take latest analysis)
+                        const repoId = repo.repository.id;
+                        if (processedRepoIds.has(repoId)) {
+                            return false;
+                        }
+                        processedRepoIds.add(repoId);
+                        return true;
+                    });
+                
+                // If no results found or empty, try repositories.jsonl
+                if (allRepos.length === 0) {
+                    const fallbackResponse = await fetch('repositories.jsonl');
+                    const fallbackText = await fallbackResponse.text();
+                    
+                    if (fallbackText.trim()) {
+                        allRepos = fallbackText.split('\n')
+                            .filter(line => line.trim() !== '')
+                            .map(line => {
+                                try {
+                                    // Convert repo data to match results.jsonl format
+                                    const rawRepo = JSON.parse(line);
+                                    return {
+                                        repository: rawRepo,
+                                        overall_score: 0,
+                                        timestamp: new Date().toISOString()
+                                    };
+                                } catch (e) {
+                                    console.error('Error parsing fallback line:', line, e);
+                                    return null;
+                                }
+                            })
+                            .filter(repo => repo !== null);
+                    }
+                }
                 
                 // Process each repo to calculate category averages
                 allRepos.forEach(repo => {
@@ -308,12 +347,12 @@
                 filterRepos();
             });
 
-            // Function to filter repositories
+            // Function to filter repositories - add better logging for debugging
             function filterRepos() {
                 const searchTerm = searchInput.value.toLowerCase();
-
-                // Values are now read directly from module-level variables updated by event listeners
-                // currentLanguage, currentCategory, minScoreFilter
+                
+                console.log(`Filtering repos with: Search="${searchTerm}", Language=${currentLanguage}, Category=${currentCategory}, MinScore=${minScoreFilter}`);
+                console.log(`Total repos before filtering: ${allRepos.length}`);
 
                 filteredRepos = allRepos.filter(repo => {
                     // Filter by search term (repo name or description)
@@ -330,13 +369,15 @@
                     let categoryMatch = true;
                     if (currentCategory !== 'all') {
                         // Check if the selected category exists and has a score > 0
-                        // (You might adjust this logic, e.g., filter based on a minimum score for the category)
                         categoryMatch = (repo.category_scores?.[currentCategory] || 0) > 0;
                     }
 
-                    return nameMatch && languageMatch && scoreMatch && categoryMatch;
+                    const matches = nameMatch && languageMatch && scoreMatch && categoryMatch;
+                    return matches;
                 });
 
+                console.log(`Total repos after filtering: ${filteredRepos.length}`);
+                
                 // Update count and display repositories
                 repoCount.textContent = filteredRepos.length;
                 sortRepos(sortSelect.value); // Re-sort after filtering

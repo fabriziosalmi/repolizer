@@ -811,8 +811,6 @@ def run_analyzer(job_id, config, job_queue):
                 force=force,
                 categories=categories
             )
-            # Note: process_repository_from_jsonl loads the repo object itself
-            # We might want to update the job's results['repository'] later if needed
 
         else: # Analyzing a new repository via URL
             # Extract repository URL

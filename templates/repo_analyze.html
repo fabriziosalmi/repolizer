@@ -104,6 +104,10 @@
                             <input type="radio" name="repo-source" value="new" class="h-4 w-4 text-blue-600">
                             <span class="text-gray-700">Analyze a new repository</span>
                         </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="repo-source" value="batch" class="h-4 w-4 text-blue-600">
+                            <span class="text-gray-700">Batch analyze all repositories</span>
+                        </label>
                     </div>
                     
                     <!-- Existing Repository Selection -->
@@ -128,6 +132,26 @@
                             <input type="password" id="github-token" name="github-token" placeholder="Enter GitHub personal access token" 
                                   class="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
                             <p class="text-xs text-gray-500 mt-1">For private repositories or to avoid API rate limits. Never stored on server.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Batch Analysis Options -->
+                    <div id="batch-repo-form" class="hidden">
+                        <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <h4 class="text-sm font-medium text-yellow-800 mb-2">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>Batch Analysis
+                            </h4>
+                            <p class="text-xs text-yellow-700 mb-2">
+                                This will analyze all repositories in your repositories.jsonl file. This process may take a long time depending on the number of repositories.
+                            </p>
+                            <div class="flex items-center mb-2">
+                                <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                                    <input type="checkbox" name="skip-analyzed" id="skip-analyzed" checked 
+                                          class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
+                                    <label for="skip-analyzed" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                </div>
+                                <label for="skip-analyzed" class="text-sm text-gray-700">Skip already analyzed repositories</label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -203,9 +227,23 @@
                 <i class="fas fa-sync-alt fa-spin mr-2"></i>Analysis in Progress
             </h2>
             
+            <!-- Batch Progress (only shown during batch processing) -->
+            <div id="batch-progress-container" class="mb-6 hidden">
+                <div class="flex justify-between mb-1">
+                    <span class="text-sm font-medium text-gray-700">Batch Progress</span>
+                    <span id="batch-progress-percentage" class="text-sm font-medium text-blue-600">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="batch-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                    <span id="batch-repo-count">Processing 0 of 0 repositories</span>
+                </div>
+            </div>
+            
             <div class="mb-6">
                 <div class="flex justify-between mb-1">
-                    <span class="text-sm font-medium text-gray-700">Overall Progress</span>
+                    <span class="text-sm font-medium text-gray-700" id="current-progress-label">Overall Progress</span>
                     <span id="progress-percentage" class="text-sm font-medium text-blue-600">0%</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5">
@@ -314,6 +352,7 @@
             const repoSourceRadios = document.querySelectorAll('input[name="repo-source"]');
             const existingRepoForm = document.getElementById('existing-repo-form');
             const newRepoForm = document.getElementById('new-repo-form');
+            const batchRepoForm = document.getElementById('batch-repo-form');
             const existingRepoSelect = document.getElementById('existing-repo');
             
             // Progress elements
@@ -337,6 +376,17 @@
             let analysisRunning = false;
             let analysisJobId = null;
             let eventSource = null;
+            let batchMode = false;
+            let currentBatchRepo = null;
+            let batchRepos = [];
+            let batchIndex = 0;
+            
+            // Additional elements for batch processing
+            const batchProgressContainer = document.getElementById('batch-progress-container');
+            const batchProgressBar = document.getElementById('batch-progress-bar');
+            const batchProgressPercentage = document.getElementById('batch-progress-percentage');
+            const batchRepoCount = document.getElementById('batch-repo-count');
+            const currentProgressLabel = document.getElementById('current-progress-label');
             
             // Load repositories from results.jsonl for the select dropdown
             loadRepositories();
@@ -347,9 +397,15 @@
                     if (radio.value === 'existing') {
                         existingRepoForm.classList.remove('hidden');
                         newRepoForm.classList.add('hidden');
-                    } else {
+                        batchRepoForm.classList.add('hidden');
+                    } else if (radio.value === 'new') {
                         existingRepoForm.classList.add('hidden');
                         newRepoForm.classList.remove('hidden');
+                        batchRepoForm.classList.add('hidden');
+                    } else if (radio.value === 'batch') {
+                        existingRepoForm.classList.add('hidden');
+                        newRepoForm.classList.add('hidden');
+                        batchRepoForm.classList.remove('hidden');
                     }
                 });
             });
@@ -357,13 +413,27 @@
             // Start the analysis
             analyzeForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                startAnalysis();
+                
+                const sourceType = document.querySelector('input[name="repo-source"]:checked').value;
+                if (sourceType === 'batch') {
+                    startBatchAnalysis();
+                } else {
+                    startAnalysis();
+                }
             });
             
             // Handle stop button
             stopAnalyzeBtn.addEventListener('click', () => {
                 if (confirm('Are you sure you want to stop the analysis? All progress will be lost.')) {
                     stopAnalysis();
+                    
+                    // If in batch mode, also reset batch state
+                    if (batchMode) {
+                        batchMode = false;
+                        batchRepos = [];
+                        batchIndex = 0;
+                        currentBatchRepo = null;
+                    }
                 }
             });
             
@@ -522,8 +592,203 @@
                 });
             }
             
+            // Function to start batch analysis of all repositories
+            function startBatchAnalysis() {
+                // Set batch mode flag
+                batchMode = true;
+                batchIndex = 0;
+                
+                // Get form data for global batch settings
+                const formData = new FormData(analyzeForm);
+                const skipAnalyzed = formData.get('skip-analyzed') === 'on';
+                
+                // Fetch repositories from repositories.jsonl
+                fetch('/repositories.jsonl')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch repositories.jsonl file');
+                        }
+                        return response.text();
+                    })
+                    .then(text => {
+                        const repos = text.split('\n')
+                            .filter(line => line.trim())
+                            .map(line => {
+                                try {
+                                    return JSON.parse(line);
+                                } catch (e) {
+                                    console.error('Error parsing line:', e);
+                                    return null;
+                                }
+                            })
+                            .filter(repo => repo !== null);
+                        
+                        // Store repositories for batch processing
+                        batchRepos = repos;
+                        
+                        // Filter repositories if skip-analyzed is checked
+                        if (skipAnalyzed) {
+                            // Fetch analyzed repositories to determine which ones to skip
+                            fetch('/results.jsonl')
+                                .then(response => {
+                                    if (!response.ok) {
+                                        // If no results file exists, process all repositories
+                                        return { text: () => Promise.resolve('') };
+                                    }
+                                    return response.text();
+                                })
+                                .then(resultsText => {
+                                    const analyzedRepoIds = new Set();
+                                    
+                                    if (resultsText.trim()) {
+                                        // Extract repository IDs from results
+                                        resultsText.split('\n')
+                                            .filter(line => line.trim())
+                                            .forEach(line => {
+                                                try {
+                                                    const result = JSON.parse(line);
+                                                    if (result.repository && result.repository.id) {
+                                                        analyzedRepoIds.add(String(result.repository.id));
+                                                    }
+                                                } catch (e) {
+                                                    console.error('Error parsing results line:', e);
+                                                }
+                                            });
+                                    }
+                                    
+                                    // Filter out already analyzed repositories
+                                    if (analyzedRepoIds.size > 0) {
+                                        const filteredRepos = batchRepos.filter(repo => !analyzedRepoIds.has(String(repo.id)));
+                                        addLogMessage(`Filtered out ${batchRepos.length - filteredRepos.length} already analyzed repositories`);
+                                        batchRepos = filteredRepos;
+                                    }
+                                    
+                                    // Start processing
+                                    startBatchProcessing();
+                                })
+                                .catch(error => {
+                                    addLogMessage(`Error checking analyzed repositories: ${error}. Processing all repositories.`);
+                                    startBatchProcessing();
+                                });
+                        } else {
+                            // Process all repositories
+                            startBatchProcessing();
+                        }
+                    })
+                    .catch(error => {
+                        addLogMessage(`Failed to fetch repositories: ${error}`);
+                        resetUI();
+                        alert('Error loading repositories.jsonl file: ' + error.message);
+                    });
+            }
+            
+            // Helper function to start the batch processing
+            function startBatchProcessing() {
+                // Check if we have any repositories to process
+                if (batchRepos.length === 0) {
+                    alert('No repositories to analyze. Please add repositories first.');
+                    resetUI();
+                    return;
+                }
+                
+                // Show progress UI
+                analyzeForm.parentElement.classList.add('hidden');
+                analysisProgress.classList.remove('hidden');
+                analysisRunning = true;
+                
+                // Show batch progress container
+                batchProgressContainer.classList.remove('hidden');
+                
+                // Update batch progress UI
+                batchRepoCount.textContent = `Processing 0 of ${batchRepos.length} repositories`;
+                
+                // Update current progress label to indicate repository-specific progress
+                currentProgressLabel.textContent = "Current Repository Progress";
+                
+                // Clear log
+                logContainer.innerHTML = '';
+                
+                // Log batch start
+                addLogMessage(`Starting batch analysis of ${batchRepos.length} repositories...`);
+                
+                // Start the first repository in the batch
+                processBatchRepository(batchRepos, 0);
+            }
+            
+            // Function to process the next repository in the batch
+            function processBatchRepository(repos, index) {
+                // Check if we've reached the end of the batch
+                if (index >= repos.length) {
+                    addLogMessage('Batch analysis completed! Redirecting to repository viewer...');
+                    batchMode = false;
+                    
+                    // Wait a moment before redirecting to allow user to see completion message
+                    setTimeout(() => {
+                        window.location.href = '/';  // Redirect to home page
+                    }, 3000);
+                    
+                    return;
+                }
+                
+                const repo = repos[index];
+                currentBatchRepo = repo;
+                
+                // Update batch progress
+                const batchProgress = Math.round((index / repos.length) * 100);
+                batchProgressBar.style.width = `${batchProgress}%`;
+                batchProgressPercentage.textContent = `${batchProgress}%`;
+                batchRepoCount.textContent = `Processing ${index + 1} of ${repos.length} repositories`;
+                
+                // Reset individual progress bar
+                progressBar.style.width = '0%';
+                progressPercentage.textContent = '0%';
+                
+                // Get form data for this specific analysis
+                const formData = new FormData(analyzeForm);
+                const analysisConfig = {
+                    source: 'existing',
+                    repoId: String(repo.id),
+                    categories: getSelectedCategories(),
+                    analysisDepth: formData.get('analysis-depth'),
+                    saveResults: formData.get('save-results') === 'on'
+                };
+                
+                addLogMessage(`Processing repository ${index + 1}/${repos.length}: ${repo.full_name || repo.name || repo.id}`);
+                
+                // Send request to start analysis
+                fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(analysisConfig)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        analysisJobId = data.job_id;
+                        addLogMessage(`Analysis started with job ID: ${analysisJobId}`);
+                        // Start listening for events (will move to next repo on completion)
+                        connectEventSource(repos, index);
+                    } else {
+                        addLogMessage(`Error: ${data.message}`);
+                        // Continue with next repository despite error
+                        setTimeout(() => {
+                            processBatchRepository(repos, index + 1);
+                        }, 1000);
+                    }
+                })
+                .catch(error => {
+                    addLogMessage(`Failed to start analysis: ${error}`);
+                    // Continue with next repository despite error
+                    setTimeout(() => {
+                        processBatchRepository(repos, index + 1);
+                    }, 1000);
+                });
+            }
+            
             // Function to connect to the event source
-            function connectEventSource() {
+            function connectEventSource(batchRepos = null, batchIndex = 0) {
                 // Close existing event source if any
                 if (eventSource) {
                     eventSource.close();
@@ -575,10 +840,25 @@
                         eventSource.close();
                         eventSource = null;
                         
-                        // Show results
-                        showResults(data.results);
+                        // Check if we're in batch mode
+                        if (batchMode && batchRepos) {
+                            // Add a delay before processing the next repository
+                            setTimeout(() => {
+                                processBatchRepository(batchRepos, batchIndex + 1);
+                            }, 1000);
+                        } else {
+                            // Show results for single repository analysis
+                            showResults(data.results);
+                        }
                     } catch (error) {
                         console.error('Error parsing completion message:', error);
+                        
+                        // If in batch mode, try to continue with next repository
+                        if (batchMode && batchRepos) {
+                            setTimeout(() => {
+                                processBatchRepository(batchRepos, batchIndex + 1);
+                            }, 1000);
+                        }
                     }
                 });
                 
@@ -593,11 +873,27 @@
                         }
                         
                         addLogMessage(`Error: ${errorMessage}`);
-                        stopAnalysis(true);
+                        
+                        // If in batch mode, try to continue with next repository
+                        if (batchMode && batchRepos) {
+                            setTimeout(() => {
+                                processBatchRepository(batchRepos, batchIndex + 1);
+                            }, 1000);
+                        } else {
+                            stopAnalysis(true);
+                        }
                     } catch (error) {
                         console.error('Error parsing error message:', error);
                         addLogMessage('An unknown error occurred');
-                        stopAnalysis(true);
+                        
+                        // If in batch mode, try to continue with next repository
+                        if (batchMode && batchRepos) {
+                            setTimeout(() => {
+                                processBatchRepository(batchRepos, batchIndex + 1);
+                            }, 1000);
+                        } else {
+                            stopAnalysis(true);
+                        }
                     }
                 });
                 
@@ -612,7 +908,15 @@
                             eventSource.close();
                             eventSource = null;
                         }
-                        stopAnalysis(true);
+                        
+                        // If in batch mode, try to continue with next repository
+                        if (batchMode && batchRepos) {
+                            setTimeout(() => {
+                                processBatchRepository(batchRepos, batchIndex + 1);
+                            }, 1000);
+                        } else {
+                            stopAnalysis(true);
+                        }
                     }
                 };
             }
@@ -644,8 +948,8 @@
                     eventSource = null;
                 }
                 
-                // If error, show form again
-                if (isError) {
+                // If error or in batch mode, show form again
+                if (isError || batchMode) {
                     resetUI();
                 }
             }
@@ -682,7 +986,12 @@
                 logContainer.innerHTML = '';
                 progressBar.style.width = '0%';
                 progressPercentage.textContent = '0%';
+                batchProgressBar.style.width = '0%';
+                batchProgressPercentage.textContent = '0%';
+                batchProgressContainer.classList.add('hidden');
+                currentProgressLabel.textContent = "Overall Progress";
                 analysisRunning = false;
+                batchMode = false;
             }
             
             // Function to add a log message
