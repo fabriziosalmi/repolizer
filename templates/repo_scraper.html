@@ -369,46 +369,58 @@
             <h2 class="text-xl font-bold text-gray-800 mb-4">
                 <i class="fas fa-check-circle text-green-500 mr-2"></i>Scraper Results
             </h2>
-            
+
             <div class="bg-gray-100 rounded-lg p-4 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Grid columns already 4 from previous change -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Add New Card: Total Repositories Saved -->
                     <div class="bg-white p-3 rounded-lg shadow-sm">
-                        <div class="text-sm font-medium text-gray-500">Repositories Scraped</div>
-                        <div class="text-2xl font-bold text-blue-600" id="repos-count">0</div>
+                        <h4 class="text-sm font-medium text-gray-500 mb-1">Repositories Saved</h4>
+                        <p id="total-saved-repos-count" class="text-2xl font-bold text-gray-800">0</p>
+                        <p class="text-xs text-gray-400">Total in output file</p>
                     </div>
-                    
+
+                    <!-- Renamed previous 'Repositories Saved' to 'Repositories Found' -->
                     <div class="bg-white p-3 rounded-lg shadow-sm">
-                        <div class="text-sm font-medium text-gray-500">Pages Processed</div>
-                        <div class="text-2xl font-bold text-green-600" id="pages-count">0</div>
+                        <h4 class="text-sm font-medium text-gray-500 mb-1">Repositories Found</h4>
+                        <p id="repos-count" class="text-2xl font-bold text-blue-600">0</p> <!-- Changed color for distinction -->
+                        <p class="text-xs text-gray-400">This scrape session</p>
                     </div>
-                    
+
                     <div class="bg-white p-3 rounded-lg shadow-sm">
-                        <div class="text-sm font-medium text-gray-500">Time Elapsed</div>
-                        <div class="text-2xl font-bold text-purple-600" id="time-elapsed">0s</div>
+                        <h4 class="text-sm font-medium text-gray-500 mb-1">Pages Fetched</h4>
+                        <p id="pages-count" class="text-2xl font-bold text-green-600">0</p> <!-- Changed color -->
+                        <p class="text-xs text-gray-400">API result pages</p>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <h4 class="text-sm font-medium text-gray-500 mb-1">Time Elapsed</h4>
+                        <p id="time-elapsed" class="text-2xl font-bold text-purple-600">0s</p> <!-- Changed color -->
+                        <p class="text-xs text-gray-400">Duration of scrape</p>
                     </div>
                 </div>
             </div>
-            
+
             <div class="bg-gray-100 rounded-lg p-4 mb-6">
-                <h3 class="text-lg font-medium text-gray-800 mb-2">Preview (First 5 repositories)</h3>
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Preview (First 5 repositories found this session)</h3>
                 <div class="overflow-x-auto">
                     <table class="min-w-full bg-white">
-                        <thead class="bg-gray-200">
+                        <!-- Add thead for clarity -->
+                        <thead class="bg-gray-50">
                             <tr>
-                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
-                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Owner</th>
-                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Stars</th>
-                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Language</th>
-                                <th class="py-2 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Updated</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Repository</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stars</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Language</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated</th>
                             </tr>
                         </thead>
                         <tbody id="results-preview">
-                            <!-- Results will be inserted here -->
+                            <!-- Preview rows will be added here -->
                         </tbody>
                     </table>
                 </div>
             </div>
-            
+
             <div class="flex justify-center space-x-4">
                 <button id="download-results-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
                     <i class="fas fa-download mr-2"></i> Download Results
@@ -448,7 +460,8 @@
             
             // Results elements
             const scraperResults = document.getElementById('scraper-results');
-            const reposCount = document.getElementById('repos-count');
+            const totalSavedReposCountEl = document.getElementById('total-saved-repos-count'); // New element for total count
+            const reposCount = document.getElementById('repos-count'); // Count for this session
             const pagesCount = document.getElementById('pages-count');
             const timeElapsed = document.getElementById('time-elapsed');
             const resultsPreview = document.getElementById('results-preview');
@@ -475,6 +488,9 @@
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             document.getElementById('pushed-after').value = thirtyDaysAgo.toISOString().split('T')[0];
             
+            // Load initial total saved repo count on page load
+            loadTotalSavedRepoCount();
+
             // Start the scraper
             scraperForm.addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -830,6 +846,9 @@
                 // Reset pause/resume buttons
                 resumeScraperBtn.classList.add('hidden');
                 pauseScraperBtn.classList.remove('hidden');
+
+                // Reload the total saved repo count from the file
+                loadTotalSavedRepoCount();
             }
             
             // Function to add a log message
@@ -893,10 +912,12 @@
                 scraperProgress.classList.add('hidden');
                 scraperResults.classList.remove('hidden');
                 
-                // Update stats
-                reposCount.textContent = currentStats.repositories;
+                // Update stats FOR THIS SESSION
+                reposCount.textContent = currentStats.repositories; // This session's count
                 pagesCount.textContent = currentStats.pages;
-                
+
+                // DO NOT update totalSavedReposCountEl here, it reflects the file state before/after the run
+
                 // Calculate elapsed time
                 const elapsedMs = Date.now() - currentStats.startTime;
                 const seconds = Math.floor(elapsedMs / 1000);
@@ -914,83 +935,20 @@
                 }
                 timeElapsed.textContent = timeString;
                 
-                // Show preview of repositories if we have some
-                resultsPreview.innerHTML = '';
-                
-                console.log("Preview repos available:", previewRepos.length);
-                
-                // If we have preview repos, use them
-                if (previewRepos && previewRepos.length > 0) {
+                // Show preview of repositories found THIS SESSION
+                resultsPreview.innerHTML = ''; // Clear previous preview
+                // ... (logic to populate preview table using previewRepos) ...
+                 if (previewRepos && previewRepos.length > 0) {
                     previewRepos.forEach(repo => {
                         addRepoToPreview(repo);
                     });
                 } else {
-                    // Otherwise, try to load the first 5 repositories from the results file
-                    addLogMessage('No preview repositories available, attempting to load from results file...');
-                    
-                    // Load the first 5 repositories from the results file
-                    fetch('/results/' + outputFile)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Failed to fetch results file');
-                            }
-                            return response.text();
-                        })
-                        .then(text => {
-                            const repos = [];
-                            if (outputFormat === 'jsonl') {
-                                // Parse JSONL format (one JSON per line)
-                                const lines = text.trim().split('\n');
-                                for (let i = 0; i < Math.min(5, lines.length); i++) {
-                                    try {
-                                        const repo = JSON.parse(lines[i]);
-                                        repos.push(repo);
-                                    } catch (e) {
-                                        console.error('Error parsing JSON line:', e);
-                                    }
-                                }
-                            } else {
-                                // Parse JSON format (array of repositories)
-                                try {
-                                    const allRepos = JSON.parse(text);
-                                    if (Array.isArray(allRepos)) {
-                                        for (let i = 0; i < Math.min(5, allRepos.length); i++) {
-                                            repos.push(allRepos[i]);
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.error('Error parsing JSON file:', e);
-                                }
-                            }
-                            
-                            if (repos.length > 0) {
-                                // Display the loaded repositories
-                                repos.forEach(repo => {
-                                    addRepoToPreview(repo);
-                                });
-                            } else {
-                                // Show placeholder when no repositories are available
-                                const row = document.createElement('tr');
-                                row.innerHTML = `
-                                    <td colspan="5" class="py-2 px-4 text-sm text-center text-gray-500">
-                                        No repositories available in the results file.
-                                    </td>
-                                `;
-                                resultsPreview.appendChild(row);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error loading repositories from file:', error);
-                            // Show placeholder when there's an error
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td colspan="5" class="py-2 px-4 text-sm text-center text-gray-500">
-                                    Error loading preview data: ${error.message}. Download the full results to view repositories.
-                                </td>
-                            `;
-                            resultsPreview.appendChild(row);
-                        });
+                    // Display a message if no preview is available for this session
+                    resultsPreview.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No new repositories found or preview unavailable for this session.</td></tr>';
                 }
+
+                // Refresh the total count from the file in case it changed
+                loadTotalSavedRepoCount();
             }
             
             // Function to add a repository to the preview table
@@ -1005,12 +963,12 @@
                 const language = repo.language || 'Not specified';
                 const updated_at = repo.updated_at || repo.pushed_at || null;
                 
+                // Ensure the table structure matches the new thead
                 row.innerHTML = `
-                    <td class="py-2 px-4 text-sm">${name}</td>
-                    <td class="py-2 px-4 text-sm">${owner}</td>
-                    <td class="py-2 px-4 text-sm">${stars}</td>
-                    <td class="py-2 px-4 text-sm">${language}</td>
-                    <td class="py-2 px-4 text-sm">${formatDate(updated_at)}</td>
+                    <td class="py-2 px-4 border-b border-gray-200"><a href="${html_url}" target="_blank" class="text-blue-600 hover:underline">${owner}/${name}</a></td>
+                    <td class="py-2 px-4 border-b border-gray-200">${stars} <i class="fas fa-star text-yellow-400 text-xs"></i></td>
+                    <td class="py-2 px-4 border-b border-gray-200">${language}</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-sm">${formatDate(updated_at)}</td>
                 `;
                 resultsPreview.appendChild(row);
             }
@@ -1080,6 +1038,40 @@
                     }, 5000);
                 }
             });
+
+            // Renamed function to load TOTAL count of saved repos from file
+            async function loadTotalSavedRepoCount() {
+                // Determine the file to check based on current state or default
+                const fileToCheck = outputFile || 'repositories.jsonl';
+                const sampleFileToCheck = `sample_${fileToCheck}`; // Construct sample filename
+
+                try {
+                    const response = await fetch(`/results/${fileToCheck}`); // Use the /results/ endpoint
+                    if (response.ok) {
+                        const text = await response.text();
+                        // Count non-empty lines for jsonl, or estimate for json
+                        const lines = text.split('\n').filter(line => line.trim() !== '');
+                        totalSavedReposCountEl.textContent = lines.length;
+                    } else if (response.status === 404) {
+                         // If main file not found, try sample file
+                         const sampleResponse = await fetch(`/results/${sampleFileToCheck}`);
+                         if (sampleResponse.ok) {
+                             const sampleText = await sampleResponse.text();
+                             const sampleLines = sampleText.split('\n').filter(line => line.trim() !== '');
+                             totalSavedReposCountEl.textContent = sampleLines.length;
+                             addLogMessage(`Loaded count from sample file: ${sampleFileToCheck}`, 'info');
+                         } else {
+                             totalSavedReposCountEl.textContent = '0'; // No file found
+                         }
+                    } else {
+                        console.error('Failed to fetch total repo count:', response.statusText);
+                        totalSavedReposCountEl.textContent = 'Error';
+                    }
+                } catch (error) {
+                    console.error('Error fetching total repo count:', error);
+                    totalSavedReposCountEl.textContent = 'Error';
+                }
+            }
         });
     </script>
 </body>
