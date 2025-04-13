@@ -400,12 +400,17 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         
         # Calculate execution time
         execution_time = time.time() - start_time
-        logger.info(f"Semantic HTML check completed in {execution_time:.2f}s with score: {result.get('semantic_usage_score', 0)}")
+        
+        # Get score, ensuring a minimum of 1 for completed checks
+        score = result.get("semantic_usage_score", 0)
+        final_score = normalize_score(score)
+        
+        logger.info(f"Semantic HTML check completed in {execution_time:.2f}s with score: {final_score}")
         
         # Return the result with enhanced metadata
         return {
             "status": "completed",
-            "score": result.get("semantic_usage_score", 0),
+            "score": final_score,
             "result": result,
             "metadata": {
                 "files_checked": result.get("files_checked", 0),
@@ -463,3 +468,20 @@ def get_most_used_semantic(elements_usage: Dict[str, int]) -> List[str]:
     
     # Return top 5 or fewer if there aren't 5
     return [item[0] for item in sorted_elements[:5]]
+
+def normalize_score(score: float) -> int:
+    """
+    Normalize score to be between 1-100, with 0 reserved for errors/skipped checks.
+    
+    Args:
+        score: Raw score value
+        
+    Returns:
+        Normalized score between 1-100
+    """
+    if score <= 0:
+        return 1  # Minimum score for completed checks
+    elif score > 100:
+        return 100  # Maximum score
+    else:
+        return int(round(score))

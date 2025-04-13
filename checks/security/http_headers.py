@@ -445,6 +445,23 @@ def get_headers_recommendation(result: Dict[str, Any]) -> str:
     
     return " ".join(recommendations)
 
+def normalize_score(score: float) -> int:
+    """
+    Normalize score to be between 1-100, with 0 reserved for errors/skipped checks.
+    
+    Args:
+        score: Raw score value
+        
+    Returns:
+        Normalized score between 1-100
+    """
+    if score <= 0:
+        return 1  # Minimum score for completed checks
+    elif score > 100:
+        return 100  # Maximum score
+    else:
+        return int(round(score))
+
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
     Run the HTTP headers security check
@@ -479,11 +496,15 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_http_headers_security(local_path, repository)
         
-        logger.info(f"HTTP headers security check completed with score: {result.get('http_headers_score', 0)}")
+        # Get score, ensuring a minimum of 1 for completed checks
+        score = result.get("http_headers_score", 0)
+        final_score = normalize_score(score)
+        
+        logger.info(f"HTTP headers security check completed with score: {final_score}")
         
         # Return the result with enhanced metadata
         return {
-            "score": result.get("http_headers_score", 0),
+            "score": final_score,
             "result": result,
             "status": "completed",
             "metadata": {

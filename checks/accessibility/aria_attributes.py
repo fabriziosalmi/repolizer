@@ -386,10 +386,14 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
                 logger.error(f"ARIA attributes check failed after {execution_time:.2f}s: {str(e)}")
             raise
         
+        # Get score, ensuring a minimum of 1 for completed checks
+        score = result.get("aria_usage_score", 0)
+        final_score = normalize_score(score)
+        
         # Add more detailed metadata to the result
         return {
             "status": "completed",
-            "score": result.get("aria_usage_score", 0),
+            "score": final_score,
             "result": result,
             "metadata": {
                 "files_checked": result.get("files_checked", 0),
@@ -451,3 +455,20 @@ def get_recommendation(result: Dict[str, Any]) -> str:
             return "Poor ARIA implementation with several misuse issues. Consider implementing ARIA correctly."
         else:
             return "Limited ARIA usage detected. Implement more ARIA attributes to improve accessibility."
+
+def normalize_score(score: float) -> int:
+    """
+    Normalize score to be between 1-100, with 0 reserved for errors/skipped checks.
+    
+    Args:
+        score: Raw score value
+        
+    Returns:
+        Normalized score between 1-100
+    """
+    if score <= 0:
+        return 1  # Minimum score for completed checks
+    elif score > 100:
+        return 100  # Maximum score
+    else:
+        return int(round(score))

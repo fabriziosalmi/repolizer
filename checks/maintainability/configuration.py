@@ -324,6 +324,23 @@ def check_configuration_handling(repo_path: str = None, repo_data: Dict = None) 
     
     return result
 
+def normalize_score(score: float) -> int:
+    """
+    Normalize score to be between 1-100, with 0 reserved for errors/skipped checks.
+    
+    Args:
+        score: Raw score value
+        
+    Returns:
+        Normalized score between 1-100
+    """
+    if score <= 0:
+        return 1  # Minimum score for completed checks
+    elif score > 100:
+        return 100  # Maximum score
+    else:
+        return int(round(score))
+
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
     Verify configuration handling
@@ -350,10 +367,14 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # API data is not used for this check
         result = check_configuration_handling(local_path, None)
         
+        # Get score, ensuring a minimum of 1 for completed checks
+        score = result.get("configuration_score", 0)
+        final_score = normalize_score(score)
+        
         # Return the result with the score
         return {
             "status": "completed",
-            "score": result.get("configuration_score", 0),
+            "score": final_score,
             "result": result,
             "errors": None
         }
