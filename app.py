@@ -1002,6 +1002,20 @@ def repo_stats():
     # Publicly accessible
     return render_template('repo_stats.html')
 
+# Add route to serve manifest.json
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'manifest.json', mimetype='application/manifest+json')
+
+# Add route to serve static files
+@app.route('/static/<path:path>')
+def serve_static(path):
+    # Ensure the static directory exists
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+    return send_from_directory(static_dir, path)
+
 # Add context processor to make current_year and current_user available globally
 @app.context_processor
 def inject_global_vars():
@@ -1016,6 +1030,18 @@ if __name__ == '__main__':
     if not os.path.exists(templates_dir):
         os.makedirs(templates_dir)
         print(f"Created templates directory: {templates_dir}")
+    
+    # Check if static directory exists, create it if not
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+        print(f"Created static directory: {static_dir}")
+    
+    # Check if icons directory exists, create it if not
+    icons_dir = os.path.join(static_dir, 'icons')
+    if not os.path.exists(icons_dir):
+        os.makedirs(icons_dir)
+        print(f"Created icons directory: {icons_dir}")
     
     # Check if repo_viewer.html exists in the templates directory
     template_file = os.path.join(templates_dir, 'repo_viewer.html')
