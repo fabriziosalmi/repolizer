@@ -6,10 +6,62 @@ Checks if the repository's licenses are compatible with each other and with depe
 import os
 import re
 import logging
-from typing import Dict, Any, List, Set, Tuple
+import time
+import platform
+import threading
+import signal
+import json
+from typing import Dict, Any, List, Set, Tuple, Optional
+from contextlib import contextmanager
+from datetime import datetime
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+# Add timeout handling
+class TimeoutException(Exception):
+    """Custom exception for timeouts."""
+    pass
+
+@contextmanager
+def time_limit(seconds):
+    """Context manager for setting a timeout on file operations (Unix/MainThread only)."""
+    # Skip setting alarm on Windows or when not in main thread
+    is_main_thread = threading.current_thread() is threading.main_thread()
+    can_use_signal = platform.system() != 'Windows' and is_main_thread
+
+    if can_use_signal:
+        def signal_handler(signum, frame):
+            logger.warning(f"File processing triggered timeout after {seconds} seconds.")
+            raise TimeoutException(f"File processing timed out after {seconds} seconds")
+
+        original_handler = signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+    else:
+        # If signals can't be used, this context manager does nothing for timeout.
+        original_handler = None  # To satisfy finally block
+
+    try:
+        yield
+    finally:
+        if can_use_signal:
+            signal.alarm(0)  # Disable the alarm
+            # Restore the original signal handler if there was one
+            if original_handler is not None:
+                signal.signal(signal.SIGALRM, original_handler)
+
+def safe_read_file(file_path, timeout=2):
+    """Safely read a file with timeout protection."""
+    try:
+        with time_limit(timeout):
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                return f.read()
+    except TimeoutException:
+        logger.warning(f"Timeout reading file: {file_path}")
+        return None
+    except Exception as e:
+        logger.warning(f"Error reading file {file_path}: {e}")
+        return None
 
 # Common licenses and their compatibility matrix
 # True means compatible, False means incompatible
@@ -119,12 +171,13 @@ def is_compatible(primary_license: str, secondary_license: str) -> bool:
     
     return LICENSE_COMPATIBILITY[primary_license][secondary_license]
 
-def check_package_json_dependencies(repo_path: str) -> List[str]:
+def check_package_json_dependencies(repo_path: str, timeout: int = 2) -> List[str]:
     """
     Extract licenses from NPM dependencies in package.json
     
     Args:
         repo_path: Path to the repository
+        timeout: Timeout in seconds for file operations
         
     Returns:
         List of dependency licenses found
@@ -134,35 +187,40 @@ def check_package_json_dependencies(repo_path: str) -> List[str]:
     
     if os.path.exists(package_json_path):
         try:
-            import json
-            with open(package_json_path, 'r', encoding='utf-8', errors='ignore') as f:
-                package_data = json.load(f)
+            content = safe_read_file(package_json_path, timeout=timeout)
+            if content is None:
+                return dependency_licenses
                 
-                # Check license field if it exists
-                if "license" in package_data:
-                    license_info = package_data["license"]
-                    if isinstance(license_info, str):
-                        dependency_licenses.append(license_info.lower())
-                    elif isinstance(license_info, dict) and "type" in license_info:
-                        dependency_licenses.append(license_info["type"].lower())
+            package_data = json.loads(content)
                 
-                # Sometimes npm projects list licenses of dependencies
-                if "dependencies" in package_data:
-                    # To properly check this, we would need to analyze node_modules
-                    # This is a placeholder for more comprehensive checking
-                    pass
+            # Check license field if it exists
+            if "license" in package_data:
+                license_info = package_data["license"]
+                if isinstance(license_info, str):
+                    dependency_licenses.append(license_info.lower())
+                elif isinstance(license_info, dict) and "type" in license_info:
+                    dependency_licenses.append(license_info["type"].lower())
+            
+            # Sometimes npm projects list licenses of dependencies
+            if "dependencies" in package_data:
+                # To properly check this, we would need to analyze node_modules
+                # This is a placeholder for more comprehensive checking
+                pass
+        except json.JSONDecodeError:
+            logger.warning(f"Invalid JSON in package.json at {package_json_path}")
         except Exception as e:
             logger.error(f"Error reading package.json: {e}")
     
     return dependency_licenses
 
-def check_requirements_txt_dependencies(repo_path: str) -> List[str]:
+def check_requirements_txt_dependencies(repo_path: str, timeout: int = 2) -> List[str]:
     """
     Extract licenses from Python requirements.txt
     Note: This is a simplified implementation as requirements.txt doesn't contain license info
     
     Args:
         repo_path: Path to the repository
+        timeout: Timeout in seconds for file operations
         
     Returns:
         List of dependency licenses found (empty as this requires external API calls)
@@ -170,7 +228,7 @@ def check_requirements_txt_dependencies(repo_path: str) -> List[str]:
     # In a real implementation, this would query PyPI or another source for license info
     return []
 
-def check_license_compatibility(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
+def check_license_compatibility(repo_path: Optional[str] = None, repo_data: Optional[Dict] = None) -> Dict[str, Any]:
     """
     Check license compatibility in the repository
     
@@ -190,31 +248,57 @@ def check_license_compatibility(repo_path: str = None, repo_data: Dict = None) -
         "compatibility_issues": [],
         "license_files": [],
         "files_checked": 0,
-        "compatibility_score": 0
+        "compatibility_score": 0,
+        "early_termination": None,
+        "errors": None
     }
     
+    # Configuration constants
+    FILE_READ_TIMEOUT = 2  # seconds per file read
+    GLOBAL_ANALYSIS_TIMEOUT = 20  # 20 seconds total timeout for the entire analysis
+    
     # First check if repository is available locally for more accurate analysis
-    if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path} for license compatibility")
-        
-        # Files that might contain license information
-        license_files = [
-            "LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING", "COPYING.md", "COPYING.txt",
-            "LICENSE-MIT", "LICENSE-APACHE", "LICENSE.MIT", "LICENSE.APACHE",
-            ".github/LICENSE.md", "docs/LICENSE.md"
-        ]
-        
-        files_checked = 0
-        found_license_files = []
-        licenses_detected = []
-        
-        # Check license files
-        for lic_file in license_files:
-            file_path = os.path.join(repo_path, lic_file)
-            if os.path.isfile(file_path):
-                try:
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read()
+    if not repo_path or not os.path.isdir(repo_path):
+        logger.warning("No local repository path provided or path is not a directory")
+        # Skip local analysis, use API data later
+    else:
+        try:
+            logger.info(f"Analyzing local repository at {repo_path} for license compatibility")
+            
+            # Track analysis start time for global timeout
+            start_time = datetime.now()
+            analysis_terminated_early = False
+            
+            # Files that might contain license information
+            license_files = [
+                "LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING", "COPYING.md", "COPYING.txt",
+                "LICENSE-MIT", "LICENSE-APACHE", "LICENSE.MIT", "LICENSE.APACHE",
+                ".github/LICENSE.md", "docs/LICENSE.md"
+            ]
+            
+            files_checked = 0
+            found_license_files = []
+            licenses_detected = []
+            
+            # Check license files with timeout protection
+            for lic_file in license_files:
+                # Check if we've exceeded the global timeout
+                elapsed_time = (datetime.now() - start_time).total_seconds()
+                if elapsed_time > GLOBAL_ANALYSIS_TIMEOUT:
+                    logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds. Stopping analysis.")
+                    analysis_terminated_early = True
+                    result["early_termination"] = {
+                        "reason": "global_timeout",
+                        "elapsed_seconds": round(elapsed_time, 1),
+                        "limit_seconds": GLOBAL_ANALYSIS_TIMEOUT
+                    }
+                    break
+                
+                file_path = os.path.join(repo_path, lic_file)
+                if os.path.isfile(file_path):
+                    # Use safe_read_file with timeout
+                    content = safe_read_file(file_path, timeout=FILE_READ_TIMEOUT)
+                    if content is not None:
                         files_checked += 1
                         relative_path = os.path.relpath(file_path, repo_path)
                         found_license_files.append(relative_path)
@@ -224,37 +308,54 @@ def check_license_compatibility(repo_path: str = None, repo_data: Dict = None) -
                         if license_type != "unknown":
                             licenses_detected.append(license_type)
                             result["has_license"] = True
-                            
-                except Exception as e:
-                    logger.error(f"Error reading file {file_path}: {e}")
-        
-        # If multiple licenses detected, assume first one is main and others are additional
-        if licenses_detected:
-            result["main_license"] = licenses_detected[0]
             
-            # Add other detected licenses to other_licenses list
-            for license_type in licenses_detected[1:]:
-                if license_type not in result["other_licenses"]:
-                    result["other_licenses"].append(license_type)
+            # If multiple licenses detected, assume first one is main and others are additional
+            if licenses_detected:
+                result["main_license"] = licenses_detected[0]
+                
+                # Add other detected licenses to other_licenses list
+                for license_type in licenses_detected[1:]:
+                    if license_type not in result["other_licenses"]:
+                        result["other_licenses"].append(license_type)
+            
+            # Check for dependency licenses if we haven't terminated early
+            if not analysis_terminated_early:
+                # Check if we've exceeded the global timeout
+                elapsed_time = (datetime.now() - start_time).total_seconds()
+                if elapsed_time > GLOBAL_ANALYSIS_TIMEOUT:
+                    logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds. Skipping dependency analysis.")
+                    analysis_terminated_early = True
+                    result["early_termination"] = {
+                        "reason": "global_timeout",
+                        "elapsed_seconds": round(elapsed_time, 1),
+                        "limit_seconds": GLOBAL_ANALYSIS_TIMEOUT
+                    }
+                else:
+                    # Check for NPM dependencies
+                    npm_licenses = check_package_json_dependencies(repo_path, timeout=FILE_READ_TIMEOUT)
+                    if npm_licenses:
+                        result["dependency_licenses"].extend(npm_licenses)
+                    
+                    # Check for Python dependencies
+                    python_licenses = check_requirements_txt_dependencies(repo_path, timeout=FILE_READ_TIMEOUT)
+                    if python_licenses:
+                        result["dependency_licenses"].extend(python_licenses)
+                    
+                    # Update result with findings
+                    result["license_files"] = found_license_files
+                    result["files_checked"] = files_checked
         
-        # Check for dependency licenses
-        npm_licenses = check_package_json_dependencies(repo_path)
-        if npm_licenses:
-            result["dependency_licenses"].extend(npm_licenses)
-        
-        python_licenses = check_requirements_txt_dependencies(repo_path)
-        if python_licenses:
-            result["dependency_licenses"].extend(python_licenses)
+        except Exception as e:
+            logger.error(f"Error analyzing repository: {e}")
+            result["errors"] = str(e)
     
     # Only use API data if we couldn't determine license from local analysis
-    elif repo_data and "license" in repo_data:
-        logger.info("Using API data for license compatibility check as local repository is not available")
+    if result["main_license"] == "unknown" and repo_data and "license" in repo_data:
+        logger.info("Using API data for license compatibility check")
         license_info = repo_data.get("license", {})
         if license_info and "spdx_id" in license_info:
             result["has_license"] = True
             result["main_license"] = license_info["spdx_id"].lower()
-    else:
-        logger.warning("No local repository path or API data provided for license compatibility check")
     
     # Check compatibility between main license and other licenses
     if result["main_license"] != "unknown":
@@ -263,9 +364,11 @@ def check_license_compatibility(repo_path: str = None, repo_data: Dict = None) -
                 result["compatible_licenses"] = False
                 result["compatibility_issues"].append(f"{result['main_license']} is not compatible with {other_license}")
     
-    # Update result with findings
-    result["license_files"] = found_license_files
-    result["files_checked"] = files_checked
+    # Clean up early_termination if not needed
+    if result.get("early_termination") is None:
+        result.pop("early_termination", None)
+    if result.get("errors") is None:
+        result.pop("errors", None)
     
     # Calculate license compatibility score (0-100 scale)
     score = 0
@@ -305,25 +408,58 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Check results with score on 0-100 scale
     """
+    repo_name = repository.get('name', 'unknown')
+    logger.info(f"Starting license compatibility check for repository: {repo_name}")
+    
     try:
+        # Check if we have a cached result
+        cache_key = f"license_compatibility_{repository.get('id', repo_name)}"
+        cached_result = repository.get('_cache', {}).get(cache_key)
+        
+        if cached_result:
+            logger.info(f"Using cached license compatibility check result for {repo_name}")
+            return cached_result
+        
         # Prioritize local path for analysis
         local_path = repository.get('local_path')
         
-        # Run the check
+        # Run the check with timeout protection
+        start_time = time.time()
         result = check_license_compatibility(local_path, repository)
+        elapsed = time.time() - start_time
         
-        # Return the result with the score
-        return {
+        if elapsed > 5:  # Log if the check took more than 5 seconds
+            logger.warning(f"License compatibility check for {repo_name} took {elapsed:.2f} seconds")
+        
+        # Prepare the final result
+        final_result = {
             "status": "completed",
             "score": result.get("compatibility_score", 0),
             "result": result,
-            "errors": None
+            "errors": result.get("errors")
         }
+        
+        # Clean up None errors
+        if final_result["errors"] is None:
+            final_result.pop("errors", None)
+        
+        # Add to cache if available
+        if '_cache' in repository:
+            repository['_cache'][cache_key] = final_result
+        
+        logger.info(f"Completed license compatibility check for {repo_name} with score: {final_result['score']}")
+        return final_result
+        
     except Exception as e:
-        logger.error(f"Error running license compatibility check: {e}")
+        logger.error(f"Error running license compatibility check for {repo_name}: {e}", exc_info=True)
         return {
             "status": "failed",
             "score": 0,
-            "result": {},
+            "result": {
+                "has_license": False,
+                "main_license": "unknown",
+                "compatibility_score": 0,
+                "errors": str(e)
+            },
             "errors": str(e)
         }
