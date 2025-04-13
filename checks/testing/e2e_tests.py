@@ -331,16 +331,16 @@ def check_e2e_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
                                 result["has_e2e_tests"] = True
                                 candidate_files.append(file_path)
                             
-                        # For non-e2e named files, check if they're test files in e2e directories
-                        elif any(file.endswith(ext) for ext in ['.js', '.ts', '.jsx', '.tsx', '.py', '.rb', '.feature']):
-                            if any(e2e_dir in rel_root for e2e_dir in e2e_directories):
-                                rel_path = os.path.relpath(file_path, repo_path)
-                                e2e_files.append(rel_path)
-                                result["has_e2e_tests"] = True
-                                logger.debug(f"Found test file in e2e directory: {rel_path}")
-                                
-                                # Add to candidates for content analysis
-                                candidate_files.append(file_path)
+                            # For non-e2e named files, check if they're test files in e2e directories
+                            elif any(file.endswith(ext) for ext in ['.js', '.ts', '.jsx', '.tsx', '.py', '.rb', '.feature']):
+                                if any(e2e_dir in rel_root for e2e_dir in e2e_directories):
+                                    rel_path = os.path.relpath(file_path, repo_path)
+                                    e2e_files.append(rel_path)
+                                    result["has_e2e_tests"] = True
+                                    logger.debug(f"Found test file in e2e directory: {rel_path}")
+                                    
+                                    # Add to candidates for content analysis
+                                    candidate_files.append(file_path)
                 except Exception as inner_e:
                     logger.debug(f"Error processing path {root}: {inner_e}")
                     continue
