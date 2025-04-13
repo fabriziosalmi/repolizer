@@ -487,7 +487,6 @@
             const timeElapsed = document.getElementById('time-elapsed');
             const resultsPreview = document.getElementById('results-preview');
             const downloadResultsBtn = document.getElementById('download-results-btn');
-            const analyzeResultsBtn = document.getElementById('analyze-results-btn');
             const newSearchBtn = document.getElementById('new-search-btn');
             
             // Scraper state
@@ -503,6 +502,7 @@
                 startTime: null
             };
             let previewRepos = [];
+            let elapsedTimeInterval; // Declare elapsedTimeInterval here
             
             // Set default date for pushed-after to 30 days ago
             const thirtyDaysAgo = new Date();
@@ -538,11 +538,6 @@
             // Handle download button
             downloadResultsBtn.addEventListener('click', () => {
                 downloadResults();
-            });
-            
-            // Handle analyze button
-            analyzeResultsBtn.addEventListener('click', () => {
-                analyzeResults();
             });
             
             // Handle new search button
@@ -827,7 +822,7 @@
                 }
                 
                 scraperRunning = false;
-                clearInterval(elapsedTimeInterval);
+                clearInterval(elapsedTimeInterval); // Clear interval here
                 
                 if (eventSource) {
                     eventSource.close();
@@ -848,12 +843,6 @@
                 window.location.href = `/results/${outputFile}`;
             }
             
-            // Function to analyze results
-            function analyzeResults() {
-                // Redirect to the analysis page
-                window.location.href = '/';
-            }
-            
             // Function to reset the UI
             function resetUI() {
                 scraperForm.parentElement.classList.remove('hidden');
@@ -864,7 +853,7 @@
                 progressPercentage.textContent = '0%';
                 scraperRunning = false;
                 scraperPaused = false;
-                clearInterval(elapsedTimeInterval);
+                clearInterval(elapsedTimeInterval); // Clear interval here
                 
                 // Reset pause/resume buttons
                 resumeScraperBtn.classList.add('hidden');
@@ -985,6 +974,7 @@
                 const stars = repo.stargazers_count || 0;
                 const language = repo.language || 'Not specified';
                 const updated_at = repo.updated_at || repo.pushed_at || null;
+                const html_url = repo.html_url || '#'; // Get the html_url from the repo object
                 
                 // Ensure the table structure matches the new thead
                 row.innerHTML = `
@@ -997,9 +987,8 @@
             }
             
             // Elapsed time counter
-            let elapsedTimeInterval;
-            
             function startElapsedTimeCounter() {
+                clearInterval(elapsedTimeInterval); // Clear any existing interval first
                 elapsedTimeInterval = setInterval(() => {
                     if (!scraperRunning || scraperPaused) return;
                     
