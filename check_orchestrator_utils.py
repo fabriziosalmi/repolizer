@@ -783,6 +783,14 @@ def safe_fs_operation(func, *args, timeout=10, default=None, **kwargs):
     Returns:
         Result of the function or default value on timeout
     """
+    import platform
+    import signal
+    import threading
+    import time
+    
+    # Get function name for better logging
+    func_name = getattr(func, '__name__', str(func))
+    
     # Skip setting alarm on Windows or when not in main thread
     is_main_thread = threading.current_thread() is threading.main_thread()
     can_use_signal = platform.system() != 'Windows' and is_main_thread
@@ -802,21 +810,21 @@ def safe_fs_operation(func, *args, timeout=10, default=None, **kwargs):
             signal.alarm(0)  # Disable the alarm
             return result
         else:
-            # Without signal timeout (simple execution)
+            # Without signal timeout (simple execution with time tracking)
             start_time = time.time()
             result = func(*args, **kwargs)
             
             # Log warning if operation was slow but didn't hit timeout
             elapsed = time.time() - start_time
             if elapsed > timeout * 0.8:  # If took more than 80% of timeout
-                logger.warning(f"Operation {func.__name__} was slow ({elapsed:.2f}s) but completed")
+                logger.warning(f"Operation {func_name} was slow ({elapsed:.2f}s) but completed")
                 
             return result
     except TimeoutException:
-        logger.warning(f"Operation {func.__name__} timed out after {timeout}s")
+        logger.warning(f"Operation {func_name} timed out after {timeout}s")
         return default
     except Exception as e:
-        logger.warning(f"Operation {func.__name__} failed: {e}")
+        logger.warning(f"Operation {func_name} failed: {e}")
         return default
     finally:
         if can_use_signal:
@@ -890,6 +898,44 @@ def safe_cleanup_directory(directory: str, timeout=30) -> bool:
     except Exception as e:
         logger.error(f"Error during cleanup of {directory}: {e}")
         return False
+
+def monitor_resource_usage(tag="", threshold_mb=500):
+    """
+    Monitor and log resource usage of the current process.
+    Useful for detecting memory leaks during batch processing.
+    
+    Args:
+        tag: Identifier for logging (e.g., repository name or check name)
+        threshold_mb: Memory threshold in MB to trigger warnings
+        
+    Returns:
+        Dictionary with memory usage information
+    """
+    import os
+    import psutil
+    
+    try:
+        process = psutil.Process(os.getpid())
+        memory_info = process.memory_info()
+        memory_mb = memory_info.rss / (1024 * 1024)  # Convert to MB
+        
+        # Create result with detailed memory info
+        result = {
+            "memory_mb": round(memory_mb, 2),
+            "cpu_percent": process.cpu_percent(interval=0.1),
+            "num_threads": process.num_threads(),
+            "open_files": len(process.open_files())
+        }
+        
+        # Log if memory usage is high
+        if memory_mb > threshold_mb:
+            tag_str = f" [{tag}]" if tag else ""
+            logger.warning(f"High memory usage{tag_str}: {memory_mb:.2f} MB, {result['num_threads']} threads")
+        
+        return result
+    except:
+        # Fail silently if psutil isn't available
+        return {"memory_mb": 0, "cpu_percent": 0, "num_threads": 0, "open_files": 0}
 
 # Initialize has_filesystem_utils before the try block
 has_filesystem_utils = False 

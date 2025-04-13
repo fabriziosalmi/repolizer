@@ -443,7 +443,7 @@ class CheckOrchestrator:
             }
             
             # Process results as they complete
-            for future in concurrent.futures.as_completed(futures):
+            for future in as_completed(futures):
                 category, check_name = futures[future]
                 try:
                     # Result is already added to results list in execute_check_with_progress
@@ -542,11 +542,13 @@ class CheckOrchestrator:
                 with ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(run_with_rate_limit)
                     try:
-                        result = future.result(timeout=self.check_timeout)
+                        # Use a shorter timeout for batch processing to prevent hangs
+                        effective_timeout = min(self.check_timeout, 120)
+                        result = future.result(timeout=effective_timeout)
                     except TimeoutError:
-                        duration = self.check_timeout  # Set duration to timeout value
+                        duration = effective_timeout  # Set duration to timeout value
                         total_execution_time += duration
-                        self.logger.warning(f"Check {check_name} for {repo_name} timed out after {self.check_timeout}s")
+                        self.logger.warning(f"Check {check_name} for {repo_name} timed out after {effective_timeout}s")
                         # Cancel the future if possible to stop the operation
                         future.cancel()
                         return {
@@ -556,7 +558,7 @@ class CheckOrchestrator:
                             "check_name": check_name,
                             "status": "timeout",
                             "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
-                            "validation_errors": f"Check execution timed out after {self.check_timeout} seconds",
+                            "validation_errors": f"Check execution timed out after {effective_timeout} seconds",
                             "duration": total_execution_time,  # Use total time including all retries
                             "score": 0,
                             "details": {"error": "Execution timed out"}
@@ -689,7 +691,7 @@ class CheckOrchestrator:
             self._save_results_to_jsonl(results, output_path)
         
         # Add to processed repos set - both ID and full name
-        self.processed_repos.add(repo_id)
+        self.processed_reos.add(repo_id)
         self.processed_repos.add(repo_name)
         
         # Clean up the cloned repository to free disk space
@@ -833,7 +835,9 @@ class CheckOrchestrator:
     def process_all_repositories(self, force: bool = False, 
                                 categories: Optional[List[str]] = None, 
                                 checks: Optional[List[str]] = None,
-                                output_path: Optional[str] = None) -> List[Dict]:
+                                output_path: Optional[str] = None,
+                                batch_size: int = 5,
+                                check_memory_usage: bool = True) -> List[Dict]:
         """
         Process all repositories from repositories.jsonl
         
@@ -841,8 +845,12 @@ class CheckOrchestrator:
         :param categories: Optional list of categories to include (all if None)
         :param checks: Optional list of specific check names to include (all if None)
         :param output_path: Path to save results (default: results.jsonl)
+        :param batch_size: Number of repositories to process before cleanup (default: 5)
+        :param check_memory_usage: Whether to monitor memory usage (default: True)
         :return: List of results for all repositories
         """
+        from check_orchestrator_utils import monitor_resource_usage
+        
         console = Console()
         all_results = []
         
@@ -865,7 +873,11 @@ class CheckOrchestrator:
         ) as progress:
             process_task = progress.add_task(f"Processing repositories...", total=len(repositories))
             
-            for repository in repositories:
+            # Process repositories in smaller batches to limit resource usage
+            batch_count = 0
+            batch_results = []
+            
+            for i, repository in enumerate(repositories):
                 repo_id = repository.get('id')
                 repo_name = repository.get('full_name', f"{repository.get('owner', {}).get('login', 'unknown')}/{repository.get('name', 'unknown')}")
                 
@@ -885,12 +897,19 @@ class CheckOrchestrator:
                         existing_results = self._get_existing_results(repo_id, repo_name)
                         if existing_results:
                             all_results.append(existing_results)
+                            batch_results.append(existing_results)
                         
                         # Update progress
                         progress.advance(process_task)
                         continue
                     
-                    # Process the repository
+                    # Check memory usage before processing
+                    if check_memory_usage:
+                        memory_info = monitor_resource_usage(f"Before {repo_name}", threshold_mb=500)
+                        self.logger.debug(f"Memory before {repo_name}: {memory_info['memory_mb']} MB")
+                    
+                    # Process the repository with a smaller timeout specifically for batch mode
+                    # This helps prevent individual checks from hanging the entire batch
                     self.logger.info(f"Processing repository: {repo_name}")
                     results = self.run_checks(repository, categories=categories, checks=checks)
                     
@@ -902,6 +921,7 @@ class CheckOrchestrator:
                     self.processed_repos.add(repo_name)
                     
                     all_results.append(results)
+                    batch_results.append(results)
                     
                     # Clean up to free disk space
                     if repo_id in self.cloned_repos:
@@ -915,6 +935,25 @@ class CheckOrchestrator:
                 
                 # Update progress
                 progress.advance(process_task)
+                
+                # Perform batch cleanup and monitoring
+                batch_count += 1
+                if batch_count >= batch_size or i == len(repositories) - 1:
+                    # End of batch or last repository - perform cleanup
+                    self.logger.info(f"Completed batch of {batch_count} repositories. Performing cleanup...")
+                    
+                    # Force garbage collection to free memory
+                    import gc
+                    gc.collect()
+                    
+                    # Check memory usage after processing batch
+                    if check_memory_usage:
+                        memory_info = monitor_resource_usage("After batch", threshold_mb=500)
+                        self.logger.info(f"Memory after batch: {memory_info['memory_mb']} MB, Threads: {memory_info['num_threads']}")
+                    
+                    # Reset batch counter and results
+                    batch_count = 0
+                    batch_results = []
         
         return all_results
     
