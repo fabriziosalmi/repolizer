@@ -222,65 +222,108 @@
             // Removed event listener for score range slider input
             // scoreFilter.addEventListener('input', () => { ... });
 
-            // Load repositories from the JSONL file
+            // Get result file path from URL parameter if specified
+            const urlParams = new URLSearchParams(window.location.search);
+            const resultPath = urlParams.get('path') || 'results.jsonl';
+            
+            console.log(`Loading repositories from: ${resultPath}`);
+
+            // Load repositories from the results file
             try {
-                // First try results.jsonl (analyzed repos)
-                const response = await fetch('results.jsonl');
+                // First try the specified results file
+                const response = await fetch(resultPath);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch ${resultPath}: ${response.statusText}`);
+                }
+                
                 const text = await response.text();
                 
                 if (!text.trim()) {
-                    throw new Error('No data in results.jsonl');
+                    throw new Error(`No data in ${resultPath}`);
                 }
                 
-                // Parse JSONL (one JSON object per line)
-                const processedRepoIds = new Set(); // Track processed repos to avoid duplicates
+                // Determine if the file is JSON or JSONL format based on content or extension
+                const isJson = resultPath.toLowerCase().endsWith('.json') || 
+                              (text.trim().startsWith('[') && text.trim().endsWith(']'));
                 
-                allRepos = text.split('\n')
-                    .filter(line => line.trim() !== '')
-                    .map(line => {
-                        try {
-                            return JSON.parse(line);
-                        } catch (e) {
-                            console.error('Error parsing line:', line, e);
-                            return null;
-                        }
-                    })
-                    .filter(repo => repo !== null && repo.repository)  // Ensure repo object has repository data
-                    .filter(repo => {
-                        // Only include each repository once (take latest analysis)
-                        const repoId = repo.repository.id;
-                        if (processedRepoIds.has(repoId)) {
-                            return false;
-                        }
-                        processedRepoIds.add(repoId);
-                        return true;
-                    });
+                console.log(`Detected file format: ${isJson ? 'JSON' : 'JSONL'}`);
                 
-                // If no results found or empty, try repositories.jsonl
-                if (allRepos.length === 0) {
-                    const fallbackResponse = await fetch('repositories.jsonl');
-                    const fallbackText = await fallbackResponse.text();
+                // Process based on the file format
+                if (isJson) {
+                    // Handle JSON format (array of objects)
+                    try {
+                        const jsonData = JSON.parse(text);
+                        
+                        // Check if it's an array or a single object
+                        if (Array.isArray(jsonData)) {
+                            allRepos = jsonData.filter(repo => repo && repo.repository);
+                        } else if (jsonData && jsonData.repository) {
+                            allRepos = [jsonData];
+                        }
+                    } catch (e) {
+                        console.error('Error parsing JSON:', e);
+                        throw new Error('Invalid JSON format');
+                    }
+                } else {
+                    // Handle JSONL format (one JSON object per line)
+                    const processedRepoIds = new Set(); // Track processed repos to avoid duplicates
                     
-                    if (fallbackText.trim()) {
-                        allRepos = fallbackText.split('\n')
-                            .filter(line => line.trim() !== '')
-                            .map(line => {
-                                try {
-                                    // Convert repo data to match results.jsonl format
-                                    const rawRepo = JSON.parse(line);
-                                    return {
-                                        repository: rawRepo,
-                                        overall_score: 0,
-                                        timestamp: new Date().toISOString()
-                                    };
-                                } catch (e) {
-                                    console.error('Error parsing fallback line:', line, e);
-                                    return null;
-                                }
-                            })
-                            .filter(repo => repo !== null);
+                    allRepos = text.split('\n')
+                        .filter(line => line.trim() !== '')
+                        .map(line => {
+                            try {
+                                return JSON.parse(line);
+                            } catch (e) {
+                                console.error('Error parsing line:', line, e);
+                                return null;
+                            }
+                        })
+                        .filter(repo => repo !== null && repo.repository)  // Ensure repo object has repository data
+                        .filter(repo => {
+                            // Only include each repository once (take latest analysis)
+                            const repoId = repo.repository.id;
+                            if (processedRepoIds.has(repoId)) {
+                                return false;
+                            }
+                            processedRepoIds.add(repoId);
+                            return true;
+                        });
+                }
+                
+                // If no results found or empty, try repositories.jsonl as fallback
+                if (allRepos.length === 0) {
+                    console.log("No repositories found in the results file. Trying repositories.jsonl as fallback.");
+                    const fallbackResponse = await fetch('repositories.jsonl');
+                    
+                    if (fallbackResponse.ok) {
+                        const fallbackText = await fallbackResponse.text();
+                        
+                        if (fallbackText.trim()) {
+                            allRepos = fallbackText.split('\n')
+                                .filter(line => line.trim() !== '')
+                                .map(line => {
+                                    try {
+                                        // Convert repo data to match results.jsonl format
+                                        const rawRepo = JSON.parse(line);
+                                        return {
+                                            repository: rawRepo,
+                                            overall_score: 0,
+                                            timestamp: new Date().toISOString()
+                                        };
+                                    } catch (e) {
+                                        console.error('Error parsing fallback line:', line, e);
+                                        return null;
+                                    }
+                                })
+                                .filter(repo => repo !== null);
+                        }
+                    } else {
+                        console.log("No fallback repository data found either.");
                     }
                 }
+                
+                console.log(`Loaded ${allRepos.length} repositories successfully.`);
                 
                 // Process each repo to calculate category averages
                 allRepos.forEach(repo => {
@@ -316,7 +359,7 @@
                 console.error('Error loading repositories:', error);
                 loadingIndicator.classList.add('hidden');
                 noResults.classList.remove('hidden');
-                noResults.querySelector('p').textContent = 'Error loading repositories. Please make sure your repositories.jsonl file is accessible.';
+                noResults.querySelector('p').textContent = `Error loading repositories: ${error.message}. Please make sure your repository data files are accessible.`;
             }
 
             // Event listener for search input

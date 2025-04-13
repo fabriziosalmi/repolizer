@@ -616,7 +616,8 @@ class CheckOrchestrator:
     
     def process_repository_from_jsonl(self, repo_id: Optional[str] = None, force: bool = False, 
                                       categories: Optional[List[str]] = None, 
-                                      checks: Optional[List[str]] = None) -> Dict:
+                                      checks: Optional[List[str]] = None,
+                                      output_path: Optional[str] = None) -> Dict:
         """
         Process a single repository from repositories.jsonl and save results
         
@@ -624,6 +625,7 @@ class CheckOrchestrator:
         :param force: If True, process the repository even if it has been processed before
         :param categories: Optional list of categories to include (all if None)
         :param checks: Optional list of specific check names to include (all if None)
+        :param output_path: Path to save results (default: results.jsonl)
         :return: Results of the checks
         """
         # Start the timer for total processing time
@@ -669,9 +671,10 @@ class CheckOrchestrator:
         with console.status(f"[bold blue]Cloning and analyzing repository...[/]", spinner="dots"):
             results = self.run_checks(repository, categories=categories, checks=checks)
         
-        # Save results to results.jsonl
-        with console.status(f"Saving results to results.jsonl...", spinner="dots"):
-            self._save_results_to_jsonl(results)
+        # Save results to the specified output path
+        output_file = output_path or 'results.jsonl'
+        with console.status(f"Saving results to {output_file}...", spinner="dots"):
+            self._save_results_to_jsonl(results, output_path)
         
         # Add to processed repos set - both ID and full name
         self.processed_repos.add(repo_id)
@@ -750,14 +753,17 @@ class CheckOrchestrator:
         
         return None
     
-    def _save_results_to_jsonl(self, results: Dict) -> bool:
+    def _save_results_to_jsonl(self, results: Dict, output_path: Optional[str] = None) -> bool:
         """
-        Save check results to results.jsonl
+        Save check results to results.jsonl or a custom output path
         
         :param results: Check results to save
+        :param output_path: Custom output path (if None, uses default results.jsonl)
         :return: True if successful, False otherwise
         """
-        results_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+        # Use the default path if no custom path is provided
+        if not output_path:
+            output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
         
         # Ensure results has the needed metadata
         if 'engine_version' not in results:
@@ -782,18 +788,47 @@ class CheckOrchestrator:
             results['overall_score'] = round(total_score / max(total_checks, 1), 3)
             results['total_checks'] = total_checks
         
-        # Save to JSONL file using utility function
-        return save_to_jsonl(results, results_path)
+        # Determine if we should save as JSON or JSONL based on file extension
+        if output_path.lower().endswith('.json'):
+            try:
+                # If the file already exists and has content, we need to load it first
+                existing_data = []
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    try:
+                        with open(output_path, 'r', encoding='utf-8') as f:
+                            existing_data = json.load(f)
+                            # If it's not a list, make it a list with the existing item
+                            if not isinstance(existing_data, list):
+                                existing_data = [existing_data]
+                    except json.JSONDecodeError:
+                        self.logger.warning(f"Existing file {output_path} is not valid JSON. Creating new file.")
+                        existing_data = []
+                
+                # Append the new results and save
+                existing_data.append(results)
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    json.dump(existing_data, f, indent=2)
+                
+                self.logger.info(f"Results saved to {output_path}")
+                return True
+            except Exception as e:
+                self.logger.error(f"Error saving data to {output_path}: {e}")
+                return False
+        else:
+            # Save to JSONL file using utility function
+            return save_to_jsonl(results, output_path)
     
     def process_all_repositories(self, force: bool = False, 
                                 categories: Optional[List[str]] = None, 
-                                checks: Optional[List[str]] = None) -> List[Dict]:
+                                checks: Optional[List[str]] = None,
+                                output_path: Optional[str] = None) -> List[Dict]:
         """
         Process all repositories from repositories.jsonl
         
         :param force: If True, process repositories even if they have been processed before
         :param categories: Optional list of categories to include (all if None)
         :param checks: Optional list of specific check names to include (all if None)
+        :param output_path: Path to save results (default: results.jsonl)
         :return: List of results for all repositories
         """
         console = Console()
@@ -847,8 +882,8 @@ class CheckOrchestrator:
                     self.logger.info(f"Processing repository: {repo_name}")
                     results = self.run_checks(repository, categories=categories, checks=checks)
                     
-                    # Save results to results.jsonl
-                    self._save_results_to_jsonl(results)
+                    # Save results to the specified output path
+                    self._save_results_to_jsonl(results, output_path)
                     
                     # Add to processed repos - both ID and full name
                     self.processed_repos.add(repo_id)
@@ -986,6 +1021,11 @@ if __name__ == "__main__":
         "--github-token",
         help="GitHub token to use for API calls (overrides config.json)"
     )
+    parser.add_argument(
+        "--output",
+        default="results.jsonl",
+        help="Path to save results (default: results.jsonl). Use .json extension for JSON format."
+    )
     
     # Parse arguments
     args = parser.parse_args(sys.argv[1:])
@@ -1017,6 +1057,12 @@ if __name__ == "__main__":
             checks = [chk.strip() for chk in args.checks.split(',')]
             console.print(f"[bold blue]Filtering checks by names:[/] {', '.join(checks)}")
         
+        # Inform about output format
+        if args.output.lower().endswith('.json'):
+            console.print(f"[bold blue]Results will be saved in JSON format to:[/] {args.output}")
+        else:
+            console.print(f"[bold blue]Results will be saved in JSONL format to:[/] {args.output}")
+            
         if args.process_all:
             console.print(Panel(f"[bold blue]Processing all repositories[/]" + 
                                 (" [bold yellow](forcing reprocessing)[/]" if args.force else "")))
@@ -1024,13 +1070,14 @@ if __name__ == "__main__":
             all_results = orchestrator.process_all_repositories(
                 force=args.force, 
                 categories=categories,
-                checks=checks
+                checks=checks,
+                output_path=args.output
             )
             
             # Print summary
             if all_results:
                 console.print(Panel(f"[bold green]Processed {len(all_results)} repositories[/]"))
-                console.print("[bold]Complete results saved to results.jsonl[/]")
+                console.print(f"[bold]Complete results saved to {args.output}[/]")
             else:
                 console.print("[bold yellow]No repositories were processed.[/]")
         else:
@@ -1048,7 +1095,8 @@ if __name__ == "__main__":
                 args.repo_id, 
                 force=args.force,
                 categories=categories,
-                checks=checks
+                checks=checks,
+                output_path=args.output
             )
             
             if "error" in results:
@@ -1132,8 +1180,8 @@ if __name__ == "__main__":
             console.print(f"[bold]Engine Version:[/] {engine_version}")
             console.print(f"[bold]Processed On:[/] {formatted_timestamp}")
             
-            console.print(f"\n[bold]Complete results saved to results.jsonl[/]")
-    
+            console.print(f"\n[bold]Complete results saved to {args.output}[/]")
+        
     except Exception as e:
         console.print(f"[bold red]An error occurred:[/] {str(e)}")
         import traceback

@@ -618,6 +618,9 @@ def save_to_jsonl(data: Dict, file_path: str, append: bool = True) -> bool:
     import jsonlines
     
     try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
+        
         mode = 'a' if append and os.path.exists(file_path) else 'w'
         with jsonlines.open(file_path, mode=mode) as writer:
             writer.write(data)
@@ -629,10 +632,10 @@ def save_to_jsonl(data: Dict, file_path: str, append: bool = True) -> bool:
 
 def extract_processed_repo_ids(results_path: str) -> Set[str]:
     """
-    Extract repository IDs from results.jsonl.
+    Extract repository IDs from results file (JSONL or JSON).
     
     Args:
-        results_path: Path to the results JSONL file
+        results_path: Path to the results file
         
     Returns:
         Set of repository IDs that have been processed
@@ -645,14 +648,18 @@ def extract_processed_repo_ids(results_path: str) -> Set[str]:
         logger.info(f"No results file found at {results_path}")
         return processed_ids
     
-    # Read with more robust error handling
-    try:
-        with open(results_path, 'r', encoding='utf-8') as f:
-            for i, line in enumerate(f):
+    # Determine file format based on extension
+    if results_path.lower().endswith('.json'):
+        # Handle JSON format
+        try:
+            with open(results_path, 'r', encoding='utf-8') as f:
                 try:
-                    if line.strip():  # Skip empty lines
-                        # Parse each line individually
-                        result = json.loads(line)
+                    data = json.load(f)
+                    # Handle both single result and array of results
+                    if not isinstance(data, list):
+                        data = [data]
+                    
+                    for result in data:
                         if "repository" in result and "id" in result["repository"]:
                             processed_ids.add(result["repository"]["id"])
                             
@@ -660,25 +667,44 @@ def extract_processed_repo_ids(results_path: str) -> Set[str]:
                             if "full_name" in result["repository"]:
                                 processed_ids.add(result["repository"]["full_name"])
                 except json.JSONDecodeError as je:
-                    # Log the error but continue processing
-                    logger.error(f"Error parsing JSON at line {i+1}: {je}")
-                    # Try to extract repository ID using regex in case the JSON is only partially corrupt
-                    import re
-                    id_match = re.search(r'"id":\s*("[^"]+"|[\d]+)', line)
-                    if id_match:
-                        id_value = id_match.group(1).strip('"')
-                        try:
-                            if id_value.isdigit():
-                                processed_ids.add(int(id_value))
-                            else:
-                                processed_ids.add(id_value)
-                            logger.info(f"Extracted ID {id_value} from partially corrupt JSON line {i+1}")
-                        except (ValueError, TypeError) as e:
-                            logger.debug(f"Could not convert extracted ID: {e}")
-                except Exception as e:
-                    logger.error(f"Error processing results file at line {i+1}: {e}")
-    except Exception as e:
-        logger.error(f"Error loading processed repository IDs: {e}")
+                    logger.error(f"Error parsing JSON file: {je}")
+        except Exception as e:
+            logger.error(f"Error loading processed repository IDs from JSON: {e}")
+    else:
+        # Read JSONL with more robust error handling
+        try:
+            with open(results_path, 'r', encoding='utf-8') as f:
+                for i, line in enumerate(f):
+                    try:
+                        if line.strip():  # Skip empty lines
+                            # Parse each line individually
+                            result = json.loads(line)
+                            if "repository" in result and "id" in result["repository"]:
+                                processed_ids.add(result["repository"]["id"])
+                                
+                                # Also add full_name if available for additional uniqueness check
+                                if "full_name" in result["repository"]:
+                                    processed_ids.add(result["repository"]["full_name"])
+                    except json.JSONDecodeError as je:
+                        # Log the error but continue processing
+                        logger.error(f"Error parsing JSON at line {i+1}: {je}")
+                        # Try to extract repository ID using regex in case the JSON is only partially corrupt
+                        import re
+                        id_match = re.search(r'"id":\s*("[^"]+"|[\d]+)', line)
+                        if id_match:
+                            id_value = id_match.group(1).strip('"')
+                            try:
+                                if id_value.isdigit():
+                                    processed_ids.add(int(id_value))
+                                else:
+                                    processed_ids.add(id_value)
+                                logger.info(f"Extracted ID {id_value} from partially corrupt JSON line {i+1}")
+                            except (ValueError, TypeError) as e:
+                                logger.debug(f"Could not convert extracted ID: {e}")
+                    except Exception as e:
+                        logger.error(f"Error processing results file at line {i+1}: {e}")
+        except Exception as e:
+            logger.error(f"Error loading processed repository IDs: {e}")
     
     logger.info(f"Found {len(processed_ids)} already processed repositories")
     return processed_ids
