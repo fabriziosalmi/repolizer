@@ -484,6 +484,13 @@ class ResilientGitHubScraper:
         # If we didn't yield any items, log a clear message
         if not items_yielded:
             self.logger.warning("No repositories were found matching your criteria in any page.")
+            # Build a simpler query suggestion
+            simple_suggestion = ""
+            if "min_stars" in filters:
+                simple_suggestion = f"stars:>={filters['min_stars']} "
+            if "languages" in filters and filters["languages"]:
+                simple_suggestion += f"language:{filters['languages'][0]}"
+            self.logger.warning(f"Try a simpler query: --query \"{simple_suggestion.strip()}\"")
 
     async def get_repository_details(self, owner: str, repo: str) -> Optional[Dict]:
         """Gets detailed information for a specific repository."""
@@ -653,6 +660,12 @@ async def main():
         help="Force restart scraping from scratch (ignore existing output file)"
     )
 
+    # Add new argument for max repositories
+    parser.add_argument(
+        "--max-repos", type=int, default=None,
+        help="Maximum number of repositories to save to output file (default: save all found)"
+    )
+
     args = parser.parse_args()
 
     # --- Load Configuration ---
@@ -746,18 +759,29 @@ async def main():
         if not pushed_after_val and 'last_updated_days' in filter_config:
             try:
                 days_ago = int(filter_config['last_updated_days'])
+                # Ensure days_ago is positive
+                days_ago = abs(days_ago)  # Use absolute value to handle negative input
                 cutoff_date = date.today() - timedelta(days=days_ago)
                 pushed_after_val = cutoff_date.isoformat()
-                logger.info(f"Using last_updated_days ({days_ago}) from config, setting pushed_after_date to {pushed_after_val}")
+                
+                # Check if the date is in the future (which would yield no results)
+                if cutoff_date > date.today():
+                    logger.warning(f"WARNING: The calculated date {pushed_after_val} is in the future! This will find NO repositories.")
+                    logger.warning("Consider using a smaller value for last_updated_days in your config.")
+                else:
+                    logger.info(f"Using last_updated_days ({days_ago}) from config, setting pushed_after_date to {pushed_after_val}")
             except (ValueError, TypeError):
                 logger.warning(f"Invalid value for last_updated_days in config: {filter_config['last_updated_days']}")
-        if pushed_after_val:
-            # Basic validation for YYYY-MM-DD format
-            if re.match(r'^\d{4}-\d{2}-\d{2}$', pushed_after_val):
-                search_filters['pushed_after_date'] = pushed_after_val
-            else:
-                logger.warning(f"Invalid date format for pushed_after_date: {pushed_after_val}. Expected YYYY-MM-DD. Ignoring filter.")
         
+        # If pushed_after_val is explicitly provided, verify it's not in the future
+        elif pushed_after_val:
+            try:
+                pushed_date = date.fromisoformat(pushed_after_val)
+                if pushed_date > date.today():
+                    logger.warning(f"WARNING: The specified date {pushed_after_val} is in the future! This will find NO repositories.")
+            except ValueError:
+                logger.warning(f"Invalid date format for pushed_after_date: {pushed_after_val}. Expected YYYY-MM-DD.")
+
         # Add countries filter
         countries_val = None
         if args.countries:
@@ -770,6 +794,24 @@ async def main():
         
         # Track if we're using simple query mode
         search_filters['simple_query'] = args.simple_query
+
+    # Add auto simple-query detection based on filter count
+    filter_count = sum(1 for k in ['languages', 'countries', 'pushed_after_date'] if k in search_filters)
+    
+    if filter_count >= 2 and not args.simple_query:
+        logger.warning("Multiple filters detected which may limit results. Consider using --simple-query")
+        logger.info("Tip: Using --simple-query will use only min_stars and first language for wider results")
+    
+    if args.simple_query:
+        search_filters['simple_query'] = True
+        logger.info("Simple query mode enabled: using more compatible query format")
+        
+    # Add a direct query command to try if results are empty
+    if "languages" in search_filters and search_filters["languages"]:
+        first_lang = search_filters["languages"][0]
+        min_stars = search_filters.get("min_stars", 10)
+        fallback_query = f"stars:>={min_stars} language:{first_lang}"
+        logger.debug(f"Fallback simple query if no results: {fallback_query}")
 
     # Diagnose query if requested
     if args.diagnose_query:
@@ -1083,6 +1125,11 @@ async def main():
                                 # Log progress periodically
                                 if repo_count % 25 == 0:
                                     logger.info(f"Scraped {repo_count} repositories...")
+                                
+                                # Add check for max repos limit
+                                if args.max_repos is not None and repo_count >= args.max_repos:
+                                    logger.info(f"Reached max-repos limit ({args.max_repos}). Stopping.")
+                                    break
                         
                         # Final check to ensure we actually wrote something
                         if repo_count == 0:
@@ -1149,6 +1196,11 @@ async def main():
                             # Log progress periodically
                             if new_repo_count % 10 == 0:
                                 logger.info(f"Scraped {repo_count} repositories ({new_repo_count} new)...")
+                            
+                            # Add check for max repos limit
+                            if args.max_repos is not None and repo_count >= args.max_repos:
+                                logger.info(f"Reached max-repos limit ({args.max_repos}). Stopping.")
+                                break
                     
                     # Save final results
                     logger.info(f"Search complete. Found {repo_count} repositories total ({new_repo_count} new).")

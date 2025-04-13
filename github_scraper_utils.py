@@ -236,8 +236,17 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
     """Build a GitHub search query from filter parameters."""
     query_parts = []
     
+    # Auto-simplify queries with many filters to improve results
+    auto_simplify = not simple and len([f for f in ['languages', 'countries', 'pushed_after_date'] 
+                                      if f in filters and filters.get(f)]) >= 2
+    
+    if auto_simplify:
+        # If we have multiple complex filters, log a warning and auto-simplify
+        logging.warning("Multiple complex filters detected - automatically simplifying query for better results")
+        simple = True
+    
     # Always include min_stars if present
-    if "min_stars" in filters: 
+    if "min_stars" in filters and filters["min_stars"]: 
         query_parts.append(f"stars:>={filters['min_stars']}")
     
     # Handle language filtering - simplified if requested
@@ -251,10 +260,21 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
             query_parts.append(f"({lang_query})")
     
     # Only add pushed_after if not in simple mode
-    if "pushed_after_date" in filters and not simple:
-        query_parts.append(f"pushed:>={filters['pushed_after_date']}")
+    if "pushed_after_date" in filters and filters["pushed_after_date"] and not simple:
+        # GitHub API can be picky about date formats, ensure it's YYYY-MM-DD
+        try:
+            if isinstance(filters["pushed_after_date"], str):
+                # If it's already a string, ensure it's properly formatted
+                date_obj = datetime.strptime(filters["pushed_after_date"], "%Y-%m-%d").date()
+                query_parts.append(f"pushed:>={date_obj.isoformat()}")
+            else:
+                # If it's a date object, format it
+                query_parts.append(f"pushed:>={filters['pushed_after_date'].isoformat()}")
+        except (ValueError, AttributeError):
+            # Log warning but don't crash if date is improperly formatted
+            logging.warning(f"Invalid date format for pushed_after_date: {filters['pushed_after_date']}. Skipping this filter.")
     
-    # Handle country-based filtering
+    # Handle country-based filtering - using location: syntax (not user:location:)
     if "countries" in filters and filters["countries"] and not simple:
         if len(filters["countries"]) == 1:
             # Single country
@@ -266,6 +286,10 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
     
     # Join all parts with spaces
     query = " ".join(query_parts) if query_parts else "is:public"
+    
+    # Add a diagnostic log of the final query
+    logging.debug(f"Final GitHub search query: {query}")
+    
     return query
 
 def parse_link_header(link_header: str) -> Dict[str, str]:
