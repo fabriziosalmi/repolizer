@@ -92,6 +92,15 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index')) # Redirect if already logged in
     if request.method == 'POST':
+        # --- Simple JS Check ---
+        js_check_value = request.form.get('js_check')
+        if js_check_value != 'js_enabled':
+            flash('JavaScript must be enabled to log in.', 'error')
+            # Optionally log this attempt as suspicious
+            print("Login attempt rejected: Missing or invalid JS check value.")
+            return render_template('login.html')
+        # --- End JS Check ---
+
         username = request.form.get('username')
         password = request.form.get('password')
         user_data = users.get(username)

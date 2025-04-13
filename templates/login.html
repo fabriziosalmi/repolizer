@@ -63,6 +63,7 @@
             {% endwith %}
 
             <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}">
+                <input type="hidden" name="js_check" id="js_check" value=""> <!-- Hidden field for JS check -->
                 <div class="mb-4">
                     <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Username:</label>
                     <input type="text" id="username" name="username" required
@@ -91,11 +92,17 @@
     </footer>
 
     <script>
-        // Add dynamic year to footer
         document.addEventListener('DOMContentLoaded', () => {
+            // Add dynamic year to footer
             const yearSpan = document.querySelector('footer p');
             if (yearSpan) {
                 yearSpan.innerHTML = yearSpan.innerHTML.replace('{{ current_year }}', new Date().getFullYear());
+            }
+            
+            // Set the value for the JS check hidden field
+            const jsCheckField = document.getElementById('js_check');
+            if (jsCheckField) {
+                jsCheckField.value = 'js_enabled'; // Set a specific value
             }
         });
     </script>
