@@ -342,6 +342,7 @@ def check_caching(repo_path: str = None, repo_data: Dict = None, timeout: int = 
     # Process files in parallel using ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=min(os.cpu_count() * 2, 8)) as executor:
         futures = []
+        config_futures = []  # Separate list for config file futures
         
         # Submit source code file tasks
         for file_path, ext in files_to_process:
@@ -353,35 +354,33 @@ def check_caching(repo_path: str = None, repo_data: Dict = None, timeout: int = 
             elif ext == "config":
                 # Handle config files separately
                 future = executor.submit(check_config_file, file_path, repo_path, config_caching_keywords, set(), [])
-                futures.append((future, file_path))
+                config_futures.append((future, file_path))
         
-        # Process results as they complete
+        # Process source file results as they complete
         for future in as_completed(futures):
-            if isinstance(future, tuple):
-                # Config file result
-                future_obj, file_path = future
-                config_has_caching = future_obj.result()
-                if config_has_caching:
-                    files_with_caching += 1
-                    caching_types_found.add("config")
-                total_files_checked += 1
-            else:
-                # Source file result
-                result_data = future.result()
-                if result_data:
-                    caching_types_found.update(result_data["types"])
-                    caching_libraries_found.update(result_data["libraries"])
-                    
-                    # Track language-specific patterns
-                    lang = result_data["language"]
-                    if lang not in language_caching:
-                        language_caching[lang] = set()
-                    language_caching[lang].update(result_data["patterns"])
-                    
-                    # Add to file examples if we have fewer than 5
-                    if result_data["example"] and len(file_examples) < 5:
-                        file_examples.append(result_data["example"])
-    
+            result_data = future.result()
+            if result_data:
+                caching_types_found.update(result_data["types"])
+                caching_libraries_found.update(result_data["libraries"])
+                
+                # Track language-specific patterns
+                lang = result_data["language"]
+                if lang not in language_caching:
+                    language_caching[lang] = set()
+                language_caching[lang].update(result_data["patterns"])
+                
+                # Add to file examples if we have fewer than 5
+                if result_data["example"] and len(file_examples) < 5:
+                    file_examples.append(result_data["example"])
+        
+        # Process config file results separately
+        for future, file_path in config_futures:
+            config_has_caching = future.result()
+            if config_has_caching:
+                files_with_caching += 1
+                caching_types_found.add("config")
+            total_files_checked += 1
+
     # Convert language patterns to a serializable format
     lang_caching_dict = {}
     for lang, patterns in language_caching.items():

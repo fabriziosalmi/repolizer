@@ -411,7 +411,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                             try:
                                 if has_filesystem_utils:
                                     # Use our safer utils if available
-                                    chunk = safe_read_file(file_path, max_size=1024, binary=True, timeout=3)
+                                    chunk = safe_read_file(file_path, max_size=32768, binary=True, timeout=3)
                                     if chunk is None or b'\x00' in chunk:
                                         logger.debug(f"Skipping likely binary file: {rel_path}")
                                         files_checked -= 1
@@ -420,7 +420,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                                 else:
                                     # Fallback with try/except
                                     with open(file_path, 'rb') as f_bin:
-                                        chunk = f_bin.read(1024)
+                                        chunk = f_bin.read(32768)
                                         if b'\x00' in chunk:
                                             logger.debug(f"Skipping likely binary file (null byte found): {rel_path}")
                                             files_checked -= 1
