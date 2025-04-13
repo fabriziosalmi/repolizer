@@ -146,6 +146,20 @@ def start_scraper():
         if config.get('force_restart'):
             cmd.append('--force-restart')
         
+        # Add max_repos parameter
+        if config.get('max_repos'): # Check if the key exists and has a truthy value
+            try:
+                max_repos_value = int(config['max_repos'])
+                if max_repos_value > 0:
+                    cmd.extend(['--max-repos', str(max_repos_value)])
+                    print(f"Limiting scrape to {max_repos_value} repositories.") # Add log
+                else:
+                    # Log if a non-positive value was provided but don't add the arg
+                    print(f"Ignoring non-positive max_repos value: {config['max_repos']}")
+            except (ValueError, TypeError):
+                # Log if the value is not a valid integer
+                print(f"Ignoring invalid max_repos value: {config['max_repos']}")
+        
         # Set output format and file
         output_format = config.get('output_format', 'jsonl')
         # Change default output file from 'results.jsonl' to 'repositories.jsonl'
