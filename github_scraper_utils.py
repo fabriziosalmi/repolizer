@@ -236,10 +236,14 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
     """Build a GitHub search query from filter parameters."""
     query_parts = []
     
+    # Check if languages were explicitly provided by the user
+    languages_from_user = "_languages_from_user" in filters and filters["_languages_from_user"] == True
+    
     # Always auto-simplify when using multiple languages or complex filters
+    # Only consider languages in complexity calculation if they were directly provided by the user
     auto_simplify = not simple and (
-        ("languages" in filters and filters.get("languages") and len(filters.get("languages", [])) > 1) or
-        len([f for f in ['countries', 'pushed_after_date', 'owners'] if f in filters and filters.get(f)]) > 0 # Added 'owners' here
+        ("languages" in filters and filters.get("languages") and len(filters.get("languages", [])) > 1 and languages_from_user) or
+        len([f for f in ['countries', 'pushed_after_date', 'owners'] if f in filters and filters.get(f)]) > 1
     )
     
     if auto_simplify:
@@ -251,8 +255,8 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
     if "min_stars" in filters and filters["min_stars"]: 
         query_parts.append(f"stars:>={filters['min_stars']}")
     
-    # Handle language filtering - simplified if requested
-    if "languages" in filters and filters["languages"]:
+    # Only include languages if explicitly provided by the user (via command line)
+    if languages_from_user and "languages" in filters and filters["languages"]:
         if simple or len(filters["languages"]) == 1:
             # Simple mode or single language - just use the first one
             query_parts.append(f"language:{filters['languages'][0]}")

@@ -751,13 +751,14 @@ async def main():
         min_stars_val = args.min_stars if args.min_stars is not None else filter_config.get('min_stars', 5)  # Default to 5 stars
         search_filters['min_stars'] = min_stars_val
 
+        # Only add languages to the search filters if explicitly provided on command line
         languages_val = None
         if args.languages:
             languages_val = [lang.strip().lower() for lang in args.languages.split(',') if lang.strip()]
-        elif 'languages' in filter_config:
-            languages_val = filter_config['languages']
-        if languages_val:
+            # Mark that languages were explicitly requested by the user
+            search_filters['_languages_from_user'] = True  
             search_filters['languages'] = languages_val
+        # Don't use languages from config if not explicitly requested
 
         pushed_after_val = args.pushed_after
         if not pushed_after_val and 'last_updated_days' in filter_config:
