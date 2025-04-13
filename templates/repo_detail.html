@@ -266,7 +266,82 @@
                                                         {% if score is number %}{{ score|round(1) }}{% else %}{{ score }}{% endif %}
                                                     </span>
                                                 </div>
-                                                <p class="text-sm text-gray-600 mb-2">{{ details }}</p>
+                                                
+                                                <!-- Improved JSON visualization -->
+                                                <div class="text-sm text-gray-600 mb-2">
+                                                    {% if details is mapping %}
+                                                        <div class="bg-gray-50 p-3 rounded-md border border-gray-200 overflow-auto">
+                                                            <div class="json-explorer">
+                                                                {% for key, value in details.items() %}
+                                                                    <div class="mb-2">
+                                                                        <span class="font-semibold text-blue-700">{{ key }}:</span>
+                                                                        {% if value is mapping %}
+                                                                            <div class="ml-4 pl-2 border-l-2 border-gray-300">
+                                                                                {% for k, v in value.items() %}
+                                                                                    <div class="my-1">
+                                                                                        <span class="font-medium text-blue-600">{{ k }}:</span>
+                                                                                        {% if v is mapping or v is iterable and v is not string %}
+                                                                                            <button class="toggle-btn ml-1 text-xs bg-gray-200 hover:bg-gray-300 px-1 rounded" data-target="nested-{{ check_name|replace(' ', '-') }}-{{ key }}-{{ k }}">
+                                                                                                <i class="fas fa-chevron-right"></i>
+                                                                                            </button>
+                                                                                            <div id="nested-{{ check_name|replace(' ', '-') }}-{{ key }}-{{ k }}" class="ml-4 pl-2 border-l-2 border-gray-300 hidden">
+                                                                                                <pre class="text-xs overflow-auto whitespace-pre-wrap break-words">{{ v|pprint }}</pre>
+                                                                                            </div>
+                                                                                        {% else %}
+                                                                                            <span class="text-gray-700">{{ v }}</span>
+                                                                                        {% endif %}
+                                                                                    </div>
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        {% elif value is iterable and value is not string %}
+                                                                            {% if value|length > 0 %}
+                                                                                <button class="toggle-btn ml-1 text-xs bg-gray-200 hover:bg-gray-300 px-1 rounded" data-target="list-{{ check_name|replace(' ', '-') }}-{{ key }}">
+                                                                                    <i class="fas fa-chevron-right"></i> {{ value|length }} items
+                                                                                </button>
+                                                                                <div id="list-{{ check_name|replace(' ', '-') }}-{{ key }}" class="ml-4 pl-2 border-l-2 border-gray-300 hidden">
+                                                                                    <ul class="list-disc list-inside">
+                                                                                        {% for item in value %}
+                                                                                            <li class="text-gray-700">
+                                                                                                {% if item is mapping %}
+                                                                                                    <pre class="text-xs overflow-auto whitespace-pre-wrap break-words">{{ item|pprint }}</pre>
+                                                                                                {% else %}
+                                                                                                    {{ item }}
+                                                                                                {% endif %}
+                                                                                            </li>
+                                                                                        {% endfor %}
+                                                                                    </ul>
+                                                                                </div>
+                                                                            {% else %}
+                                                                                <span class="text-gray-500 italic">(empty list)</span>
+                                                                            {% endif %}
+                                                                        {% else %}
+                                                                            {% if value is number %}
+                                                                                <span class="text-purple-600 font-mono">{{ value }}</span>
+                                                                            {% elif value is boolean %}
+                                                                                <span class="text-green-600 font-mono">{{ value|string|lower }}</span>
+                                                                            {% elif value is none %}
+                                                                                <span class="text-gray-500 italic">null</span>
+                                                                            {% else %}
+                                                                                <span class="text-gray-700">{{ value }}</span>
+                                                                            {% endif %}
+                                                                        {% endif %}
+                                                                    </div>
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                    {% elif details is iterable and details is not string %}
+                                                        <div class="bg-gray-50 p-3 rounded-md border border-gray-200 overflow-auto">
+                                                            <ul class="list-disc list-inside">
+                                                                {% for item in details %}
+                                                                    <li class="text-gray-700">{{ item }}</li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </div>
+                                                    {% else %}
+                                                        {{ details }}
+                                                    {% endif %}
+                                                </div>
+                                                
                                                 {% if suggestions %}
                                                     <div class="mt-2 bg-blue-50 p-2 rounded-md border border-blue-100">
                                                         <div class="text-xs font-medium text-blue-700 mb-1">Suggestions:</div>
@@ -321,6 +396,37 @@
                     // Log an error if elements aren't found (for debugging)
                     console.error("Could not find elements for detailed checks toggle.");
                 }
+            </script>
+            <!-- Add Javascript for JSON toggles after the existing script tag -->
+            <script>
+                // Initialize toggle functionality for JSON elements
+                document.addEventListener('DOMContentLoaded', function() {
+                    const toggleButtons = document.querySelectorAll('.toggle-btn');
+                    
+                    toggleButtons.forEach(button => {
+                        button.addEventListener('click', function() {
+                            const targetId = this.getAttribute('data-target');
+                            const targetElement = document.getElementById(targetId);
+                            
+                            if (targetElement) {
+                                // Toggle visibility
+                                targetElement.classList.toggle('hidden');
+                                
+                                // Toggle icon
+                                const icon = this.querySelector('i');
+                                if (icon) {
+                                    if (targetElement.classList.contains('hidden')) {
+                                        icon.classList.remove('fa-chevron-down');
+                                        icon.classList.add('fa-chevron-right');
+                                    } else {
+                                        icon.classList.remove('fa-chevron-right');
+                                        icon.classList.add('fa-chevron-down');
+                                    }
+                                }
+                            }
+                        });
+                    });
+                });
             </script>
         </div> {# End of main white card #}
 
