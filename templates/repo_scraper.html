@@ -150,32 +150,45 @@
                         </div>
                         
                         <div>
+                            <label for="max-repos" class="block text-sm font-medium text-gray-700 mb-1">Max Repositories</label>
+                            <input type="number" id="max-repos" name="max-repos" min="1" placeholder="No limit"
+                                  class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
+                            <p class="text-xs text-gray-500 mt-1">Maximum repositories to save (leave empty for no limit)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
                             <label for="direct-query" class="block text-sm font-medium text-gray-700 mb-1">Direct Query (Advanced)</label>
                             <input type="text" id="direct-query" name="direct-query" placeholder="e.g. stars:>100 language:python pushed:>2023-01-01"
                                   class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
                             <p class="text-xs text-gray-500 mt-1">Direct GitHub search query (overrides other filters if specified)</p>
                         </div>
+                        
+                        <div class="flex flex-col">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Query Options</label>
+                            <div class="flex flex-wrap gap-4 mt-2">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="simple-query" name="simple-query" checked
+                                          class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                                    <label for="simple-query" class="ml-2 block text-sm text-gray-700">Use Simple Query</label>
+                                    <span class="ml-1 text-gray-500 text-xs" title="Recommended: Use more compatible query format with GitHub API">
+                                        <i class="fas fa-question-circle"></i>
+                                    </span>
+                                </div>
+                                
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="diagnose-query" name="diagnose-query"
+                                          class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                                    <label for="diagnose-query" class="ml-2 block text-sm text-gray-700">Diagnose Query</label>
+                                    <span class="ml-1 text-gray-500 text-xs" title="Test queries to find which filters are too restrictive">
+                                        <i class="fas fa-question-circle"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mt-4 flex flex-wrap gap-4">
-                        <div class="flex items-center">
-                            <input type="checkbox" id="simple-query" name="simple-query"
-                                  class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
-                            <label for="simple-query" class="ml-2 block text-sm text-gray-700">Use Simple Query</label>
-                            <span class="ml-1 text-gray-500 text-xs" title="Omit some filters that might cause issues">
-                                <i class="fas fa-question-circle"></i>
-                            </span>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" id="diagnose-query" name="diagnose-query"
-                                  class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
-                            <label for="diagnose-query" class="ml-2 block text-sm text-gray-700">Diagnose Query</label>
-                            <span class="ml-1 text-gray-500 text-xs" title="Test increasingly specific queries to find which filters are too restrictive">
-                                <i class="fas fa-question-circle"></i>
-                            </span>
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Advanced Options -->
@@ -184,88 +197,125 @@
                         <i class="fas fa-cogs mr-2"></i>Advanced Options
                     </h3>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                            <label for="request-delay" class="block text-sm font-medium text-gray-700 mb-1">Request Delay (ms)</label>
-                            <input type="number" id="request-delay" name="request-delay" value="500" min="100"
-                                  class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
-                        </div>
-                        
-                        <div>
-                            <label for="retries" class="block text-sm font-medium text-gray-700 mb-1">Max Retries</label>
-                            <input type="number" id="retries" name="retries" value="3" min="1" max="10"
-                                  class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
-                        </div>
-                        
-                        <div>
-                            <label for="output-format" class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
-                            <select id="output-format" name="output-format"
-                                   class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
-                                <option value="jsonl">JSONL (One JSON per line)</option>
-                                <option value="json">JSON (Single array)</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label for="save-interval" class="block text-sm font-medium text-gray-700 mb-1">Save Interval</label>
-                            <input type="number" id="save-interval" name="save-interval" value="25" min="0"
-                                  class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
-                            <p class="text-xs text-gray-500 mt-1">Save progress every N repositories (0 to disable)</p>
-                        </div>
-                        
-                        <div>
-                            <label for="timeout" class="block text-sm font-medium text-gray-700 mb-1">Request Timeout (seconds)</label>
-                            <input type="number" id="timeout" name="timeout" value="30" min="5" max="120"
-                                  class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                    <!-- Reorganize into meaningful sections -->
+                    <div class="mb-4">
+                        <h4 class="text-sm font-medium text-purple-700 mb-2 border-b border-purple-200 pb-1">Performance & Reliability</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="request-delay" class="block text-sm font-medium text-gray-700 mb-1">Request Delay (ms)</label>
+                                <input type="number" id="request-delay" name="request-delay" value="500" min="100"
+                                      class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                                <p class="text-xs text-gray-500 mt-1">Time between requests</p>
+                            </div>
+                            
+                            <div>
+                                <label for="retries" class="block text-sm font-medium text-gray-700 mb-1">Max Retries</label>
+                                <input type="number" id="retries" name="retries" value="3" min="1" max="10"
+                                      class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                                <p class="text-xs text-gray-500 mt-1">Retry failed requests</p>
+                            </div>
+                            
+                            <div>
+                                <label for="timeout" class="block text-sm font-medium text-gray-700 mb-1">Request Timeout (seconds)</label>
+                                <input type="number" id="timeout" name="timeout" value="30" min="5" max="120"
+                                      class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                                <p class="text-xs text-gray-500 mt-1">Cancel requests after timeout</p>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="flex flex-wrap gap-4">
-                        <div class="flex items-center">
-                            <input type="checkbox" id="debug-search" name="debug-search"
-                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <label for="debug-search" class="ml-2 block text-sm text-gray-700">Debug Search</label>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" id="debug-api" name="debug-api"
-                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <label for="debug-api" class="ml-2 block text-sm text-gray-700">Debug API</label>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" id="dump-responses" name="dump-responses"
-                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <label for="dump-responses" class="ml-2 block text-sm text-gray-700">Dump Responses</label>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" id="test-only" name="test-only"
-                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <label for="test-only" class="ml-2 block text-sm text-gray-700">Test Only (No data saved)</label>
+                    <div class="mb-4">
+                        <h4 class="text-sm font-medium text-purple-700 mb-2 border-b border-purple-200 pb-1">Output Options</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="output-format" class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
+                                <select id="output-format" name="output-format"
+                                       class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                                    <option value="jsonl">JSONL (One JSON per line)</option>
+                                    <option value="json">JSON (Single array)</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">JSONL better for large results</p>
+                            </div>
+                            
+                            <div>
+                                <label for="save-interval" class="block text-sm font-medium text-gray-700 mb-1">Save Interval</label>
+                                <input type="number" id="save-interval" name="save-interval" value="25" min="0"
+                                      class="w-full p-2 border rounded-md focus:ring-purple-500 focus:border-purple-500">
+                                <p class="text-xs text-gray-500 mt-1">Save progress every N repositories (0 to disable)</p>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="flex items-center">
-                            <input type="checkbox" id="resume" name="resume"
-                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <label for="resume" class="ml-2 block text-sm text-gray-700">Resume Scraping</label>
-                            <span class="ml-1 text-gray-500 text-xs" title="Resume from existing output file if present">
-                                <i class="fas fa-question-circle"></i>
-                            </span>
+                    <div class="mb-4">
+                        <h4 class="text-sm font-medium text-purple-700 mb-2 border-b border-purple-200 pb-1">Scraping Session</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white p-3 rounded-md shadow-sm">
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" id="resume" name="resume"
+                                          class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label for="resume" class="ml-2 block text-sm font-medium text-gray-700">Resume Scraping</label>
+                                </div>
+                                <p class="text-xs text-gray-500">Resume from existing output file if present</p>
+                            </div>
+                            
+                            <div class="bg-white p-3 rounded-md shadow-sm">
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" id="force-restart" name="force-restart"
+                                          class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label for="force-restart" class="ml-2 block text-sm font-medium text-gray-700">Force Restart</label>
+                                </div>
+                                <p class="text-xs text-gray-500">Force restart scraping from scratch (ignore existing output file)</p>
+                            </div>
                         </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" id="force-restart" name="force-restart"
-                                  class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <label for="force-restart" class="ml-2 block text-sm text-gray-700">Force Restart</label>
-                            <span class="ml-1 text-gray-500 text-xs" title="Force restart scraping from scratch (ignore existing output file)">
-                                <i class="fas fa-question-circle"></i>
-                            </span>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-sm font-medium text-purple-700 mb-2 border-b border-purple-200 pb-1">Debugging Options</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white p-3 rounded-md shadow-sm">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug-search" name="debug-search"
+                                          class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label for="debug-search" class="ml-2 block text-sm font-medium text-gray-700">Debug Search</label>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Show detailed search diagnostic information</p>
+                            </div>
+                            
+                            <div class="bg-white p-3 rounded-md shadow-sm">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug-api" name="debug-api"
+                                          class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label for="debug-api" class="ml-2 block text-sm font-medium text-gray-700">Debug API</label>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Test API connectivity before scraping</p>
+                            </div>
+                            
+                            <div class="bg-white p-3 rounded-md shadow-sm">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="dump-responses" name="dump-responses"
+                                          class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label for="dump-responses" class="ml-2 block text-sm font-medium text-gray-700">Dump Responses</label>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Save raw API responses for troubleshooting</p>
+                            </div>
+                            
+                            <div class="bg-white p-3 rounded-md shadow-sm">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="test-only" name="test-only"
+                                          class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label for="test-only" class="ml-2 block text-sm font-medium text-gray-700">Test Only</label>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Test the query without saving data</p>
+                            </div>
                         </div>
+                    </div>
+                    
+                    <!-- Add a help tip box at the bottom -->
+                    <div class="mt-4 p-3 bg-purple-100 rounded-md border border-purple-200">
+                        <p class="text-xs text-purple-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Tip:</strong> For most users, the default settings work well. Adjust these options only if you're experiencing issues or have specific requirements.
+                        </p>
                     </div>
                 </div>
                 
@@ -484,6 +534,7 @@
                     languages: formData.get('languages'),
                     pushed_after: formData.get('pushed-after'),
                     max_pages: parseInt(formData.get('max-pages')),
+                    max_repos: formData.get('max-repos') ? parseInt(formData.get('max-repos')) : null,
                     direct_query: formData.get('direct-query'),
                     simple_query: formData.get('simple-query') === 'on',
                     diagnose_query: formData.get('diagnose-query') === 'on',
@@ -509,6 +560,15 @@
                 outputFormat = formData.get('output-format');
                 // Change the default output file to repositories.jsonl
                 outputFile = `repositories.${outputFormat}`;
+                
+                // Ensure max_repos is properly passed to the backend
+                if (formData.get('max-repos')) {
+                    const maxReposValue = parseInt(formData.get('max-repos'));
+                    if (!isNaN(maxReposValue) && maxReposValue > 0) {
+                        scraperConfig.max_repos = maxReposValue;
+                        console.log(`Setting maximum repositories limit to: ${maxReposValue}`);
+                    }
+                }
                 
                 // Show progress UI
                 scraperForm.parentElement.classList.add('hidden');
@@ -776,6 +836,24 @@
             function addLogMessage(message) {
                 const now = new Date().toLocaleTimeString();
                 const logEntry = document.createElement('div');
+                
+                // Check for warning about future dates
+                if (message.includes("WARNING: The") && message.includes("future")) {
+                    logEntry.className = "text-red-600 font-semibold";
+                } 
+                // Check for warning about complex filters
+                else if (message.includes("Complex filters detected") || message.includes("Multiple filters detected")) {
+                    logEntry.className = "text-orange-600";
+                }
+                // Check for No repositories found message
+                else if (message.includes("No repositories were found")) {
+                    logEntry.className = "text-red-600";
+                }
+                // Highlight success messages
+                else if (message.includes("Found") && message.includes("repositories")) {
+                    logEntry.className = "text-green-600";
+                }
+                
                 logEntry.textContent = `[${now}] ${message}`;
                 logContainer.appendChild(logEntry);
                 logContainer.scrollTop = logContainer.scrollHeight;
@@ -783,16 +861,31 @@
             
             // Function to update progress
             function updateProgress() {
-                // For now, use a simple approximation based on pages
-                // In a real implementation, we'd get more detailed progress from the backend
+                // For now, use a simple approximation based on pages and max repos/pages settings
                 const maxPages = parseInt(document.getElementById('max-pages').value) || 10;
-                const percentage = Math.min(100, Math.round((currentStats.pages / maxPages) * 100));
+                const maxRepos = parseInt(document.getElementById('max-repos').value) || null;
+                
+                let percentage;
+                if (maxRepos && currentStats.repositories > 0) {
+                    // If max repos is set, use it for percentage calculation
+                    percentage = Math.min(100, Math.round((currentStats.repositories / maxRepos) * 100));
+                } else {
+                    // Otherwise use pages
+                    percentage = Math.min(100, Math.round((currentStats.pages / maxPages) * 100));
+                }
+                
                 progressBar.style.width = `${percentage}%`;
                 progressPercentage.textContent = `${percentage}%`;
                 
                 // Update stats if needed
                 reposCount.textContent = currentStats.repositories;
                 pagesCount.textContent = currentStats.pages;
+                
+                // Add a visual indicator when we're approaching the max repos limit
+                if (maxRepos && currentStats.repositories >= maxRepos * 0.9) {
+                    progressBar.classList.remove('bg-blue-600');
+                    progressBar.classList.add('bg-green-600');
+                }
             }
             
             // Function to show results
@@ -955,6 +1048,38 @@
                 const date = new Date(dateString);
                 return date.toLocaleDateString();
             }
+
+            // Add event listener for max-repos field to update UI
+            document.getElementById('max-repos').addEventListener('change', function(e) {
+                const maxReposInput = e.target;
+                const maxReposValue = parseInt(maxReposInput.value);
+                
+                if (!isNaN(maxReposValue) && maxReposValue > 0) {
+                    // Add a helpful indicator
+                    const indicator = document.createElement('div');
+                    indicator.className = 'text-xs text-blue-600 mt-1 transition-opacity duration-1000';
+                    indicator.textContent = `Will stop after retrieving ${maxReposValue.toLocaleString()} repositories`;
+                    
+                    // Replace any existing indicator
+                    const existingIndicator = maxReposInput.parentNode.querySelector('.text-blue-600');
+                    if (existingIndicator) {
+                        maxReposInput.parentNode.removeChild(existingIndicator);
+                    }
+                    
+                    // Add new indicator
+                    maxReposInput.parentNode.insertBefore(indicator, maxReposInput.nextSibling.nextSibling);
+                    
+                    // Fade out after 5 seconds
+                    setTimeout(() => {
+                        indicator.style.opacity = '0';
+                        setTimeout(() => {
+                            if (indicator.parentNode) {
+                                indicator.parentNode.removeChild(indicator);
+                            }
+                        }, 1000);
+                    }, 5000);
+                }
+            });
         });
     </script>
 </body>

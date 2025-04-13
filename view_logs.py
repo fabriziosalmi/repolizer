@@ -10,6 +10,7 @@ import os
 import sys
 import re
 import argparse
+import logging
 from datetime import datetime, timedelta
 from rich.console import Console
 from rich.table import Table
