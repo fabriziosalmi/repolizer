@@ -588,6 +588,10 @@ async def main():
     parser.add_argument(
         "--pushed-after", help="Filter for repos pushed after this date (YYYY-MM-DD) (overrides config last_updated_days)"
     )
+    # Add country filter parameter
+    parser.add_argument(
+        "--countries", help="Comma-separated list of countries/locations to filter by (e.g., 'Italy,Germany')"
+    )
 
     # --- Add some new command line arguments to help with troubleshooting ---
     parser.add_argument(
@@ -754,6 +758,16 @@ async def main():
             else:
                 logger.warning(f"Invalid date format for pushed_after_date: {pushed_after_val}. Expected YYYY-MM-DD. Ignoring filter.")
         
+        # Add countries filter
+        countries_val = None
+        if args.countries:
+            countries_val = [country.strip() for country in args.countries.split(',') if country.strip()]
+        elif 'countries' in filter_config:
+            countries_val = filter_config['countries']
+        if countries_val:
+            search_filters['countries'] = countries_val
+            logger.info(f"Filtering by countries/locations: {countries_val}")
+        
         # Track if we're using simple query mode
         search_filters['simple_query'] = args.simple_query
 
@@ -784,15 +798,34 @@ async def main():
                 lang_query = f"{stars_query} ({lang_list})"
                 test_queries.append(("Stars + languages", lang_query))
         
+        # Add countries if present
+        if "countries" in search_filters and search_filters["countries"]:
+            base_query = lang_query if "languages" in search_filters and search_filters["languages"] else stars_query
+            
+            if len(search_filters["countries"]) == 1:
+                # Single country
+                country = search_filters["countries"][0]
+                country_query = f"{base_query} location:{country}"
+                test_queries.append((f"Stars + languages + {country}", country_query))
+            else:
+                # Multiple countries
+                country_list = " OR ".join([f"location:{country}" for country in search_filters["countries"]])
+                country_query = f"{base_query} ({country_list})"
+                test_queries.append(("Stars + languages + countries", country_query))
+        
         # Add pushed date if present
         if "pushed_after_date" in search_filters:
-            if "languages" in search_filters and search_filters["languages"]:
+            if "countries" in search_filters and search_filters["countries"]:
+                # Stars + languages + countries + pushed
+                date_query = f"{country_query} pushed:>={search_filters['pushed_after_date']}"
+                test_queries.append(("Stars + languages + countries + date", date_query))
+            elif "languages" in search_filters and search_filters["languages"]:
                 # Stars + languages + pushed
                 date_query = f"{lang_query} pushed:>={search_filters['pushed_after_date']}"
                 test_queries.append(("Stars + languages + date", date_query))
             else:
                 # Stars + pushed
-                date_query = f"{stars_query} pushed:>={search_filters['ppushed_after_date']}"
+                date_query = f"{stars_query} pushed:>={search_filters['pushed_after_date']}"
                 test_queries.append(("Stars + date", date_query))
         
         # Run the diagnostic queries using our utility function
@@ -809,10 +842,10 @@ async def main():
         logger.info("\nDiagnosis Results:")
         logger.info("--------------------")
         for name, query in test_queries:
-            logger.info(f"- Try: python github_scraper.py --query \"{query}\" -o results.json --format json")
+            logger.info(f"- Try: python github_scraper.py --query \"{query}\" -o repositories.json --format json")
         
         logger.info("\nNote: You can also try a simple, guaranteed-to-work query like:")
-        logger.info("python github_scraper.py --query \"stars:>100\" -o results.json --format json")
+        logger.info("python github_scraper.py --query \"stars:>100\" -o repositories.json --format json")
         
         # Exit if just running diagnostics
         if args.test_only:

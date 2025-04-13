@@ -254,6 +254,16 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
     if "pushed_after_date" in filters and not simple:
         query_parts.append(f"pushed:>={filters['pushed_after_date']}")
     
+    # Handle country-based filtering
+    if "countries" in filters and filters["countries"] and not simple:
+        if len(filters["countries"]) == 1:
+            # Single country
+            query_parts.append(f"location:{filters['countries'][0]}")
+        else:
+            # Multiple countries with OR
+            country_query = " OR ".join([f"location:{country}" for country in filters["countries"]])
+            query_parts.append(f"({country_query})")
+    
     # Join all parts with spaces
     query = " ".join(query_parts) if query_parts else "is:public"
     return query

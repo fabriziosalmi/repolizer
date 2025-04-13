@@ -95,6 +95,12 @@ def start_scraper():
         if config.get('pushed_after'):
             cmd.extend(['--pushed-after', config['pushed_after']])
         
+        # Add countries parameter
+        if config.get('countries'):
+            countries = ','.join(country.strip() for country in config['countries'].split(',') if country.strip())
+            if countries:
+                cmd.extend(['--countries', countries])
+        
         if config.get('max_pages'):
             cmd.extend(['--max-pages', str(config['max_pages'])])
         
