@@ -70,20 +70,32 @@
                 <i class="fab fa-github text-4xl mr-3"></i>
                 <h1 class="text-2xl font-bold">Repolizer</h1>
             </div>
-            <!-- Navigation menu -->
+            <!-- Updated navigation menu -->
             <div class="flex items-center space-x-4">
                 <a href="/" class="text-white hover:text-blue-300 transition-colors">
                     <i class="fas fa-home mr-1"></i> Home
                 </a>
-                <a href="/scraper" class="text-white hover:text-blue-300 transition-colors">
-                    <i class="fas fa-search mr-1"></i> Scraper
-                </a>
-                <a href="/analyze" class="text-white hover:text-blue-300 transition-colors">
-                    <i class="fas fa-chart-line mr-1"></i> Analyzer
-                </a>
-                <a href="/stats" class="text-blue-300 border-b-2 border-blue-300">
+                {% if current_user.is_authenticated %}
+                    <a href="/scraper" class="text-white hover:text-blue-300 transition-colors">
+                        <i class="fas fa-search mr-1"></i> Scraper
+                    </a>
+                    <a href="/analyze" class="text-white hover:text-blue-300 transition-colors">
+                        <i class="fas fa-chart-line mr-1"></i> Analyzer
+                    </a>
+                {% endif %}
+                <a href="/stats" class="text-blue-300 border-b-2 border-blue-300"> <!-- Active link style -->
                     <i class="fas fa-chart-pie mr-1"></i> Statistics
                 </a>
+                <!-- Login/Logout Link -->
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('logout') }}" class="text-white hover:text-red-400 transition-colors">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="text-white hover:text-blue-300 transition-colors">
+                        <i class="fas fa-sign-in-alt mr-1"></i> Login
+                    </a>
+                {% endif %}
             </div>
         </div>
     </header>
@@ -219,7 +231,7 @@
 
     <footer class="bg-gray-800 text-white mt-auto py-6">
         <div class="container mx-auto px-4 text-center">
-            <p>Repolizer</p>
+            <p>&copy; {{ current_year }} Repolizer</p> <!-- Use context variable -->
         </div>
     </footer>
 

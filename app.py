@@ -1,4 +1,5 @@
-from flask import Flask, render_template, send_from_directory, jsonify, request, Response, stream_with_context
+from flask import Flask, render_template, send_from_directory, jsonify, request, Response, stream_with_context, redirect, url_for, flash # Added redirect, url_for, flash
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user # Added Flask-Login imports
 from jinja2.ext import do # Import the DoExtension
 import os
 import json
@@ -15,6 +16,41 @@ from datetime import datetime, timezone # Import datetime and timezone for sorti
 import requests # Add requests import
 
 app = Flask(__name__)
+
+# --- Authentication Setup ---
+# IMPORTANT: Change this secret key in a real application!
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', '9n5pd40e2d3m6vytyryhv2r67mz9t8i7')
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login' # The route name for the login page
+
+# Simple User Model (Replace with database in production)
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+        # In a real app, add roles, etc.
+        self.is_admin = (id == 'admin') # Example admin check
+
+    # In a real app, load user data from DB based on id
+    @staticmethod
+    def get(user_id):
+        # For this example, only 'admin' user exists
+        if user_id == 'admin':
+            return User(user_id)
+        return None
+
+# Hardcoded user store (Replace with database lookup)
+# Store passwords securely using hashing (e.g., Werkzeug security helpers)
+users = {'admin': {'password': 'password'}} # VERY INSECURE - FOR DEMO ONLY
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Flask-Login callback to load a user from the session."""
+    return User.get(user_id)
+
+# --- End Authentication Setup ---
+
 
 # Enable the 'do' extension
 app.jinja_env.add_extension('jinja2.ext.do')
@@ -50,7 +86,58 @@ def enqueue_output(pipe, process_id, is_error=False):
     # If the loop exits, the pipe is closed
     pipe.close()
 
+# --- Login/Logout Routes ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index')) # Redirect if already logged in
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user_data = users.get(username)
+        # IMPORTANT: Use secure password hashing and comparison in production!
+        if user_data and user_data['password'] == password:
+            user = User.get(username)
+            if user:
+                login_user(user)
+                flash('Logged in successfully.', 'success')
+                # Redirect to the page they were trying to access, or index
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('index'))
+            else:
+                 flash('User not found.', 'error') # Should not happen if users dict is correct
+        else:
+            flash('Invalid username or password.', 'error')
+    # Render login.html template (You need to create this file)
+    # Example: templates/login.html
+    # <!doctype html>
+    # <html><body>
+    #   <h2>Login</h2>
+    #   {% with messages = get_flashed_messages(with_categories=true) %}
+    #     {% if messages %}
+    #       {% for category, message in messages %}
+    #         <div class="alert alert-{{ category }}">{{ message }}</div>
+    #       {% endfor %}
+    #     {% endif %}
+    #   {% endwith %}
+    #   <form method="post">
+    #     Username: <input type="text" name="username"><br>
+    #     Password: <input type="password" name="password"><br>
+    #     <button type="submit">Login</button>
+    #   </form>
+    # </body></html>
+    return render_template('login.html') # Make sure this template exists
+
+@app.route('/logout')
+@login_required # Must be logged in to log out
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('index'))
+# --- End Login/Logout Routes ---
+
 @app.route('/api/scrape', methods=['POST'])
+@login_required # Protect this API endpoint
 def start_scraper():
     """API endpoint to start the GitHub scraper"""
     
@@ -109,16 +196,16 @@ def start_scraper():
         
         # Add advanced options
         if config.get('request_delay'):
-            cmd.extend(['--delay-ms', str(config['request_delay'])])
+            cmd.extend(['--delay-ms', str(config.get('request_delay'))])
         
         if config.get('retries'):
-            cmd.extend(['--retries', str(config['retries'])])
+            cmd.extend(['--retries', str(config.get('retries'))])
         
         if config.get('timeout'):
-            cmd.extend(['--timeout', str(config['timeout'])])
+            cmd.extend(['--timeout', str(config.get('timeout'))])
         
         if config.get('save_interval'):
-            cmd.extend(['--save-interval', str(config['save_interval'])])
+            cmd.extend(['--save-interval', str(config.get('save_interval'))])
         
         # Add debugging options
         if config.get('debug_search'):
@@ -209,6 +296,10 @@ def start_scraper():
         }), 500
 
 @app.route('/api/scrape/stream')
+# Note: SSE streams are tricky to protect directly with session cookies easily.
+# Often, protection happens at the point of initiating the connection (e.g., the page loading the script)
+# or using token-based auth passed in the EventSource URL.
+# For now, leaving it open but be aware of security implications.
 def stream_scraper_output():
     """Stream scraper output as Server-Sent Events (SSE)"""
     
@@ -229,7 +320,7 @@ def stream_scraper_output():
                     
                     # Check if the message belongs to a valid process
                     process_id = message.get('process_id')
-                    if process_id not in scraper_processes:
+                    if (process_id not in scraper_processes):
                         continue
                     
                     # Format the message as an SSE event
@@ -237,23 +328,23 @@ def stream_scraper_output():
                     message_text = message.get('text', '')
                     
                     # Try to parse progress information from stdout
-                    if message_type == 'output' and message_text:
+                    if (message_type == 'output' and message_text):
                         try:
                             # Check for JSON format progress updates
-                            if message_text.startswith('{') and message_text.endswith('}'):
+                            if (message_text.startswith('{') and message_text.endswith('}')):
                                 data = json.loads(message_text)
-                                if 'type' in data:
+                                if ('type' in data):
                                     # This is a structured progress message
                                     yield f'event: {data["type"]}\ndata: {message_text}\n\n'
                                     continue
                             
                             # Try to parse repository JSON data for preview
                             # Only if we don't have 5 repositories yet
-                            if len(preview_repos) < 5 and message_text.strip().startswith('{'):
+                            if (len(preview_repos) < 5 and message_text.strip().startswith('{')):
                                 try:
                                     repo_data = json.loads(message_text)
                                     # Check if it looks like a GitHub repository object
-                                    if isinstance(repo_data, dict) and 'full_name' in repo_data and 'id' in repo_data:
+                                    if (isinstance(repo_data, dict) and 'full_name' in repo_data and 'id' in repo_data):
                                         preview_repos.append(repo_data)
                                         # Send a progress update with preview repos
                                         progress_data = {
@@ -275,7 +366,7 @@ def stream_scraper_output():
                     # No new messages, check if process has completed
                     for process_id, process_info in list(scraper_processes.items()):
                         process = process_info['process']
-                        if process.poll() is not None:  # Process has terminated
+                        if (process.poll() is not None):  # Process has terminated
                             # Get exit code
                             exit_code = process.returncode
                             
@@ -313,6 +404,7 @@ def stream_scraper_output():
     return Response(generate(), mimetype='text/event-stream')
 
 @app.route('/api/scrape/stop', methods=['POST'])
+@login_required # Protect this API endpoint
 def stop_scraper():
     """API endpoint to stop a running scraper process"""
     
@@ -370,9 +462,11 @@ def stop_scraper():
 
 @app.route('/')
 def index():
+    # Publicly accessible
     return render_template('repo_viewer.html')
 
 @app.route('/scraper')
+@login_required # Protect this page
 def scraper():
     return render_template('repo_scraper.html')
 
@@ -426,6 +520,7 @@ def serve_result_file(filename):
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), filename)
 
 @app.route('/repo/<path:repo_id>') # Use <path:repo_id> to allow slashes
+# Removed protection - Publicly accessible
 def repo_detail(repo_id):
     print(f"--- Starting repo_detail for ID/Name: {repo_id} ---") # DEBUG
     # Load results.jsonl or sample_results.jsonl
@@ -536,6 +631,7 @@ def repo_detail(repo_id):
     return render_template('repo_detail.html', repo=latest_valid_repo_data)
 
 @app.route('/repo/<path:repo_id>/history')
+# Removed protection - Publicly accessible
 def repo_history(repo_id):
     """Render the analysis history page for a specific repository"""
     print(f"--- Starting repo_history for ID/Name: {repo_id} ---") # DEBUG
@@ -696,11 +792,13 @@ def repo_history(repo_id):
     return render_template('repo_history.html', repo_info=repo_info, history_data=history_data)
 
 @app.route('/analyze')
+@login_required # Protect this page
 def analyze():
     """Render the repository analyzer page"""
     return render_template('repo_analyze.html')
 
 @app.route('/api/analyze', methods=['POST'])
+@login_required # Protect this API endpoint
 def start_analyzer():
     """API endpoint to start the repository analyzer"""
     
@@ -948,6 +1046,7 @@ def run_analyzer(job_id, config, job_queue):
              analyzer_jobs[job_id]['status'] = 'error'
 
 @app.route('/api/analyze/stream')
+# Similar note as /api/scrape/stream regarding SSE protection. Leaving open for now.
 def stream_analyzer_output():
     """Stream analyzer output as Server-Sent Events (SSE)"""
     
@@ -1031,6 +1130,7 @@ def stream_analyzer_output():
     return Response(generate(), mimetype='text/event-stream')
 
 @app.route('/api/analyze/stop', methods=['POST'])
+@login_required # Protect this API endpoint
 def stop_analyzer():
     """API endpoint to stop a running analysis job"""
     
@@ -1075,7 +1175,16 @@ def stop_analyzer():
 @app.route('/stats')
 def repo_stats():
     """Render the repository statistics page"""
+    # Publicly accessible
     return render_template('repo_stats.html')
+
+# Add context processor to make current_year and current_user available globally
+@app.context_processor
+def inject_global_vars():
+    return {
+        'current_year': datetime.now().year,
+        'current_user': current_user # Make current_user available to templates
+    }
 
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not
@@ -1099,6 +1208,9 @@ if __name__ == '__main__':
     
     # Run the Flask app
     print("Starting web server at http://127.0.0.1:5000/")
+    print("Login required for Scraper and Analyzer pages/APIs.") # Updated message
+    print("Home, Stats, Repo Details, and Repo History pages are public.") # Updated message
+    print("Default admin credentials (DEMO ONLY): admin / password")
     print("Repository Health Analyzer will load data from results.jsonl")
     print("Press Ctrl+C to stop the server")
-    app.run(debug=True)
+    app.run(debug=True) # debug=True is convenient but insecure for production
