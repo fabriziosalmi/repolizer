@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from unittest import mock
+from unittest.mock import patch  # Added explicit import for patch
 import shutil
 import time
 from typing import Dict, Any

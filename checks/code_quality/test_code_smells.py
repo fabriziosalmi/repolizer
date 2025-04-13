@@ -34,14 +34,17 @@ class TestCodeSmells(unittest.TestCase):
         """Test with an empty repository"""
         # Mock check_code_smells to handle empty repository without division by zero
         with patch('checks.code_quality.code_smells.check_code_smells', autospec=True) as mock_check:
+            # Include all required keys in the mock return value
             mock_check.return_value = {
                 "code_smells_found": False,
                 "smell_count": 0,
                 "detected_smells": [],
                 "files_checked": 0,
-                "timed_out": False
+                "timed_out": False,
+                "smells_by_category": {}  # Add this missing key
             }
             
+            # Call run_check with the mock in place
             repository = {"local_path": self.temp_dir}
             result = run_check(repository)
             
