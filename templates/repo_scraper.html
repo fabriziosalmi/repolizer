@@ -409,6 +409,7 @@
             // Scraper state
             let scraperRunning = false;
             let scraperPaused = false;
+            // Change default output file from 'results.jsonl' to 'repositories.jsonl'
             let outputFile = 'repositories.jsonl';
             let outputFormat = 'jsonl';
             let eventSource = null;
@@ -506,7 +507,8 @@
                 };
                 
                 outputFormat = formData.get('output-format');
-                outputFile = `results.${outputFormat}`;
+                // Change the default output file to repositories.jsonl
+                outputFile = `repositories.${outputFormat}`;
                 
                 // Show progress UI
                 scraperForm.parentElement.classList.add('hidden');

@@ -55,7 +55,7 @@ def start_scraper():
     """API endpoint to start the GitHub scraper"""
     
     # Check if a scraper is already running
-    if scraper_processes:
+    if (scraper_processes):
         return jsonify({
             'status': 'error',
             'message': 'A scraper process is already running. Please wait for it to complete or stop it.'
@@ -148,7 +148,8 @@ def start_scraper():
         
         # Set output format and file
         output_format = config.get('output_format', 'jsonl')
-        output_file = 'results.' + output_format
+        # Change default output file from 'results.jsonl' to 'repositories.jsonl'
+        output_file = 'repositories.' + output_format
         cmd.extend(['--format', output_format, '--output-file', output_file])
         
         # Add log level for detailed output
@@ -377,12 +378,24 @@ def scraper():
 
 @app.route('/repositories.jsonl')
 def serve_repos_file():
-    # Redirect to results.jsonl for backward compatibility
-    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+    # Serve the repositories.jsonl file directly
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
+    
+    # If repositories.jsonl doesn't exist but we have sample data, use it
+    if not os.path.exists(file_path):
+        # Try to use sample data if available
+        sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_repositories.jsonl')
+        if os.path.exists(sample_path):
+            return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'sample_repositories.jsonl')
+        else:
+            # No sample file exists either, return 404
+            return jsonify({"error": "Repositories file not found"}), 404
+    
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
 
 @app.route('/results.jsonl')
 def serve_results_file():
-    # Serve the results.jsonl file directly
+    # Serve the results.jsonl file directly - this is for analyzed repos
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
     
     # If results.jsonl doesn't exist but we have sample data, use it
