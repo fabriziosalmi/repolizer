@@ -42,7 +42,7 @@ class User(UserMixin):
 
 # Hardcoded user store (Replace with database lookup)
 # Store passwords securely using hashing (e.g., Werkzeug security helpers)
-users = {'admin': {'password': 'password'}} # VERY INSECURE - FOR DEMO ONLY
+users = {'admin': {'password': 'fCSJyYTwgJULoqFl7xUo2GCxdIKqAxMb'}} # VERY INSECURE - FOR DEMO ONLY
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1210,7 +1210,7 @@ if __name__ == '__main__':
     print("Starting web server at http://127.0.0.1:5000/")
     print("Login required for Scraper and Analyzer pages/APIs.") # Updated message
     print("Home, Stats, Repo Details, and Repo History pages are public.") # Updated message
-    print("Default admin credentials (DEMO ONLY): admin / password")
+    print("Default admin credentials (DEMO ONLY): admin / fCSJyYTwgJULoqFl7xUo2GCxdIKqAxMb") # Updated password hint
     print("Repository Health Analyzer will load data from results.jsonl")
     print("Press Ctrl+C to stop the server")
     app.run(debug=True) # debug=True is convenient but insecure for production
