@@ -155,31 +155,41 @@
                             <p class="text-xs text-gray-500 mt-1">Filter repos by owner/org location</p>
                         </div>
                     </div>
-                    
+
+                    <!-- Add Owners Input Field -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="owners" class="block text-sm font-medium text-gray-700 mb-1">Owners (Users/Orgs)</label>
+                            <input type="text" id="owners" name="owners" placeholder="e.g. microsoft, torvalds"
+                                  class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
+                            <p class="text-xs text-gray-500 mt-1">Comma-separated list of owners to filter</p>
+                        </div>
+                        
                         <div>
                             <label for="max-pages" class="block text-sm font-medium text-gray-700 mb-1">Max Pages</label>
                             <input type="number" id="max-pages" name="max-pages" value="10" min="1" max="100"
                                   class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
                             <p class="text-xs text-gray-500 mt-1">Maximum pages to fetch (100 repos per page)</p>
                         </div>
-                        
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label for="max-repos" class="block text-sm font-medium text-gray-700 mb-1">Max Repositories</label>
                             <input type="number" id="max-repos" name="max-repos" min="1" placeholder="No limit"
                                   class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
                             <p class="text-xs text-gray-500 mt-1">Maximum repositories to save (leave empty for no limit)</p>
                         </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        
                         <div>
                             <label for="direct-query" class="block text-sm font-medium text-gray-700 mb-1">Direct Query (Advanced)</label>
                             <input type="text" id="direct-query" name="direct-query" placeholder="e.g. stars:>100 language:python pushed:>2023-01-01"
                                   class="w-full p-2 border rounded-md focus:ring-green-500 focus:border-green-500">
                             <p class="text-xs text-gray-500 mt-1">Direct GitHub search query (overrides other filters if specified)</p>
                         </div>
-                        
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div class="flex flex-col">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Query Options</label>
                             <div class="flex flex-wrap gap-4 mt-2">
@@ -560,6 +570,8 @@
                     min_stars: parseInt(formData.get('min-stars')),
                     languages: formData.get('languages'),
                     pushed_after: formData.get('pushed-after'),
+                    countries: formData.get('countries'), // Add countries
+                    owners: formData.get('owners'), // Add owners
                     max_pages: parseInt(formData.get('max-pages')),
                     max_repos: formData.get('max-repos') ? parseInt(formData.get('max-repos')) : null,
                     direct_query: formData.get('direct-query'),

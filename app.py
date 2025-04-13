@@ -43,7 +43,7 @@ class User(UserMixin):
 
 # Hardcoded user store (Replace with database lookup)
 # Store passwords securely using hashing (e.g., Werkzeug security helpers)
-users = {'admin': {'password': 'fCSJyYTwgJULoqFl7xUo2GCxdIKqAxMb'}} # VERY INSECURE - FOR DEMO ONLY
+users = {'admin': {'password': 'invaders'}} # VERY INSECURE - FOR DEMO ONLY
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -102,11 +102,12 @@ def login():
     #   <h2>Login</h2>
     #   {% with messages = get_flashed_messages(with_categories=true) %}
     #     {% if messages %}
-    #       {% for category, message in messages %}
-    #         <div class="alert alert-{{ category }}">{{ message }}</div>
-    #       {% endfor %}
-    #     {% endif %}
-    #   {% endwith %}
+    #       {% if messages %}
+    #         {% for category, message in messages %}
+    #           <div class="alert alert-{{ category }}">{{ message }}</div>
+    #         {% endfor %}
+    #       {% endif %}
+    #     {% endwith %}
     #   <form method="post">
     #     Username: <input type="text" name="username"><br>
     #     Password: <input type="password" name="password"><br>
@@ -174,6 +175,12 @@ def start_scraper():
             countries = ','.join(country.strip() for country in config['countries'].split(',') if country.strip())
             if countries:
                 cmd.extend(['--countries', countries])
+        
+        # Add owners parameter
+        if config.get('owners'):
+            owners = ','.join(owner.strip() for owner in config['owners'].split(',') if owner.strip())
+            if owners:
+                cmd.extend(['--owners', owners])
         
         if config.get('max_pages'):
             cmd.extend(['--max-pages', str(config['max_pages'])])
@@ -987,10 +994,10 @@ if __name__ == '__main__':
             print("Warning: repo_viewer.html not found in current directory or templates directory")
     
     # Run the Flask app
-    print("Starting web server at http://127.0.0.1:5000/")
+    print("Starting web server at http://0.0.0.0:8000/") # Updated print statement
     print("Login required for Scraper and Analyzer pages/APIs.") # Updated message
     print("Home, Stats, Repo Details, and Repo History pages are public.") # Updated message
-    print("Default admin credentials (DEMO ONLY): admin / fCSJyYTwgJULoqFl7xUo2GCxdIKqAxMb") # Updated password hint
+    print("Default admin credentials (DEMO ONLY): admin / invaders") # Updated password hint
     print("Repository Health Analyzer will load data from results.jsonl")
     print("Press Ctrl+C to stop the server")
-    app.run(debug=True) # debug=True is convenient but insecure for production
+    app.run(host='0.0.0.0', port='8000', debug=True) # Added host='0.0.0.0'

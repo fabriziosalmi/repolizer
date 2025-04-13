@@ -236,16 +236,15 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
     """Build a GitHub search query from filter parameters."""
     query_parts = []
     
-    # Always auto-simplify when using multiple languages to avoid GitHub API limitations
-    # GitHub's search API doesn't reliably handle complex OR queries for languages
+    # Always auto-simplify when using multiple languages or complex filters
     auto_simplify = not simple and (
         ("languages" in filters and filters.get("languages") and len(filters.get("languages", [])) > 1) or
-        len([f for f in ['countries', 'pushed_after_date'] if f in filters and filters.get(f)]) > 0
+        len([f for f in ['countries', 'pushed_after_date', 'owners'] if f in filters and filters.get(f)]) > 0 # Added 'owners' here
     )
     
     if auto_simplify:
         logging.warning("Complex filters detected - automatically simplifying query for better results")
-        logging.info("Using only the first language for best compatibility with GitHub API")
+        logging.info("Using only the first language and owner (if applicable) for best compatibility with GitHub API")
         simple = True
     
     # Always include min_stars if present
@@ -258,13 +257,21 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
             # Simple mode or single language - just use the first one
             query_parts.append(f"language:{filters['languages'][0]}")
         else:
-            # The problem is likely in the OR syntax for languages
-            # According to GitHub docs, the correct syntax for multiple languages is:
-            # "language:javascript language:python" for AND
-            # "language:javascript OR language:python" for OR (without parentheses)
+            # Multiple languages with OR
             lang_query = " OR ".join([f"language:{lang}" for lang in filters["languages"]])
-            query_parts.append(lang_query)  # Removed extra parentheses that might be causing issues
+            query_parts.append(lang_query)
     
+    # Handle owner filtering (user/org) - simplified if requested
+    if "owners" in filters and filters["owners"]:
+        if simple or len(filters["owners"]) == 1:
+            # Simple mode or single owner - just use the first one
+            # GitHub search uses 'user:' for both users and orgs in this context
+            query_parts.append(f"user:{filters['owners'][0]}")
+        else:
+            # Multiple owners with OR
+            owner_query = " OR ".join([f"user:{owner}" for owner in filters["owners"]])
+            query_parts.append(owner_query)
+
     # Only add pushed_after if not in simple mode
     if "pushed_after_date" in filters and filters["pushed_after_date"] and not simple:
         # GitHub API can be picky about date formats, ensure it's YYYY-MM-DD
@@ -279,7 +286,7 @@ def build_search_query(filters: Dict[str, Any], simple: bool = False) -> str:
         except (ValueError, AttributeError):
             logging.warning(f"Invalid date format for pushed_after_date: {filters['pushed_after_date']}. Skipping this filter.")
     
-    # Handle country-based filtering
+    # Handle country-based filtering - only if not in simple mode
     if "countries" in filters and filters["countries"] and not simple:
         if len(filters["countries"]) == 1:
             # Single country - GitHub prefers this format without extra quotes

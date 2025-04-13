@@ -599,6 +599,10 @@ async def main():
     parser.add_argument(
         "--countries", help="Comma-separated list of countries/locations to filter by (e.g., 'Italy,Germany')"
     )
+    # Add owner filter parameter
+    parser.add_argument(
+        "--owners", help="Comma-separated list of GitHub usernames or organization names to filter by (e.g., 'microsoft,torvalds')"
+    )
 
     # --- Add some new command line arguments to help with troubleshooting ---
     parser.add_argument(
@@ -791,16 +795,26 @@ async def main():
         if countries_val:
             search_filters['countries'] = countries_val
             logger.info(f"Filtering by countries/locations: {countries_val}")
+
+        # Add owners filter
+        owners_val = None
+        if args.owners:
+            owners_val = [owner.strip() for owner in args.owners.split(',') if owner.strip()]
+        elif 'owners' in filter_config: # Check config file as well
+            owners_val = filter_config['owners']
+        if owners_val:
+            search_filters['owners'] = owners_val
+            logger.info(f"Filtering by owners (users/orgs): {owners_val}")
         
         # Track if we're using simple query mode
         search_filters['simple_query'] = args.simple_query
 
     # Add auto simple-query detection based on filter count
-    filter_count = sum(1 for k in ['languages', 'countries', 'pushed_after_date'] if k in search_filters)
+    filter_count = sum(1 for k in ['languages', 'countries', 'pushed_after_date', 'owners'] if k in search_filters and search_filters[k]) # Added 'owners'
     
     if filter_count >= 2 and not args.simple_query:
-        logger.warning("Multiple filters detected which may limit results. Consider using --simple-query")
-        logger.info("Tip: Using --simple-query will use only min_stars and first language for wider results")
+        logger.warning("Multiple complex filters detected (languages, countries, date, owners). Consider using --simple-query")
+        logger.info("Tip: Using --simple-query will use only min_stars, first language, and first owner for wider results")
     
     if args.simple_query:
         search_filters['simple_query'] = True
