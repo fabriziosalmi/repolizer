@@ -13,13 +13,56 @@ import time
 import threading
 import random
 import requests
+import json
 from urllib.parse import urlparse
 from datetime import datetime
 from typing import Dict, Optional, List, Set, Any
 
 # Configure logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+def setup_utils_logging():
+    """Set up logging for the utils module"""
+    logger = logging.getLogger(__name__)
+    
+    # Skip if root logger has handlers or this logger already has handlers
+    if logger.handlers or (hasattr(logging.getLogger(), "root_handlers_configured") and 
+                          getattr(logging.getLogger(), "root_handlers_configured")):
+        return logger
+    
+    logger.setLevel(logging.DEBUG)
+    
+    # Create log directory if it doesn't exist
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Create file handler for debug.log
+    log_file = os.path.join(log_dir, 'debug.log')
+    file_handler = logging.FileHandler(log_file, mode='a')
+    file_handler.setLevel(logging.DEBUG)
+    
+    # Create console handler with a higher log level
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    
+    # Create formatters
+    file_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    console_formatter = logging.Formatter(
+        '%(levelname)s: %(message)s'
+    )
+    
+    # Add formatters to handlers
+    file_handler.setFormatter(file_formatter)
+    console_handler.setFormatter(console_formatter)
+    
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+# Get logger
+logger = setup_utils_logging()
 
 class GitHubApiHandler:
     """
@@ -592,16 +635,38 @@ def extract_processed_repo_ids(results_path: str) -> Set[str]:
         logger.info(f"No results file found at {results_path}")
         return processed_ids
     
+    # Read with more robust error handling
     try:
-        with jsonlines.open(results_path) as reader:
-            for result in reader:
-                # Extract repository ID from results
-                if "repository" in result and "id" in result["repository"]:
-                    processed_ids.add(result["repository"]["id"])
-                    
-                    # Also add full_name if available for additional uniqueness check
-                    if "full_name" in result["repository"]:
-                        processed_ids.add(result["repository"]["full_name"])
+        with open(results_path, 'r', encoding='utf-8') as f:
+            for i, line in enumerate(f):
+                try:
+                    if line.strip():  # Skip empty lines
+                        # Parse each line individually
+                        result = json.loads(line)
+                        if "repository" in result and "id" in result["repository"]:
+                            processed_ids.add(result["repository"]["id"])
+                            
+                            # Also add full_name if available for additional uniqueness check
+                            if "full_name" in result["repository"]:
+                                processed_ids.add(result["repository"]["full_name"])
+                except json.JSONDecodeError as je:
+                    # Log the error but continue processing
+                    logger.error(f"Error parsing JSON at line {i+1}: {je}")
+                    # Try to extract repository ID using regex in case the JSON is only partially corrupt
+                    import re
+                    id_match = re.search(r'"id":\s*("[^"]+"|[\d]+)', line)
+                    if id_match:
+                        id_value = id_match.group(1).strip('"')
+                        try:
+                            if id_value.isdigit():
+                                processed_ids.add(int(id_value))
+                            else:
+                                processed_ids.add(id_value)
+                            logger.info(f"Extracted ID {id_value} from partially corrupt JSON line {i+1}")
+                        except (ValueError, TypeError) as e:
+                            logger.debug(f"Could not convert extracted ID: {e}")
+                except Exception as e:
+                    logger.error(f"Error processing results file at line {i+1}: {e}")
     except Exception as e:
         logger.error(f"Error loading processed repository IDs: {e}")
     

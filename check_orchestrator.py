@@ -61,11 +61,11 @@ class CheckOrchestrator:
     # Engine version
     VERSION = "0.1.0"
     
-    def __init__(self, max_parallel_analysis: int = 10, temp_dir: str = None, check_timeout: int = 300):
+    def __init__(self, max_parallel_analysis: int = 10, temp_dir: str = None, check_timeout: int = 60):
         self.max_parallel_analysis = max_parallel_analysis
         self._setup_logging()
         self.checks = self._load_checks()
-        self.check_timeout = check_timeout  # Default timeout of 5 minutes per check
+        self.check_timeout = check_timeout  # Default timeout of 60 seconds per check
         
         # Rate limiter for API calls
         self.rate_limiter = RateLimiter()
@@ -103,9 +103,46 @@ class CheckOrchestrator:
         return None
     
     def _setup_logging(self):
-        """Configure logging as per config.yaml"""
+        """Configure logging for the orchestrator"""
+        # Get logger but don't add handlers if root logger is already configured
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
+        
+        # Only set up handlers if we're being used as a library
+        # (if called from main, the root logger will handle everything)
+        if not self.logger.handlers and not logging.getLogger().handlers:
+            self.logger.setLevel(logging.DEBUG)
+            
+            # Create log directory if it doesn't exist
+            log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+            os.makedirs(log_dir, exist_ok=True)
+            
+            # Create file handler for debug.log
+            log_file = os.path.join(log_dir, 'debug.log')
+            file_handler = logging.FileHandler(log_file, mode='a')
+            file_handler.setLevel(logging.DEBUG)  # Log everything to file
+            
+            # Create console handler with a higher log level
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.INFO)  # Only INFO and above to console
+            
+            # Create formatters
+            file_formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            console_formatter = logging.Formatter(
+                '%(levelname)s: %(message)s'
+            )
+            
+            # Add formatters to handlers
+            file_handler.setFormatter(file_formatter)
+            console_handler.setFormatter(console_formatter)
+            
+            # Add handlers to logger
+            self.logger.addHandler(file_handler)
+            self.logger.addHandler(console_handler)
+            
+            self.logger.info("Logging system initialized")
+            self.logger.debug(f"Detailed logs being written to {log_file}")
     
     def _load_checks(self) -> Dict[str, List[Dict]]:
         """Dynamically load checks from checks folder"""
@@ -488,33 +525,30 @@ class CheckOrchestrator:
             start_time = time.time()
             
             try:
-                # Use a timeout for the check execution
-                if is_api_check:
-                    # For API checks, use a timeout
-                    with ThreadPoolExecutor(max_workers=1) as executor:
-                        future = executor.submit(run_with_rate_limit)
-                        try:
-                            result = future.result(timeout=self.check_timeout)
-                        except TimeoutError:
-                            duration = self.check_timeout  # Set duration to timeout value
-                            total_execution_time += duration
-                            self.logger.warning(f"Check {check_name} for {repo_name} timed out after {self.check_timeout}s")
-                            return {
-                                "repo_id": repository['id'],
-                                "repo_name": repo_name,
-                                "category": category,
-                                "check_name": check_name,
-                                "status": "timeout",
-                                "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
-                                "validation_errors": f"Check execution timed out after {self.check_timeout} seconds",
-                                "duration": total_execution_time,  # Use total time including all retries
-                                "score": 0,
-                                "details": {"error": "Execution timed out"}
-                            }
-                else:
-                    # For local checks, don't use a timeout 
-                    # (they usually deal with IO and are more reliable)
-                    result = run_with_rate_limit()
+                # Use ThreadPoolExecutor with timeout for all checks
+                # This ensures consistent timeout behavior for both API and local checks
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(run_with_rate_limit)
+                    try:
+                        result = future.result(timeout=self.check_timeout)
+                    except TimeoutError:
+                        duration = self.check_timeout  # Set duration to timeout value
+                        total_execution_time += duration
+                        self.logger.warning(f"Check {check_name} for {repo_name} timed out after {self.check_timeout}s")
+                        # Cancel the future if possible to stop the operation
+                        future.cancel()
+                        return {
+                            "repo_id": repository['id'],
+                            "repo_name": repo_name,
+                            "category": category,
+                            "check_name": check_name,
+                            "status": "timeout",
+                            "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
+                            "validation_errors": f"Check execution timed out after {self.check_timeout} seconds",
+                            "duration": total_execution_time,  # Use total time including all retries
+                            "score": 0,
+                            "details": {"error": "Execution timed out"}
+                        }
                 
                 execution_time = time.time() - start_time
                 total_execution_time += execution_time
@@ -867,11 +901,46 @@ if __name__ == "__main__":
     import sys
     import argparse
     
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    # Configure root logger
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, 'debug.log')
+    
+    # Set up root logger with dual output
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    
+    # Remove existing handlers if any
+    if root_logger.handlers:
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
+    
+    # File handler for debug.log
+    file_handler = logging.FileHandler(log_file, mode='a')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    ))
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    # Use a custom formatter to avoid duplicating the level in output
+    # This way we avoid "INFO: INFO: message" patterns
+    console_handler.setFormatter(logging.Formatter(
+        '%(message)s'  # Show only the message, not the level prefix
+    ))
+    
+    # Add handlers
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+    
+    # Set property so orchestrator knows it doesn't need to set up its own handlers
+    setattr(root_logger, "root_handlers_configured", True)
+    
+    # Log startup information
+    logging.info(f"Starting Repolizer (version {CheckOrchestrator.VERSION})")
+    logging.debug(f"Detailed logs being written to {log_file}")
     
     # Create console - now we're sure Console is properly imported
     console = Console()
@@ -904,8 +973,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--timeout",
         type=int,
-        default=300,
-        help="Timeout in seconds for each API check (default: 300)"
+        default=60,
+        help="Timeout in seconds for each check (default: 60)"
     )
     parser.add_argument(
         "--rate-limit",

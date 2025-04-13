@@ -1,7 +1,38 @@
-__pycache__
-.pytest_cache
-.DS_Store
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Environment
+venv/
+env/
+.env
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Log files
 logs/*.log
-config.yaml
+*.log
+
+# Keep logs directory
+!logs/.gitkeep
+
+# Configuration with secrets
 config.json
+
+# Temporary files
+.DS_Store
+tmp/
+temp/
+
+# Generated results
 results.jsonl

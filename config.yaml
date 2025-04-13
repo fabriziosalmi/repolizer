@@ -1,0 +1,374 @@
+# GitHub Scraping Configuration
+github:
+  tokens:
+    - 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
+  rotation_strategy: round_robin  # or random
+  request_delay_ms: 1000  # delay between requests
+  max_retries: 3
+  user_agent: "Repolizer2 Scraper"
+  repository_filters:
+    min_stars: 10
+    max_size_mb: 100
+    languages:
+      - javascript
+      - python
+      - java
+    last_updated_days: 180
+  notifications:
+    email: "fabrizio.salmi@gmail.com"
+    webhook_url: "https://your-webhook-url.com"
+    events:
+      - rate_limit_exceeded
+      - critical_error
+      - check_failure
+  rate_limit:
+    detection:
+      header_check: true  # Check rate limit headers
+      error_code_check: true  # Check for 403/429 errors
+      secondary_rate_limit_check: true  # Check for secondary limits
+    recovery:
+      backoff_strategy: exponential  # or linear
+      initial_backoff_ms: 5000
+      max_backoff_ms: 600000
+      jitter: true  # Add randomness to backoff
+    checkpointing:
+      interval_minutes: 15  # Save progress interval
+      file_path: "data/scraper_checkpoint.json"
+    validation:
+      min_response_size: 100  # Bytes
+      json_schema_validation: true
+      save_failed_responses: false
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 5
+      reset_timeout_minutes: 30
+
+# Database Configuration
+database:
+  path: "data/repositories.db"
+  logging:
+    level: "info"  # debug, info, warn, error
+    file_path: "logs/db.log"
+    max_size_mb: 10
+    retention_days: 7
+
+# System Logging Configuration
+logging:
+  enabled: true
+  default_level: "info"  # debug, info, warn, error
+  format: "json"  # text or json
+  destinations:
+    - type: "file"
+      path: "logs/system.log"
+      max_size_mb: 50
+      retention_days: 30
+    - type: "console"
+      enabled: true
+    - type: "syslog"
+      enabled: false
+      address: "localhost:514"
+  rotation:
+    strategy: "time"  # time or size
+    interval: "daily"  # hourly, daily, weekly
+    max_files: 7
+  buffering:
+    enabled: true
+    size: 8192  # bytes
+    flush_interval_ms: 1000
+
+# Third-Party Tools Integration
+third_party:
+  enabled: true
+  tools:
+    - name: "web_push"
+      enabled: true
+      public_key: "your-public-key"
+      private_key: "your-private-key"
+      subscription_endpoint: "https://your-push-service.com"
+      events:
+        - rate_limit_exceeded
+        - critical_error
+        - check_failure
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+    burst_limit: 10
+  circuit_breaker:
+    enabled: true
+    failure_threshold: 5
+    reset_timeout_seconds: 300
+  tables:
+    repositories:
+      - id
+      - name
+      - url
+      - stars
+      - forks
+      - last_updated
+      - last_scraped
+      - scrape_status
+    checks:
+      - repo_id
+      - category
+      - check_name
+      - status
+      - timestamp
+      - validation_errors
+  persistence:
+    checkpoint_interval: 15  # minutes
+    backup_interval: 60  # minutes
+    backup_path: "data/backups"
+    validation:
+      pre_save: true
+      post_save: true
+      error_handling: "save_with_errors"  # or skip/fail
+    transaction_retry:
+      max_attempts: 3
+      initial_delay_ms: 1000
+      max_delay_ms: 10000
+
+# Check Categories and Scripts
+checks:
+  thresholds:
+    security:
+      critical: 3
+      warning: 5
+    performance:
+      critical: 2
+      warning: 4
+    documentation:
+      critical: 1
+      warning: 3
+  categories:
+    - security:
+        - name: "Dependency Vulnerabilities"
+          label: "Check for known vulnerabilities in dependencies"
+        - name: "Secret Leakage"
+          label: "Check for accidentally committed secrets"
+        - name: "Authentication"
+          label: "Verify secure authentication mechanisms"
+        - name: "Authorization"
+          label: "Check proper authorization controls"
+        - name: "Input Validation"
+          label: "Verify input sanitization"
+        - name: "Encryption"
+          label: "Check proper encryption usage"
+        - name: "Logging"
+          label: "Verify secure logging practices"
+        - name: "Session Management"
+          label: "Check secure session handling"
+        - name: "CORS"
+          label: "Verify Cross-Origin Resource Sharing settings"
+        - name: "HTTP Headers"
+          label: "Check security-related HTTP headers"
+    - performance:
+        - name: "Response Time"
+          label: "Measure average response time"
+        - name: "Memory Usage"
+          label: "Check memory consumption"
+        - name: "CPU Usage"
+          label: "Monitor CPU utilization"
+        - name: "Database Queries"
+          label: "Analyze query performance"
+        - name: "Caching"
+          label: "Verify caching implementation"
+        - name: "Concurrency"
+          label: "Check concurrent request handling"
+        - name: "Asset Optimization"
+          label: "Verify optimized static assets"
+        - name: "Lazy Loading"
+          label: "Check lazy loading implementation"
+        - name: "Bundle Size"
+          label: "Analyze JavaScript bundle size"
+        - name: "Render Performance"
+          label: "Measure UI rendering performance"
+    - documentation:
+        - name: "README Completeness"
+          label: "Check README file completeness"
+        - name: "API Documentation"
+          label: "Verify API documentation coverage"
+        - name: "Code Comments"
+          label: "Check code comment quality"
+        - name: "Changelog"
+          label: "Verify changelog existence and updates"
+        - name: "Contributing Guidelines"
+          label: "Check contributing guidelines"
+        - name: "License File"
+          label: "Verify license file existence"
+        - name: "Example Usage"
+          label: "Check for usage examples"
+        - name: "Installation Guide"
+          label: "Verify installation instructions"
+        - name: "Troubleshooting"
+          label: "Check troubleshooting documentation"
+        - name: "Code of Conduct"
+          label: "Verify code of conduct existence"
+    - testing:
+        - name: "Test Coverage"
+          label: "Check test coverage percentage"
+        - name: "Unit Tests"
+          label: "Verify unit test existence"
+        - name: "Integration Tests"
+          label: "Check integration test coverage"
+        - name: "E2E Tests"
+          label: "Verify end-to-end test coverage"
+        - name: "Test Data"
+          label: "Check test data quality"
+        - name: "Mocking"
+          label: "Verify proper test mocking"
+        - name: "Test Speed"
+          label: "Measure test execution time"
+        - name: "Test Reliability"
+          label: "Check test flakiness"
+        - name: "Snapshot Testing"
+          label: "Verify snapshot test coverage"
+        - name: "Test Documentation"
+          label: "Check test documentation"
+    - ci_cd:
+        - name: "Build Status"
+          label: "Check CI build status"
+        - name: "Deployment Frequency"
+          label: "Measure deployment frequency"
+        - name: "Pipeline Speed"
+          label: "Check CI/CD pipeline duration"
+        - name: "Environment Parity"
+          label: "Verify environment consistency"
+        - name: "Rollback Mechanism"
+          label: "Check rollback capability"
+        - name: "Artifact Management"
+          label: "Verify artifact handling"
+        - name: "Infrastructure as Code"
+          label: "Check IaC implementation"
+        - name: "Secret Management"
+          label: "Verify secret handling"
+        - name: "Monitoring Integration"
+          label: "Check monitoring setup"
+        - name: "Notification System"
+          label: "Verify alert notifications"
+    - code_quality:
+        - name: "Linting"
+          label: "Check linting results"
+        - name: "Code Duplication"
+          label: "Measure code duplication"
+        - name: "Complexity"
+          label: "Check code complexity metrics"
+        - name: "Code Smells"
+          label: "Identify code smells"
+        - name: "Technical Debt"
+          label: "Measure technical debt"
+        - name: "Code Style"
+          label: "Verify code style adherence"
+        - name: "Documentation Coverage"
+          label: "Check documentation coverage"
+        - name: "Dependency Freshness"
+          label: "Verify dependency updates"
+        - name: "Error Handling"
+          label: "Check error handling quality"
+        - name: "Type Safety"
+          label: "Verify type safety"
+    - accessibility:
+        - name: "WCAG Compliance"
+          label: "Check WCAG standards compliance"
+        - name: "Keyboard Navigation"
+          label: "Verify keyboard accessibility"
+        - name: "Screen Reader"
+          label: "Check screen reader compatibility"
+        - name: "Color Contrast"
+          label: "Verify color contrast ratios"
+        - name: "ARIA Attributes"
+          label: "Check proper ARIA usage"
+        - name: "Focus Management"
+          label: "Verify focus handling"
+        - name: "Semantic HTML"
+          label: "Check semantic markup"
+        - name: "Text Alternatives"
+          label: "Verify alt text for media"
+        - name: "Zoom Compatibility"
+          label: "Check zoom functionality"
+        - name: "Motion Reduction"
+          label: "Verify motion reduction options"
+    - maintainability:
+        - name: "Code Organization"
+          label: "Check code structure"
+        - name: "Modularity"
+          label: "Verify modular design"
+        - name: "Dependency Management"
+          label: "Check dependency organization"
+        - name: "Configuration"
+          label: "Verify configuration handling"
+        - name: "Documentation Quality"
+          label: "Check documentation clarity"
+        - name: "Onboarding"
+          label: "Verify new contributor experience"
+        - name: "Error Messages"
+          label: "Check error message quality"
+        - name: "Logging"
+          label: "Verify logging usefulness"
+        - name: "Code Review"
+          label: "Check code review process"
+        - name: "Technical Documentation"
+          label: "Verify technical docs"
+    - licensing:
+        - name: "License Compliance"
+          label: "Check license requirements"
+        - name: "Dependency Licenses"
+          label: "Verify dependency licenses"
+        - name: "Copyright Headers"
+          label: "Check copyright notices"
+        - name: "License Compatibility"
+          label: "Verify license compatibility"
+        - name: "Attribution"
+          label: "Check proper attribution"
+        - name: "License File"
+          label: "Verify license file existence"
+        - name: "Third-Party Code"
+          label: "Check third-party code handling"
+        - name: "Patent Clauses"
+          label: "Verify patent clauses"
+        - name: "License Updates"
+          label: "Check license updates"
+        - name: "SPDX Identifiers"
+          label: "Verify SPDX license identifiers"
+    - community:
+        - name: "Issue Response Time"
+          label: "Measure issue response time"
+        - name: "Pull Request Handling"
+          label: "Check PR handling efficiency"
+        - name: "Discussion Activity"
+          label: "Verify community discussions"
+        - name: "Contribution Guide"
+          label: "Check contribution guidelines"
+        - name: "Code of Conduct"
+          label: "Verify code of conduct"
+        - name: "Community Size"
+          label: "Measure community growth"
+        - name: "Support Channels"
+          label: "Check available support options"
+        - name: "Documentation Translations"
+          label: "Verify documentation translations"
+        - name: "Community Events"
+          label: "Check community events"
+        - name: "Adoption Metrics"
+          label: "Measure project adoption"
+  
+  scripts_per_category: 10
+  script_path: "scripts/checks"
+
+# Local Evaluation Strategy (for public repos)
+local_evaluation:
+  enabled: true  # Set to false to use API calls instead
+  clone_directory: "data/cloned_repos"
+  max_parallel_clones: 5  # Number of parallel git clone operations
+  max_parallel_analysis: 10  # Number of parallel analysis jobs
+  cleanup_after_analysis: true  # Delete cloned repos after analysis
+  git_timeout_seconds: 300  # Timeout for git operations
+  analysis_timeout_minutes: 30  # Timeout for analysis jobs
+
+# Frontend Configuration
+frontend:
+  pagination:
+    items_per_page: 100
+  rankings:
+    top_per_category: 10
+  theme: "dark"
+  port: 8080

@@ -484,7 +484,7 @@ def _check_error_handling_worker(repo_path: str, repo_data: Dict, result_contain
             files_to_check = []
             for file_path in selected_files:
                 _, ext = os.path.splitext(file_path)
-                ext = lower()
+                ext = ext.lower()  # Fix: Call the string method lower() on ext
                 
                 # Find language
                 file_language = None

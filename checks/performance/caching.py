@@ -7,7 +7,7 @@ import os
 import re
 import logging
 import time
-import signal
+import threading
 from typing import Dict, Any, List, Set, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -195,33 +195,43 @@ def check_caching(repo_path: str = None, repo_data: Dict = None, timeout: int = 
     MAX_FILES_TO_CHECK = 5000  # Limit for very large repos
     MAX_FILE_SIZE = 1024 * 1024  # 1MB
     
-    # Timeout handler for file operations
+    # Thread-safe timeout handler for file operations
     class TimeoutException(Exception):
         pass
     
-    def timeout_handler(signum, frame):
-        raise TimeoutException("File processing timed out")
-    
     def read_file_with_timeout(file_path, timeout_sec):
-        """Read a file with timeout"""
-        # Set the timeout handler
-        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(timeout_sec)
+        """Read a file with timeout using thread-safe approach"""
+        result = {'content': None, 'timed_out': False}
+        
+        def read_file():
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    result['content'] = f.read()
+            except Exception as e:
+                logger.error(f"Error reading file {file_path}: {e}")
+                result['content'] = None
+        
+        def timeout_handler():
+            result['timed_out'] = True
+        
+        # Create a timer that will fire after timeout_sec
+        timer = threading.Timer(timeout_sec, timeout_handler)
         
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
-            signal.alarm(0)  # Disable the alarm
-            return content
-        except TimeoutException:
-            logger.warning(f"Timeout while reading file: {file_path}")
-            return None
-        except Exception as e:
-            logger.error(f"Error reading file {file_path}: {e}")
-            return None
+            timer.start()
+            # Start a separate thread to read the file
+            file_thread = threading.Thread(target=read_file)
+            file_thread.daemon = True
+            file_thread.start()
+            file_thread.join(timeout_sec)  # Wait for the read thread to complete or timeout
+            
+            if result['timed_out'] or file_thread.is_alive():
+                logger.warning(f"Timeout while reading file: {file_path}")
+                return None
+            
+            return result['content']
         finally:
-            signal.signal(signal.SIGALRM, old_handler)  # Restore old handler
-            signal.alarm(0)  # Disable the alarm
+            timer.cancel()  # Make sure to cancel the timer
     
     def process_source_file(file_path, ext, patterns, libraries):
         """Process a single source code file"""

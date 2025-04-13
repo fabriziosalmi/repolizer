@@ -7,7 +7,7 @@ import os
 import re
 import logging
 from typing import Dict, Any, List, Set
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 import time
 
 # Setup logging
@@ -144,72 +144,115 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     skip_dirs = {'/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/', '/vendor/', '/venv/'}
     
     # Maximum number of files to analyze per language to prevent performance issues
-    max_files_per_language = 500
+    max_files_per_language = 200  # Reduced from 500 to improve performance
+    max_total_files = 1000  # Added overall limit
     files_per_language = {}
     
     # Get all eligible files first to improve performance
     eligible_files = []
-    for root, _, files in os.walk(repo_path):
-        # Skip excluded directories faster
-        if any(skip_dir in root.replace('\\', '/') for skip_dir in skip_dirs):
-            continue
-            
-        for file in files:
-            file_path = os.path.join(root, file)
-            _, ext = os.path.splitext(file_path)
-            ext = ext.lower()
-            
-            # Determine file language
-            file_language = None
-            typing_category = None
-            
-            # Check if file is statically typed language
-            for lang, extensions in language_extensions["statically_typed"].items():
-                if ext in extensions:
-                    file_language = lang
-                    typing_category = "statically_typed"
-                    break
-            
-            # If not statically typed, check if it's optionally typed
-            if not file_language:
-                for lang, extensions in language_extensions["optionally_typed"].items():
-                    if ext in extensions:
-                        file_language = lang
-                        typing_category = "optionally_typed"
-                        break
-            
-            # Skip files that aren't in our language sets
-            if not file_language:
+    total_file_count = 0
+    
+    # Use a timeout for the file discovery to prevent hanging
+    file_discovery_timeout = 30  # 30 seconds max for file discovery
+    file_discovery_start = time.time()
+    
+    try:
+        for root, _, files in os.walk(repo_path):
+            # Check timeout for file discovery
+            if time.time() - file_discovery_start > file_discovery_timeout:
+                logger.warning(f"File discovery timeout after {file_discovery_timeout}s. Proceeding with files found so far.")
+                break
+                
+            # Skip excluded directories faster
+            if any(skip_dir in root.replace('\\', '/') for skip_dir in skip_dirs):
                 continue
                 
-            # Count languages
-            if typing_category:
-                if file_language in language_counts[typing_category]:
-                    language_counts[typing_category][file_language] += 1
-                else:
-                    language_counts[typing_category][file_language] = 1
+            for file in files:
+                # Check overall file limit
+                if total_file_count >= max_total_files:
+                    logger.info(f"Reached maximum file count limit ({max_total_files}). Stopping file discovery.")
+                    break
+                    
+                file_path = os.path.join(root, file)
+                _, ext = os.path.splitext(file_path)
+                ext = ext.lower()
                 
-                # Initialize type annotation counts for optionally typed languages
-                if typing_category == "optionally_typed":
-                    if file_language not in type_annotations_counts:
-                        type_annotations_counts[file_language] = 0
+                # Skip files larger than 1MB to prevent hanging on large files
+                try:
+                    if os.path.getsize(file_path) > 1024 * 1024:
+                        logger.debug(f"Skipping large file: {file_path}")
+                        continue
+                except (OSError, IOError) as e:
+                    logger.debug(f"Error checking file size: {e}")
+                    continue
+                
+                # Determine file language
+                file_language = None
+                typing_category = None
+                
+                # Check if file is statically typed language
+                for lang, extensions in language_extensions["statically_typed"].items():
+                    if ext in extensions:
+                        file_language = lang
+                        typing_category = "statically_typed"
+                        break
+                
+                # If not statically typed, check if it's optionally typed
+                if not file_language:
+                    for lang, extensions in language_extensions["optionally_typed"].items():
+                        if ext in extensions:
+                            file_language = lang
+                            typing_category = "optionally_typed"
+                            break
+                
+                # Skip files that aren't in our language sets
+                if not file_language:
+                    continue
                     
-                    if file_language not in total_files_by_language:
-                        total_files_by_language[file_language] = 0
+                # Count languages
+                if typing_category:
+                    if file_language in language_counts[typing_category]:
+                        language_counts[typing_category][file_language] += 1
+                    else:
+                        language_counts[typing_category][file_language] = 1
                     
-                    total_files_by_language[file_language] += 1
+                    # Initialize type annotation counts for optionally typed languages
+                    if typing_category == "optionally_typed":
+                        if file_language not in type_annotations_counts:
+                            type_annotations_counts[file_language] = 0
+                        
+                        if file_language not in total_files_by_language:
+                            total_files_by_language[file_language] = 0
+                        
+                        total_files_by_language[file_language] += 1
+                        
+                        # Track files per language to limit analysis
+                        if file_language not in files_per_language:
+                            files_per_language[file_language] = 0
+                        
+                        if files_per_language[file_language] < max_files_per_language:
+                            files_per_language[file_language] += 1
+                            eligible_files.append((file_path, file_language, typing_category))
+                            total_file_count += 1
+                
+                # For statically typed languages, just count the file
+                elif typing_category == "statically_typed":
+                    files_checked += 1
+                    total_file_count += 1
                     
-                    # Track files per language to limit analysis
-                    if file_language not in files_per_language:
-                        files_per_language[file_language] = 0
-                    
-                    if files_per_language[file_language] < max_files_per_language:
-                        files_per_language[file_language] += 1
-                        eligible_files.append((file_path, file_language, typing_category))
+                # Check if we've reached the max total files limit
+                if total_file_count >= max_total_files:
+                    logger.info(f"Reached maximum file count limit ({max_total_files}).")
+                    break
             
-            # For statically typed languages, just count the file
-            elif typing_category == "statically_typed":
-                files_checked += 1
+            # Check if we've reached the max total files limit (after inner loop)
+            if total_file_count >= max_total_files:
+                break
+    except Exception as e:
+        logger.error(f"Error during file discovery: {e}")
+    
+    # Log statistics
+    logger.info(f"Found {len(eligible_files)} eligible files for analysis across {len(files_per_language)} languages")
     
     # Analyze files more efficiently with parallel processing
     def analyze_file(file_data):
@@ -223,9 +266,19 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
         # Only analyze optionally typed files
         if typing_category == "optionally_typed":
             try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    content = f.read()
-                    
+                # Use a timeout for file reading to prevent hanging
+                file_read_timeout = 2  # 2 seconds max per file read
+                
+                # Read file with timeout
+                content = None
+                try:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read(1024 * 1024)  # Read at most 1MB
+                except Exception as e:
+                    logger.debug(f"Error reading file {file_path}: {e}")
+                    return file_path, file_language, file_result
+                
+                if content:
                     # Look for type annotations
                     if file_language in type_annotation_patterns:
                         for pattern in type_annotation_patterns[file_language]:
@@ -271,17 +324,35 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
         
         return file_path, file_language, file_result
     
-    # Use ThreadPoolExecutor for parallelism with controlled concurrency
-    max_workers = min(20, os.cpu_count() * 2 + 4)  # Reasonable number of workers
+    # Use ThreadPoolExecutor for parallelism with controlled concurrency and timeouts
+    max_workers = min(10, os.cpu_count() * 2)  # Reduced worker count
     analysis_results = []
     
+    # Use a per-file timeout
+    file_analysis_timeout = 5  # 5 seconds max per file analysis
+    
+    # Set overall analysis timeout
+    analysis_start_time = time.time()
+    analysis_timeout = 45  # 45 seconds max for entire analysis
+    
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(analyze_file, file_data) for file_data in eligible_files]
+        # Submit all file analysis tasks
+        future_to_file = {executor.submit(analyze_file, file_data): file_data for file_data in eligible_files}
         
-        for future in as_completed(futures):
+        # Process results as they complete, with timeout
+        for future in as_completed(future_to_file):
+            # Check if overall analysis timeout has been reached
+            if time.time() - analysis_start_time > analysis_timeout:
+                logger.warning(f"Analysis timeout after {analysis_timeout}s. Processing results collected so far.")
+                executor.shutdown(wait=False)  # Stop processing remaining files
+                break
+                
             try:
-                result_data = future.result()
+                result_data = future.result(timeout=file_analysis_timeout)
                 analysis_results.append(result_data)
+            except TimeoutError:
+                file_data = future_to_file[future]
+                logger.warning(f"Timeout analyzing file: {file_data[0]}")
             except Exception as e:
                 logger.error(f"Error in file analysis thread: {e}")
     
@@ -304,41 +375,60 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     # Only keep the first 10 issues to avoid flooding the results
     result["type_issues"] = all_issues[:10]
     
-    # Check for type checker config files
-    for lang, patterns in type_check_config_patterns.items():
-        for pattern in patterns:
-            # Look for configuration files in root or common directories
-            for config_dir in ['', 'config/', '.config/', '.github/']:
-                config_path = os.path.join(repo_path, config_dir)
+    # Check for type checker config files with a timeout
+    config_check_timeout = 5  # 5 seconds max for config file checks
+    config_check_start = time.time()
+    
+    try:
+        for lang, patterns in type_check_config_patterns.items():
+            # Check timeout
+            if time.time() - config_check_start > config_check_timeout:
+                logger.warning(f"Config file check timeout after {config_check_timeout}s.")
+                break
                 
-                # Skip if the directory doesn't exist
-                if not os.path.exists(config_path) or not os.path.isdir(config_path):
-                    continue
-                
-                # Check for exact file match
-                full_pattern_path = os.path.join(config_path, pattern)
-                if os.path.exists(full_pattern_path):
-                    result["has_type_checking"] = True
-                    if lang in type_checkers:
-                        for checker in type_checkers[lang]:
-                            if checker in pattern:
-                                type_checker_found.add(checker)
+            for pattern in patterns:
+                # Look for configuration files in root or common directories
+                for config_dir in ['', 'config/', '.config/', '.github/']:
+                    # Check timeout inside inner loop too
+                    if time.time() - config_check_start > config_check_timeout:
+                        break
+                        
+                    config_path = os.path.join(repo_path, config_dir)
+                    
+                    # Skip if the directory doesn't exist
+                    if not os.path.exists(config_path) or not os.path.isdir(config_path):
+                        continue
+                    
+                    # Check for exact file match
+                    full_pattern_path = os.path.join(config_path, pattern)
+                    if os.path.exists(full_pattern_path):
+                        result["has_type_checking"] = True
+                        if lang in type_checkers:
+                            for checker in type_checkers[lang]:
+                                if checker in pattern:
+                                    type_checker_found.add(checker)
+                                    break
+                        break
+                    
+                    # Check for glob pattern match with timeout
+                    try:
+                        for file in os.listdir(config_path):
+                            # Check timeout
+                            if time.time() - config_check_start > config_check_timeout:
                                 break
-                    break
-                
-                # Check for glob pattern match
-                try:
-                    for file in os.listdir(config_path):
-                        if os.path.isfile(os.path.join(config_path, file)) and glob_match(pattern, file):
-                            result["has_type_checking"] = True
-                            if lang in type_checkers:
-                                for checker in type_checkers[lang]:
-                                    if checker in pattern:
-                                        type_checker_found.add(checker)
-                                        break
-                            break
-                except (FileNotFoundError, PermissionError) as e:
-                    logger.debug(f"Could not access directory {config_path}: {e}")
+                                
+                            if os.path.isfile(os.path.join(config_path, file)) and glob_match(pattern, file):
+                                result["has_type_checking"] = True
+                                if lang in type_checkers:
+                                    for checker in type_checkers[lang]:
+                                        if checker in pattern:
+                                            type_checker_found.add(checker)
+                                            break
+                                break
+                    except (FileNotFoundError, PermissionError) as e:
+                        logger.debug(f"Could not access directory {config_path}: {e}")
+    except Exception as e:
+        logger.error(f"Error during config file checks: {e}")
 
     # Categorize languages by type safety
     for lang, count in language_counts["statically_typed"].items():
@@ -433,7 +523,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Check if we have a local path to the repository
         local_path = repository.get('local_path')
         
-        # Run the check
+        # Run the check with internal timeouts to prevent hanging
         result = check_type_safety(local_path, repository)
         
         # Return the result with the score

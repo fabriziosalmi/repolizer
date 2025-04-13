@@ -8,7 +8,7 @@ import re
 import logging
 import hashlib
 import time
-import signal
+import threading
 from typing import Dict, Any, List, Set, Tuple
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -92,33 +92,36 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None, timeou
     file_contents = defaultdict(list)
     files_checked = 0
     
-    # Timeout handler for file operations
+    # Timeout exception for file operations
     class TimeoutException(Exception):
         pass
     
-    def timeout_handler(signum, frame):
-        raise TimeoutException("File processing timed out")
-    
     def read_file_with_timeout(file_path, timeout_sec):
-        """Read a file with timeout"""
-        # Set the timeout handler
-        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(timeout_sec)
+        """Read a file with timeout using threading approach instead of signals"""
+        result_container = {"lines": None, "exception": None}
         
-        try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                lines = f.readlines()
-            signal.alarm(0)  # Disable the alarm
-            return lines
-        except TimeoutException:
+        def target():
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    result_container["lines"] = f.readlines()
+            except Exception as e:
+                result_container["exception"] = e
+        
+        thread = threading.Thread(target=target)
+        thread.daemon = True
+        thread.start()
+        thread.join(timeout_sec)
+        
+        if thread.is_alive():
+            # Thread is still running, indicating a timeout
             logger.warning(f"Timeout while reading file: {file_path}")
             return None
-        except Exception as e:
-            logger.error(f"Error reading file {file_path}: {e}")
+        
+        if result_container["exception"]:
+            logger.error(f"Error reading file {file_path}: {result_container['exception']}")
             return None
-        finally:
-            signal.signal(signal.SIGALRM, old_handler)  # Restore old handler
-            signal.alarm(0)  # Disable the alarm
+            
+        return result_container["lines"]
     
     def process_file(file_data):
         file_path, file_language = file_data
