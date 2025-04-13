@@ -249,13 +249,15 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
 
     # --- Configuration Constants ---
     # Moved configuration together for easier modification
-    GLOBAL_ANALYSIS_TIMEOUT = 300  # 5 minutes
-    MAX_FILES_TO_CHECK = 5000
-    MAX_FILE_SIZE = 500000  # 500KB
-    FILE_SCAN_TIMEOUT = 5  # seconds per file
-    DIR_SCAN_TIMEOUT = 10  # seconds per directory scan
-    PROGRESS_LOG_INTERVAL = 500 # Log progress every N files
-    EXAMPLE_LIMIT = 3 # Max number of good/missing examples to store
+    GLOBAL_ANALYSIS_TIMEOUT = 120  # Reduced from 300 to 120 seconds to prevent long hangs
+    MAX_FILES_TO_CHECK = 1000  # Reduced from 5000 to prevent excessive processing
+    MAX_FILE_SIZE = 250000  # Reduced from 500KB to 250KB
+    FILE_SCAN_TIMEOUT = 2  # Reduced from 5 to 2 seconds per file
+    DIR_SCAN_TIMEOUT = 5   # Reduced from 10 to 5 seconds per directory scan
+    PROGRESS_LOG_INTERVAL = 100  # Reduced from 500 to show progress more frequently
+    EXAMPLE_LIMIT = 3  # Max number of good/missing examples to store
+    MAX_HEADER_LINES = 20  # Maximum lines to read for header check (reduced from 30)
+    FILE_READ_TIMEOUT = 1  # Timeout for individual file reads in seconds
 
     SOURCE_EXTENSIONS: Dict[str, Optional[str]] = {
         # Programming languages
@@ -335,13 +337,33 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
 
         start_time = datetime.now()
         analysis_terminated_early: bool = False
+        last_progress_time = start_time  # Track when we last logged progress
 
         try:
             logger.info("Starting repository walk and analysis with timeout protection...")
             
             # Use safe_walk instead of os.walk for timeout protection
             for root, dirs, files in safe_walk(repo_path, timeout=DIR_SCAN_TIMEOUT, 
-                                              max_depth=10, skip_dirs=SKIP_DIRS): # Use constant
+                                              max_depth=8, skip_dirs=SKIP_DIRS): # Reduced max_depth from 10 to 8
+                
+                # Check if we should log progress based on time (every 5 seconds)
+                current_time = datetime.now()
+                if (current_time - last_progress_time).total_seconds() >= 5:
+                    logger.info(f"Walking directory: {root}")
+                    last_progress_time = current_time
+                    
+                # Check for global timeout more frequently
+                elapsed_time = (current_time - start_time).total_seconds()
+                if elapsed_time > GLOBAL_ANALYSIS_TIMEOUT:
+                    logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds. Stopping analysis.")
+                    analysis_terminated_early = True
+                    result["early_termination"] = {
+                        "reason": "global_timeout",
+                        "elapsed_seconds": round(elapsed_time, 1),
+                        "limit_seconds": GLOBAL_ANALYSIS_TIMEOUT
+                    }
+                    break  # Break instead of raising exception for cleaner exit
+                    
                 for file in files:
                     # --- Check Global Timeout and File Limits ---
                     if files_checked >= MAX_FILES_TO_CHECK: # Use constant
@@ -351,18 +373,20 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                             "reason": "max_files_reached",
                             "limit": MAX_FILES_TO_CHECK
                         }
-                        raise StopIteration # Use exception to break out of nested loops
+                        break  # Break instead of raising exception
 
-                    elapsed_time = (datetime.now() - start_time).total_seconds()
+                    # Check elapsed time again for each file
+                    current_time = datetime.now()
+                    elapsed_time = (current_time - start_time).total_seconds()
                     if elapsed_time > GLOBAL_ANALYSIS_TIMEOUT: # Use constant
-                        logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds. Stopping analysis.")
+                        logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds during file processing. Stopping analysis.")
                         analysis_terminated_early = True
                         result["early_termination"] = {
                             "reason": "global_timeout",
                             "elapsed_seconds": round(elapsed_time, 1),
                             "limit_seconds": GLOBAL_ANALYSIS_TIMEOUT
                         }
-                        raise GlobalTimeoutException # Use exception to break out
+                        break  # Break instead of raising exception
 
                     # --- File Filtering with safer operations ---
                     file_path = os.path.join(root, file)
@@ -376,16 +400,16 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                         if ext_lower in BINARY_EXTENSIONS: # Use constant
                             continue
 
-                        # Check file size before opening - use safe version
+                        # Check file size before opening - use safe version with shorter timeout
                         if has_filesystem_utils:
-                            size = get_file_size_with_timeout(file_path, timeout=3)
+                            size = get_file_size_with_timeout(file_path, timeout=FILE_READ_TIMEOUT)
                             if size is None or size > MAX_FILE_SIZE: # Use constant
                                 logger.debug(f"Skipping large or inaccessible file: {file_path}")
                                 continue
                         else:
                             # Fallback to regular check with try/except
                             try:
-                                with time_limit(3):  # Set short timeout for size check
+                                with time_limit(FILE_READ_TIMEOUT):  # Shorter timeout for size check
                                     if os.path.getsize(file_path) > MAX_FILE_SIZE: # Use constant
                                         logger.debug(f"Skipping large file: {file_path}")
                                         continue
@@ -401,28 +425,37 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                     rel_path = os.path.relpath(file_path, repo_path)
                     language_coverage[ext_lower]["total"] += 1
 
-                    if files_checked % PROGRESS_LOG_INTERVAL == 0: # Use constant
+                    # More frequent progress logging
+                    if files_checked % PROGRESS_LOG_INTERVAL == 0 or (current_time - last_progress_time).total_seconds() >= 5:
                         logger.info(f"Processed {files_checked} files...")
+                        last_progress_time = current_time
 
                     try:
-                        # Use per-file timeout
+                        # Use per-file timeout with shorter duration
                         with time_limit(FILE_SCAN_TIMEOUT): # Use constant
                             # --- Check if file is binary (heuristic) ---
                             try:
                                 if has_filesystem_utils:
-                                    # Use our safer utils if available
-                                    chunk = safe_read_file(file_path, max_size=32768, binary=True, timeout=3)
+                                    # Use our safer utils if available with shorter timeout
+                                    chunk = safe_read_file(file_path, max_size=4096, binary=True, timeout=FILE_READ_TIMEOUT)
                                     if chunk is None or b'\x00' in chunk:
                                         logger.debug(f"Skipping likely binary file: {rel_path}")
                                         files_checked -= 1
                                         language_coverage[ext_lower]["total"] -= 1
                                         continue
                                 else:
-                                    # Fallback with try/except
-                                    with open(file_path, 'rb') as f_bin:
-                                        chunk = f_bin.read(32768)
-                                        if b'\x00' in chunk:
-                                            logger.debug(f"Skipping likely binary file (null byte found): {rel_path}")
+                                    # Fallback with try/except and shorter timeout
+                                    with time_limit(FILE_READ_TIMEOUT):
+                                        try:
+                                            with open(file_path, 'rb') as f_bin:
+                                                chunk = f_bin.read(4096)  # Read smaller chunk
+                                                if b'\x00' in chunk:
+                                                    logger.debug(f"Skipping likely binary file (null byte found): {rel_path}")
+                                                    files_checked -= 1
+                                                    language_coverage[ext_lower]["total"] -= 1
+                                                    continue
+                                        except Exception as e:
+                                            logger.warning(f"Error reading binary check from {rel_path}: {e}. Skipping.")
                                             files_checked -= 1
                                             language_coverage[ext_lower]["total"] -= 1
                                             continue
@@ -432,13 +465,13 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                                 language_coverage[ext_lower]["total"] -= 1
                                 continue
 
-                            # --- Read header text (first ~30 lines) ---
+                            # --- Read header text (first ~20 lines instead of 30) ---
                             header_text = ""
                             try:
                                 if has_filesystem_utils:
-                                    # Our utils has a simpler line-based read
+                                    # Our utils has a simpler line-based read with shorter timeout
                                     content = safe_read_file(file_path, max_size=MAX_FILE_SIZE, # Use constant
-                                                           timeout=FILE_SCAN_TIMEOUT, # Use constant
+                                                           timeout=FILE_READ_TIMEOUT, # Use constant
                                                            encoding='utf-8', errors='ignore')
                                     if content is None:
                                         logger.warning(f"Could not read file {rel_path}. Skipping.")
@@ -447,18 +480,27 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                                             missing_examples.append({"file": rel_path, "header": None, "reason": "read_error"})
                                         continue
                                         
-                                    # Take just the first 30 lines
-                                    lines = content.splitlines()[:30]
+                                    # Take just the first MAX_HEADER_LINES lines (reduced from 30)
+                                    lines = content.splitlines()[:MAX_HEADER_LINES]
                                     header_text = '\n'.join(lines)
                                 else:
-                                    # Fallback to the manual line reading
-                                    lines_read = 0
-                                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                                        for line in f:
-                                            header_text += line
-                                            lines_read += 1
-                                            if lines_read >= 30:
-                                                break
+                                    # Fallback to the manual line reading with shorter timeout
+                                    with time_limit(FILE_READ_TIMEOUT):
+                                        lines_read = 0
+                                        try:
+                                            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                                for line in f:
+                                                    header_text += line
+                                                    lines_read += 1
+                                                    if lines_read >= MAX_HEADER_LINES:
+                                                        break
+                                        except UnicodeDecodeError:
+                                            # Handle encoding issues gracefully
+                                            logger.debug(f"Unicode decode error for {rel_path}. Skipping as likely binary.")
+                                            files_without_headers += 1
+                                            if len(missing_examples) < EXAMPLE_LIMIT:
+                                                missing_examples.append({"file": rel_path, "header": None, "reason": "encoding_error"})
+                                            continue
                             except Exception as e:
                                 logger.warning(f"Error reading file {rel_path}: {e}. Skipping content analysis.")
                                 files_without_headers += 1
@@ -544,8 +586,16 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                         if len(missing_examples) < EXAMPLE_LIMIT: # Use constant
                              missing_examples.append({"file": rel_path, "header": None, "reason": "error"})
                         continue # Move to the next file
+                    
+                # Check if we broke out of the file loop due to limits
+                if analysis_terminated_early:
+                    break
+                    
+            # If we get here and processed some files but not many, set a warning
+            if files_checked > 0 and files_checked < 10 and not analysis_terminated_early:
+                logger.warning(f"Only processed {files_checked} files which is unusually low. Check for repository structure issues.")
 
-        # Exceptions to break out of the os.walk loop
+        # Exceptions to break out of the os.walk loop - handled more gracefully now
         except (StopIteration, GlobalTimeoutException) as e:
             logger.info(f"File analysis loop terminated early: {type(e).__name__}")
             analysis_terminated_early = True # Ensure flag is set

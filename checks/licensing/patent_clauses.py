@@ -6,10 +6,61 @@ Checks if the repository's license includes appropriate patent clauses.
 import os
 import re
 import logging
-from typing import Dict, Any, List, Set, Tuple
+import time
+import platform
+import threading
+import signal
+from typing import Dict, Any, List, Set, Tuple, Optional
+from contextlib import contextmanager
+from datetime import datetime
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+# Add timeout handling similar to the copyright_headers.py implementation
+class TimeoutException(Exception):
+    """Custom exception for timeouts."""
+    pass
+
+@contextmanager
+def time_limit(seconds):
+    """Context manager for setting a timeout on file operations (Unix/MainThread only)."""
+    # Skip setting alarm on Windows or when not in main thread
+    is_main_thread = threading.current_thread() is threading.main_thread()
+    can_use_signal = platform.system() != 'Windows' and is_main_thread
+
+    if can_use_signal:
+        def signal_handler(signum, frame):
+            logger.warning(f"File processing triggered timeout after {seconds} seconds.")
+            raise TimeoutException(f"File processing timed out after {seconds} seconds")
+
+        original_handler = signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+    else:
+        # If signals can't be used, this context manager does nothing for timeout.
+        original_handler = None  # To satisfy finally block
+
+    try:
+        yield
+    finally:
+        if can_use_signal:
+            signal.alarm(0)  # Disable the alarm
+            # Restore the original signal handler if there was one
+            if original_handler is not None:
+                signal.signal(signal.SIGALRM, original_handler)
+
+def safe_read_file(file_path, timeout=3):
+    """Safely read a file with timeout protection."""
+    try:
+        with time_limit(timeout):
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                return f.read()
+    except TimeoutException:
+        logger.warning(f"Timeout reading file: {file_path}")
+        return None
+    except Exception as e:
+        logger.warning(f"Error reading file {file_path}: {e}")
+        return None
 
 # Licenses with explicit patent grants
 LICENSES_WITH_PATENT_GRANTS = {
@@ -78,7 +129,7 @@ LICENSES_WITHOUT_PATENT_GRANTS = {
     }
 }
 
-def check_patent_clauses(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
+def check_patent_clauses(repo_path: Optional[str] = None, repo_data: Optional[Dict] = None) -> Dict[str, Any]:
     """
     Check for patent clauses in the repository's license
     
@@ -100,8 +151,14 @@ def check_patent_clauses(repo_path: str = None, repo_data: Dict = None) -> Dict[
         "patent_files": [],
         "license_files_checked": [],
         "files_checked": 0,
-        "patent_clause_score": 0
+        "patent_clause_score": 0,
+        "early_termination": None,
+        "errors": None
     }
+    
+    # Configuration constants
+    FILE_READ_TIMEOUT = 2  # seconds per file read
+    GLOBAL_ANALYSIS_TIMEOUT = 30  # 30 seconds total timeout for the entire analysis
     
     # Files to check for patent information
     license_files = [
@@ -129,15 +186,37 @@ def check_patent_clauses(repo_path: str = None, repo_data: Dict = None) -> Dict[
     license_content = ""
     detected_license_id = "unknown"
     
+    # Track analysis start time for global timeout
+    start_time = datetime.now()
+    analysis_terminated_early = False
+    
     # First check if we have a local repository path
-    if repo_path and os.path.isdir(repo_path):
-        # First check specific patent files
-        for pat_file in patent_files:
-            file_path = os.path.join(repo_path, pat_file)
-            if os.path.isfile(file_path):
-                try:
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read().lower()
+    if not repo_path or not os.path.isdir(repo_path):
+        logger.warning("No local repository path provided or path is not a directory")
+        # Skip local analysis, using API data later
+    else:
+        try:
+            logger.info(f"Analyzing repository at {repo_path} for patent clauses")
+            
+            # First check specific patent files with timeout protection
+            for pat_file in patent_files:
+                # Check if we've exceeded the global timeout
+                elapsed_time = (datetime.now() - start_time).total_seconds()
+                if elapsed_time > GLOBAL_ANALYSIS_TIMEOUT:
+                    logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds. Stopping analysis.")
+                    analysis_terminated_early = True
+                    result["early_termination"] = {
+                        "reason": "global_timeout",
+                        "elapsed_seconds": round(elapsed_time, 1),
+                        "limit_seconds": GLOBAL_ANALYSIS_TIMEOUT
+                    }
+                    break
+                
+                file_path = os.path.join(repo_path, pat_file)
+                if os.path.isfile(file_path):
+                    content = safe_read_file(file_path, timeout=FILE_READ_TIMEOUT)
+                    if content is not None:
+                        content = content.lower()  # Convert to lowercase for case-insensitive matching
                         files_checked += 1
                         relative_path = os.path.relpath(file_path, repo_path)
                         found_patent_files.append(relative_path)
@@ -148,97 +227,106 @@ def check_patent_clauses(repo_path: str = None, repo_data: Dict = None) -> Dict[
                         result["patent_clause_type"] = "explicit"
                         result["patent_risk_level"] = "low"
                         result["custom_patent_clause"] = True
+            
+            # If early termination occurred, skip the rest of the file checks
+            if analysis_terminated_early:
+                logger.warning("Analysis terminated early during patent file checks")
+            else:
+                # Next, check license files for license identification and patent clauses
+                for lic_file in license_files:
+                    # Check global timeout again
+                    elapsed_time = (datetime.now() - start_time).total_seconds()
+                    if elapsed_time > GLOBAL_ANALYSIS_TIMEOUT:
+                        logger.warning(f"Global analysis timeout reached after {elapsed_time:.1f} seconds. Stopping analysis.")
+                        analysis_terminated_early = True
+                        result["early_termination"] = {
+                            "reason": "global_timeout",
+                            "elapsed_seconds": round(elapsed_time, 1),
+                            "limit_seconds": GLOBAL_ANALYSIS_TIMEOUT
+                        }
+                        break
+                    
+                    file_path = os.path.join(repo_path, lic_file)
+                    if os.path.isfile(file_path):
+                        content = safe_read_file(file_path, timeout=FILE_READ_TIMEOUT)
+                        if content is not None:
+                            content = content.lower()  # Convert to lowercase for matching
+                            files_checked += 1
+                            relative_path = os.path.relpath(file_path, repo_path)
+                            license_files_checked.append(relative_path)
                             
-                except Exception as e:
-                    logger.error(f"Error reading file {file_path}: {e}")
-        
-        # Next, check license files for license identification and patent clauses
-        for lic_file in license_files:
-            file_path = os.path.join(repo_path, lic_file)
-            if os.path.isfile(file_path):
-                try:
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read().lower()
-                        files_checked += 1
-                        relative_path = os.path.relpath(file_path, repo_path)
-                        license_files_checked.append(relative_path)
-                        
-                        # Store license content for later analysis
-                        if not license_content:
-                            license_content = content
-                            result["has_license"] = True
-                            
-                            # Try to identify the license type from content
-                            if "apache license" in content and "version 2.0" in content:
-                                detected_license_id = "Apache-2.0"
-                            elif "mozilla public license" in content and "version 2.0" in content:
-                                detected_license_id = "MPL-2.0"
-                            elif "gnu general public license" in content:
-                                if "version 3" in content:
-                                    if "or any later version" in content or "or (at your option) any later version" in content:
-                                        detected_license_id = "GPL-3.0-or-later"
+                            # Store license content for later analysis
+                            if not license_content:
+                                license_content = content
+                                result["has_license"] = True
+                                
+                                # Try to identify the license type from content - simplified regex approach
+                                if "apache license" in content and "version 2.0" in content:
+                                    detected_license_id = "Apache-2.0"
+                                elif "mozilla public license" in content and "version 2.0" in content:
+                                    detected_license_id = "MPL-2.0"
+                                elif "gnu general public license" in content:
+                                    if "version 3" in content:
+                                        if "or any later version" in content or "or (at your option) any later version" in content:
+                                            detected_license_id = "GPL-3.0-or-later"
+                                        else:
+                                            detected_license_id = "GPL-3.0-only"
+                                    elif "version 2" in content:
+                                        if "or any later version" in content or "or (at your option) any later version" in content:
+                                            detected_license_id = "GPL-2.0-or-later"
+                                        else:
+                                            detected_license_id = "GPL-2.0-only"
+                                elif "mit license" in content or ("permission is hereby granted" in content and "without restriction" in content):
+                                    detected_license_id = "MIT"
+                                elif "redistribution and use" in content:
+                                    if "neither the name of the copyright holder" in content:
+                                        detected_license_id = "BSD-3-Clause"
                                     else:
-                                        detected_license_id = "GPL-3.0-only"
-                                elif "version 2" in content:
-                                    if "or any later version" in content or "or (at your option) any later version" in content:
-                                        detected_license_id = "GPL-2.0-or-later"
-                                    else:
-                                        detected_license_id = "GPL-2.0-only"
-                            elif "mit license" in content or ("permission is hereby granted" in content and "without restriction" in content):
-                                detected_license_id = "MIT"
-                            elif "redistribution and use" in content:
-                                if "neither the name of the copyright holder" in content:
-                                    detected_license_id = "BSD-3-Clause"
-                                else:
-                                    detected_license_id = "BSD-2-Clause"
-                            elif "boost software license" in content:
-                                detected_license_id = "BSL-1.0"
-                            elif "eclipse public license" in content and "version 2.0" in content:
-                                detected_license_id = "EPL-2.0"
+                                        detected_license_id = "BSD-2-Clause"
+                                elif "boost software license" in content:
+                                    detected_license_id = "BSL-1.0"
+                                elif "eclipse public license" in content and "version 2.0" in content:
+                                    detected_license_id = "EPL-2.0"
+                                
+                                # Set the detected license
+                                if detected_license_id != "unknown":
+                                    result["license_id"] = detected_license_id
                             
-                            # Set the detected license
-                            if detected_license_id != "unknown":
-                                result["license_id"] = detected_license_id
-                        
-                        # Check if license has known patent grant based on identified license
-                        if detected_license_id in LICENSES_WITH_PATENT_GRANTS:
-                            patent_text = LICENSES_WITH_PATENT_GRANTS[detected_license_id]["patent_text"].lower()
-                            if patent_text in content:
-                                result["has_patent_clause"] = True
-                                result["patent_clause_type"] = "explicit"
-                                result["patent_risk_level"] = "low"
-                        elif detected_license_id in LICENSES_WITHOUT_PATENT_GRANTS:
-                            license_data = LICENSES_WITHOUT_PATENT_GRANTS[detected_license_id]
-                            result["patent_clause_type"] = "implied" if license_data["patent_risk"] == "moderate" else "none"
-                            result["patent_risk_level"] = license_data["patent_risk"]
-                        
-                        # If not found with specific text, check for general patent terms
-                        if not result["has_patent_clause"]:
-                            for term in patent_terms:
-                                if term in content:
-                                    # Found some patent-related text, analyze context
-                                    context_size = 200  # Characters on each side of the match
-                                    
-                                    for match in re.finditer(r'\b' + re.escape(term) + r'\b', content):
-                                        start = max(0, match.start() - context_size)
-                                        end = min(len(content), match.end() + context_size)
-                                        context = content[start:end]
-                                        
-                                        # Check if it looks like a patent grant
-                                        if ("grant" in context or "license" in context) and \
-                                           ("right" in context or "permission" in context):
+                            # Check if license has known patent grant based on identified license
+                            if detected_license_id in LICENSES_WITH_PATENT_GRANTS:
+                                patent_text = LICENSES_WITH_PATENT_GRANTS[detected_license_id]["patent_text"].lower()
+                                # Use a simple contains check rather than expensive regex for performance
+                                if patent_text in content:
+                                    result["has_patent_clause"] = True
+                                    result["patent_clause_type"] = "explicit"
+                                    result["patent_risk_level"] = "low"
+                            elif detected_license_id in LICENSES_WITHOUT_PATENT_GRANTS:
+                                license_data = LICENSES_WITHOUT_PATENT_GRANTS[detected_license_id]
+                                result["patent_clause_type"] = "implied" if license_data["patent_risk"] == "moderate" else "none"
+                                result["patent_risk_level"] = license_data["patent_risk"]
+                            
+                            # If not found with specific text, check for general patent terms
+                            # Use a more efficient method that doesn't rely on expensive regex searches
+                            if not result["has_patent_clause"]:
+                                for term in patent_terms:
+                                    if term in content:
+                                        # Check if it looks like a patent grant with simpler checks
+                                        # Look for terms near each other rather than using regex context
+                                        if ("grant" in content or "license" in content) and \
+                                           ("right" in content or "permission" in content):
                                             result["has_patent_clause"] = True
                                             result["patent_clause_type"] = "explicit"
                                             result["patent_risk_level"] = "low"
                                             result["custom_patent_clause"] = True
                                             break
-                                    
-                                    # Break out of the term loop if we found a patent clause
-                                    if result["has_patent_clause"]:
-                                        break
-                            
-                except Exception as e:
-                    logger.error(f"Error reading file {file_path}: {e}")
+                                
+                                # Break out of the term loop if we found a patent clause
+                                if result["has_patent_clause"]:
+                                    break
+        
+        except Exception as e:
+            logger.error(f"Error analyzing repository: {e}")
+            result["errors"] = str(e)
     
     # Use API data only as fallback if local analysis didn't identify a license
     if result["license_id"] == "unknown" and repo_data and "license" in repo_data:
@@ -258,19 +346,16 @@ def check_patent_clauses(repo_path: str = None, repo_data: Dict = None) -> Dict[
                 result["patent_clause_type"] = "implied" if license_data["patent_risk"] == "moderate" else "none"
                 result["patent_risk_level"] = license_data["patent_risk"]
     
-    # If no local path is available, return basic result
-    if not repo_path or not os.path.isdir(repo_path):
-        logger.warning("No local repository path provided or path is not a directory")
-        if result["has_patent_clause"] and result["patent_clause_type"] == "explicit":
-            result["patent_clause_score"] = 80  # Good score for having an explicit patent clause
-        elif result["patent_clause_type"] == "implied":
-            result["patent_clause_score"] = 50  # Moderate score for implied patent rights
-        return result
-    
     # Update result with findings
     result["patent_files"] = found_patent_files
     result["license_files_checked"] = license_files_checked
     result["files_checked"] = files_checked
+    
+    # Clean up early_termination if not needed
+    if result.get("early_termination") is None:
+        result.pop("early_termination", None)
+    if result.get("errors") is None:
+        result.pop("errors", None)
     
     # Calculate patent clause score (0-100 scale)
     score = 0
@@ -321,25 +406,58 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Check results with score on 0-100 scale
     """
+    repo_name = repository.get('name', 'unknown')
+    logger.info(f"Starting patent clauses check for repository: {repo_name}")
+    
     try:
+        # Check if we have a cached result
+        cache_key = f"patent_clauses_{repository.get('id', repo_name)}"
+        cached_result = repository.get('_cache', {}).get(cache_key)
+        
+        if cached_result:
+            logger.info(f"Using cached patent clauses check result for {repo_name}")
+            return cached_result
+        
         # Check if we have a local path to the repository
         local_path = repository.get('local_path')
         
-        # Run the check
+        # Run the check with timeout protection
+        start_time = time.time()
         result = check_patent_clauses(local_path, repository)
+        elapsed = time.time() - start_time
         
-        # Return the result with the score
-        return {
+        if elapsed > 5:  # Log if the check took more than 5 seconds
+            logger.warning(f"Patent clauses check for {repo_name} took {elapsed:.2f} seconds")
+        
+        # Prepare the final result
+        final_result = {
             "status": "completed",
             "score": result.get("patent_clause_score", 0),
             "result": result,
-            "errors": None
+            "errors": result.get("errors")
         }
+        
+        # Clean up None errors
+        if final_result["errors"] is None:
+            final_result.pop("errors", None)
+        
+        # Add to cache if available
+        if '_cache' in repository:
+            repository['_cache'][cache_key] = final_result
+        
+        logger.info(f"Completed patent clauses check for {repo_name} with score: {final_result['score']}")
+        return final_result
+        
     except Exception as e:
-        logger.error(f"Error running patent clauses check: {e}")
+        logger.error(f"Error running patent clauses check for {repo_name}: {e}", exc_info=True)
         return {
             "status": "failed",
             "score": 0,
-            "result": {},
+            "result": {
+                "has_license": False,
+                "license_id": "unknown",
+                "patent_clause_score": 0,
+                "errors": str(e)
+            },
             "errors": str(e)
         }

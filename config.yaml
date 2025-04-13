@@ -7,7 +7,7 @@ github:
   max_retries: 3
   user_agent: "Repolizer2 Scraper"
   repository_filters:
-    min_stars: 10
+    min_stars: 0
     max_size_mb: 100
     languages:
       - javascript
