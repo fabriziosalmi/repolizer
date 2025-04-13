@@ -1055,6 +1055,11 @@ def stop_analyzer():
             'message': f'Failed to stop analysis: {str(e)}'
         }), 500
 
+@app.route('/stats')
+def repo_stats():
+    """Render the repository statistics page"""
+    return render_template('repo_stats.html')
+
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not
     templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
