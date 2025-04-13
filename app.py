@@ -183,7 +183,7 @@ def start_scraper():
                 cmd.extend(['--owners', owners])
         
         if config.get('max_pages'):
-            cmd.extend(['--max-pages', str(config['max_pages'])])
+            cmd.extend(['--max-pages', str(config.get('max_pages'))])
         
         if config.get('direct_query'):
             cmd.extend(['--query', config['direct_query']])
@@ -304,6 +304,7 @@ def stream_scraper_output():
         
         # Keep track of first 5 repositories to send as preview
         preview_repos = []
+        processed_repo_ids = set() # Keep track of IDs to avoid duplicates in preview
         
         # Keep streaming as long as there's at least one process
         while scraper_processes:
@@ -321,78 +322,114 @@ def stream_scraper_output():
                     message_type = message.get('type', 'output')
                     message_text = message.get('text', '')
                     
-                    # Try to parse progress information from stdout
-                    if (message_type == 'output' and message_text):
+                    # Try to parse repository JSON data for preview from stdout
+                    # Only if we don't have 5 repositories yet and it's from stdout
+                    if (message_type == 'output' and not message.get('is_stderr', False) and len(preview_repos) < 5 and message_text.strip().startswith('{')):
+                        # print(f"DEBUG: Potential repo JSON line: {message_text[:100]}...") # Optional: Add debug print
                         try:
-                            # Check for JSON format progress updates
-                            if (message_text.startswith('{') and message_text.endswith('}')):
-                                data = json.loads(message_text)
-                                if ('type' in data):
-                                    # This is a structured progress message
-                                    yield f'event: {data["type"]}\ndata: {message_text}\n\n'
-                                    continue
-                            
-                            # Try to parse repository JSON data for preview
-                            # Only if we don't have 5 repositories yet
-                            if (len(preview_repos) < 5 and message_text.strip().startswith('{')):
-                                try:
-                                    repo_data = json.loads(message_text)
-                                    # Check if it looks like a GitHub repository object
-                                    if (isinstance(repo_data, dict) and 'full_name' in repo_data and 'id' in repo_data):
-                                        preview_repos.append(repo_data)
-                                        # Send a progress update with preview repos
-                                        progress_data = {
-                                            'type': 'progress',
-                                            'repositories': len(preview_repos),
-                                            'preview_repos': preview_repos
-                                        }
-                                        yield f'event: progress\ndata: {json.dumps(progress_data)}\n\n'
-                                except:
-                                    # Not a valid repo JSON, ignore
-                                    pass
+                            repo_data = json.loads(message_text)
+                            # More robust check for a GitHub repository object
+                            if (isinstance(repo_data, dict) and
+                                'id' in repo_data and isinstance(repo_data['id'], int) and
+                                'full_name' in repo_data and isinstance(repo_data['full_name'], str) and
+                                '/' in repo_data['full_name'] and # Basic check for owner/repo format
+                                repo_data['id'] not in processed_repo_ids): # Avoid duplicates
+
+                                print(f"DEBUG: Identified repo for preview: {repo_data['full_name']}") # Debug print
+                                preview_repos.append(repo_data)
+                                processed_repo_ids.add(repo_data['id'])
+
+                                # Send a progress update immediately with the updated preview repos
+                                progress_data = {
+                                    'type': 'progress',
+                                    # Add other stats if available, otherwise just preview
+                                    'preview_repos': preview_repos
+                                }
+                                yield f'event: progress\ndata: {json.dumps(progress_data)}\n\n'
+                                # Don't yield this line as a 'log' event if it was a repo
+                                continue # Skip the generic log yield below for this message
+
                         except json.JSONDecodeError:
+                            # Not a valid JSON, might be a regular log line that starts with {
+                            # print(f"DEBUG: Not valid JSON: {message_text[:100]}...") # Optional debug
                             pass
-                    
-                    # Regular log message
+                        except Exception as e_inner:
+                            print(f"Error processing potential repo JSON: {e_inner}")
+                            # Fall through to yield as a regular log message
+
+                    # Check for structured progress messages (e.g., from scraper itself)
+                    if (message_type == 'output' and message_text.startswith('{') and message_text.endswith('}')):
+                         try:
+                             data = json.loads(message_text)
+                             if ('type' in data and data['type'] in ['progress', 'status']): # Check for specific types
+                                 # If this progress update contains preview repos, update our list
+                                 if 'preview_repos' in data and isinstance(data['preview_repos'], list):
+                                     # Update preview_repos if the incoming list is longer/newer
+                                     # This handles cases where the scraper sends the preview directly
+                                     if len(data['preview_repos']) > len(preview_repos):
+                                         preview_repos = data['preview_repos'][:5] # Take first 5
+                                         processed_repo_ids = {repo.get('id') for repo in preview_repos if repo.get('id')}
+                                         print(f"DEBUG: Updated preview_repos from structured message.")
+
+                                 yield f'event: {data["type"]}\ndata: {message_text}\n\n'
+                                 continue # Skip generic log yield
+                         except json.JSONDecodeError:
+                             pass # Ignore if it's not valid JSON
+
+                    # Yield as a regular log message if not handled above
                     yield f'event: log\ndata: {json.dumps(message)}\n\n'
                     
                 except queue.Empty:
                     # No new messages, check if process has completed
-                    for process_id, process_info in list(scraper_processes.items()):
+                    active_processes = list(scraper_processes.items()) # Copy keys to avoid modification issues
+                    for process_id, process_info in active_processes:
+                        if process_id not in scraper_processes: continue # Already cleaned up
+
                         process = process_info['process']
                         if (process.poll() is not None):  # Process has terminated
+                            print(f"DEBUG: Process {process_id} terminated with code {process.returncode}") # Debug print
                             # Get exit code
                             exit_code = process.returncode
                             
-                            # Send completion event with preview repos
+                            # Send completion event with the final preview repos list
                             completion_data = {
                                 'type': 'complete' if exit_code == 0 else 'error',
                                 'exit_code': exit_code,
                                 'process_id': process_id,
                                 'output_file': process_info['output_file'],
                                 'elapsed_time': time.time() - process_info['start_time'],
-                                'preview_repos': preview_repos  # Include preview repositories
+                                'preview_repos': preview_repos  # Ensure final list is included
                             }
                             
                             yield f'event: {"complete" if exit_code == 0 else "error"}\ndata: {json.dumps(completion_data)}\n\n'
+                            print(f"DEBUG: Sent {'complete' if exit_code == 0 else 'error'} event with {len(preview_repos)} preview repos.") # Debug print
                             
                             # Clean up the process
-                            del scraper_processes[process_id]
+                            if process_id in scraper_processes:
+                                del scraper_processes[process_id]
                             
-                # Add a small heartbeat to keep the connection alive
-                yield f'event: heartbeat\ndata: {{"timestamp": {time.time()}}}\n\n'
+                # Add a small heartbeat to keep the connection alive if scraper is still running
+                if scraper_processes:
+                    yield f'event: heartbeat\ndata: {{"timestamp": {time.time()}}}\n\n'
                 
             except Exception as e:
+                print(f"ERROR in SSE stream loop: {e}") # Log stream errors
+                import traceback
+                traceback.print_exc()
                 # Send error event
                 error_data = {
                     'type': 'error',
                     'message': f'Error in stream: {str(e)}'
                 }
                 yield f'event: error\ndata: {json.dumps(error_data)}\n\n'
-                break
+                # Clean up potentially stuck processes on stream error
+                for pid in list(scraper_processes.keys()):
+                    if pid in scraper_processes: del scraper_processes[pid]
+                break # Exit the loop on stream error
         
-        # Final event if we exit the loop
+        # Final event if we exit the loop because no processes are left
         if not scraper_processes:
+            print("DEBUG: No active scraper processes, closing stream.") # Debug print
             yield 'event: closed\ndata: {"status": "closed", "message": "No active scraper processes"}\n\n'
     
     return Response(generate(), mimetype='text/event-stream')

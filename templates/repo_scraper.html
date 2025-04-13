@@ -949,9 +949,11 @@
                 
                 // Show preview of repositories found THIS SESSION
                 resultsPreview.innerHTML = ''; // Clear previous preview
-                // ... (logic to populate preview table using previewRepos) ...
+                // Add the logic to populate the preview table using previewRepos
                  if (previewRepos && previewRepos.length > 0) {
-                    previewRepos.forEach(repo => {
+                    // Limit to first 5 for preview
+                    const reposToShow = previewRepos.slice(0, 5);
+                    reposToShow.forEach(repo => {
                         addRepoToPreview(repo);
                     });
                 } else {
