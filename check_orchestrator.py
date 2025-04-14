@@ -46,7 +46,7 @@ from check_orchestrator_utils import (
     create_temp_directory, cleanup_directory,
     clone_repository, load_jsonl_file, save_to_jsonl,
     extract_processed_repo_ids, requires_local_access, format_duration,
-    GitHubApiHandler, RateLimiter  # Add these imported classes
+    GitHubApiHandler, RateLimiter, safe_cleanup_directory # Add safe_cleanup_directory
 )
 
 # Verify the required classes are available
@@ -61,11 +61,13 @@ class CheckOrchestrator:
     # Engine version
     VERSION = "0.1.0"
     
-    def __init__(self, max_parallel_analysis: int = 10, temp_dir: str = None, check_timeout: int = 60):
+    def __init__(self, max_parallel_analysis: int = 10, temp_dir: str = None, check_timeout: int = 60, resilient_mode: bool = False, resilient_timeout: int = 60):
         self.max_parallel_analysis = max_parallel_analysis
         self._setup_logging()
         self.checks = self._load_checks()
-        self.check_timeout = check_timeout  # Default timeout of 60 seconds per check
+        self.check_timeout = check_timeout  # Timeout per individual check
+        self.resilient_mode = resilient_mode  # Whether to skip repositories that take too long overall
+        self.resilient_timeout = resilient_timeout  # Timeout for entire repository processing in resilient mode
         
         # Rate limiter for API calls
         self.rate_limiter = RateLimiter()
@@ -149,30 +151,53 @@ class CheckOrchestrator:
         import os
         import importlib
         from pathlib import Path
-        
+
         checks = {}
         checks_dir = Path(__file__).parent / "checks"
-        
+        self.logger.debug(f"Loading checks from: {checks_dir}")
+
+        if not checks_dir.is_dir():
+            self.logger.error(f"Checks directory not found: {checks_dir}")
+            return checks
+
         for category_dir in checks_dir.iterdir():
             if category_dir.is_dir():
                 category = category_dir.name
+                self.logger.debug(f"Processing category: {category}")
                 checks[category] = []
-                
+
                 for check_file in category_dir.glob("*.py"):
+                    self.logger.debug(f"Found file: {check_file.name}")
+                    # Skip __init__.py and files starting with test_
                     if check_file.name == "__init__.py":
+                        self.logger.debug(f"Skipping __init__.py file: {check_file.name}")
                         continue
-                    
+                    if check_file.name.startswith("test_"):
+                        self.logger.debug(f"Skipping test file: {check_file.name}")
+                        continue
+
                     module_name = f"checks.{category}.{check_file.stem}"
                     try:
+                        self.logger.debug(f"Attempting to import check module: {module_name}")
                         module = importlib.import_module(module_name)
-                        checks[category].append({
+                        check_info = {
                             "name": check_file.stem.replace("_", " ").title(),
                             "label": module.__doc__ or "",
                             "module": module_name
-                        })
+                        }
+                        checks[category].append(check_info)
+                        self.logger.info(f"Successfully loaded check: {category}/{check_info['name']}")
+                    except ModuleNotFoundError:
+                        self.logger.error(f"Failed to import check module {module_name}: Module not found.")
                     except Exception as e:
-                        self.logger.error(f"Failed to load check {check_file}: {e}")
-        
+                        self.logger.error(f"Failed to load check {module_name} from {check_file}: {e}", exc_info=True)
+
+        # Log summary of loaded checks
+        total_loaded = sum(len(c) for c in checks.values())
+        self.logger.info(f"Finished loading checks. Total checks loaded: {total_loaded}")
+        for category, check_list in checks.items():
+             self.logger.debug(f"  Category '{category}': {len(check_list)} checks")
+
         return checks
     
     def _load_processed_repos(self) -> Set[str]:
@@ -646,116 +671,114 @@ class CheckOrchestrator:
         console.print(Panel(f"[bold blue]Processing repository:[/] [bold green]{repo_name}[/]"))
         
         with console.status(f"[bold blue]Cloning and analyzing repository...[/]", spinner="dots"):
-            results = self.run_checks(repository, categories=categories, checks=checks)
-        
-        # Save results to the specified output path
-        output_file = output_path or 'results.jsonl'
-        with console.status(f"Saving results to {output_file}...", spinner="dots"):
-            self._save_results_to_jsonl(results, output_path)
-        
-        # Add to processed repos set - both ID and full name
-        self.processed_reos.add(repo_id)
-        self.processed_repos.add(repo_name)
-        
-        # Clean up the cloned repository to free disk space
-        if repo_id in self.cloned_repos:
-            with console.status(f"Cleaning up cloned repository...", spinner="dots"):
-                repo_path = self.cloned_repos[repo_id]
+            # If in resilient mode, use timeout for entire repository processing
+            if self.resilient_mode:
                 try:
-                    if os.path.exists(repo_path):
-                        shutil.rmtree(repo_path)
-                    del self.cloned_repos[repo_id]
+                    results = None
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(self.run_checks, repository, categories=categories, checks=checks)
+                        try:
+                            results = future.result(timeout=self.resilient_timeout)
+                        except TimeoutError:
+                            self.logger.warning(f"Repository {repo_name} processing timed out after {self.resilient_timeout}s.")
+                            # Force cancellation of the future
+                            future.cancel()
+
+                            # Make sure we clean up any cloned repositories for this repo
+                            self._force_cleanup_repository(repo_id, repo_name)
+
+                            return {
+                                "error": f"Repository processing timed out after {self.resilient_timeout} seconds",
+                                "repository": {
+                                    "id": repo_id,
+                                    "name": repository.get('name', 'Unknown'),
+                                    "full_name": repo_name
+                                },
+                                "timestamp": datetime.now().isoformat()
+                            }
+
+                    # Only continue if we got results
+                    if not results:
+                        # This case might happen if the future was cancelled or another error occurred
+                        self._force_cleanup_repository(repo_id, repo_name) # Ensure cleanup
+                        return {
+                            "error": "Repository processing failed or was cancelled",
+                            "repository": {
+                                "id": repo_id,
+                                "name": repository.get('name', 'Unknown'),
+                                "full_name": repo_name
+                            },
+                            "timestamp": datetime.now().isoformat()
+                        }
                 except Exception as e:
-                    self.logger.error(f"Failed to clean up repository {repo_path}: {e}")
-        
-        # Calculate and add total processing time
-        total_processing_time = time.time() - total_start_time
-        results['total_processing_time'] = round(total_processing_time, 3)
-        
-        return results
+                    self.logger.error(f"Error processing repository {repo_name}: {e}", exc_info=True)
+                    # Make sure we clean up any cloned repositories for this repo
+                    self._force_cleanup_repository(repo_id, repo_name)
+
+                    return {
+                        "error": str(e),
+                        "repository": {
+                            "id": repo_id,
+                            "name": repository.get('name', 'Unknown'),
+                            "full_name": repo_name
+                        },
+                        "timestamp": datetime.now().isoformat()
+                    }
+            else:
+                # Normal processing without repository-level timeout
+                try:
+                    results = self.run_checks(repository, categories=categories, checks=checks)
+                except Exception as e:
+                    self.logger.error(f"Error processing repository {repo_name}: {e}", exc_info=True)
+                    # Ensure cleanup even on error in non-resilient mode
+                    self._force_cleanup_repository(repo_id, repo_name)
+                    return {
+                        "error": str(e),
+                        "repository": {
+                            "id": repo_id,
+                            "name": repository.get('name', 'Unknown'),
+                            "full_name": repo_name
+                        },
+                        "timestamp": datetime.now().isoformat()
+                    }
+
+
+        # Save results to the specified output path (only if successful)
+        if results and "error" not in results:
+            output_file = output_path or 'results.jsonl'
+            with console.status(f"Saving results to {output_file}...", spinner="dots"):
+                self._save_results_to_jsonl(results, output_path)
+
+            # Add to processed repos set - both ID and full name
+            self.processed_repos.add(repo_id)
+            self.processed_repos.add(repo_name)
+
+            # Clean up the cloned repository normally after successful processing
+            self._cleanup_repository(repo_id)
+
+            # Calculate and add total processing time
+            total_processing_time = time.time() - total_start_time
+            results['total_processing_time'] = round(total_processing_time, 3)
+            return results
+        elif results and "error" in results:
+             # If results contain an error (e.g., from timeout handling), return it directly
+             return results
+        else:
+            # Should not happen if error handling is correct, but as a fallback
+            self._force_cleanup_repository(repo_id, repo_name) # Ensure cleanup
+            return {
+                "error": "Unknown error during repository processing",
+                "repository": { "id": repo_id, "full_name": repo_name },
+                "timestamp": datetime.now().isoformat()
+            }
     
-    def _get_existing_results(self, repo_id: Optional[str] = None, repo_name: Optional[str] = None) -> Optional[Dict]:
-        """
-        Get existing results for a repository from results.jsonl
-        
-        :param repo_id: Repository ID
-        :param repo_name: Repository name (username/reponame)
-        :return: Existing results or None if not found
-        """
-        results_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
-        
-        if os.path.exists(results_path):
-            try:
-                with jsonlines.open(results_path) as reader:
-                    for result in reader:
-                        if "repository" in result:
-                            # Match by ID
-                            if repo_id and result["repository"].get("id") == repo_id:
-                                return result
-                            
-                            # Match by full_name (username/reponame)
-                            if repo_name and result["repository"].get("full_name") == repo_name:
-                                return result
-            except Exception as e:
-                self.logger.error(f"Error loading existing results: {e}")
-        
-        return None
-    
-    def _load_repository_from_jsonl(self, repo_id: Optional[str] = None) -> Optional[Dict]:
-        """
-        Load a repository from repositories.jsonl file
-        
-        :param repo_id: ID of the repository to load. If None, returns the first repository.
-        :return: Repository data or None if not found
-        """
-        jsonl_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
-        
-        if not os.path.exists(jsonl_path):
-            self.logger.error(f"repositories.jsonl not found at {jsonl_path}")
-            return None
-        
-        try:
-            with jsonlines.open(jsonl_path) as reader:
-                if repo_id is None:
-                    # Return the first repository
-                    for repo in reader:
-                        return repo
-                else:
-                    # Find repository with matching ID
-                    for repo in reader:
-                        if repo.get('id') == repo_id:
-                            return repo
-        except Exception as e:
-            self.logger.error(f"Error loading repository from {jsonl_path}: {e}")
-        
-        return None
-    
-    def _save_results_to_jsonl(self, results: Dict, output_path: Optional[str] = None) -> bool:
-        """
-        Save check results to results.jsonl or a custom output path
-        
-        :param results: Check results to save
-        :param output_path: Custom output path (if None, uses default results.jsonl)
-        :return: True if successful, False otherwise
-        """
-        # Use the default path if no custom path is provided
-        if not output_path:
-            output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
-        
-        # Ensure results has the needed metadata
-        if 'engine_version' not in results:
-            results['engine_version'] = self.VERSION
-        
-        if 'timestamp' not in results:
-            results['timestamp'] = datetime.now().isoformat()
-        
         if 'overall_score' not in results:
             # Calculate overall score if not already present
             total_score = 0.0
             total_checks = 0
             
             for category, checks in results.items():
-                if category not in ["repository", "timestamp", "engine_version", "overall_score", "total_checks"] and isinstance(checks, dict):
+                if category not in ["repository", "timestamp", "engine_version", "overall_score", "total_checks", "total_processing_time"] and isinstance(checks, dict):
                     for check_name, check_result in checks.items():
                         score = check_result.get('score', 0)
                         if isinstance(score, (int, float)):
@@ -945,6 +968,176 @@ class CheckOrchestrator:
         """
         return list(self.processed_repos)
 
+    def _get_existing_results(self, repo_id: Optional[str] = None, repo_name: Optional[str] = None) -> Optional[Dict]:
+        """
+        Get existing results for a repository from results.jsonl
+
+        :param repo_id: Repository ID
+        :param repo_name: Repository name (username/reponame)
+        :return: Existing results or None if not found
+        """
+        results_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+
+        if os.path.exists(results_path):
+            try:
+                with jsonlines.open(results_path) as reader:
+                    for result in reader:
+                        if "repository" in result:
+                            # Match by ID
+                            if repo_id and result["repository"].get("id") == repo_id:
+                                return result
+
+                            # Match by full_name (username/reponame)
+                            if repo_name and result["repository"].get("full_name") == repo_name:
+                                return result
+            except Exception as e:
+                self.logger.error(f"Error loading existing results: {e}")
+
+        return None
+
+    def _load_repository_from_jsonl(self, repo_id: Optional[str] = None) -> Optional[Dict]:
+        """
+        Load a repository from repositories.jsonl file
+
+        :param repo_id: ID of the repository to load. If None, returns the first repository.
+        :return: Repository data or None if not found
+        """
+        jsonl_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
+
+        if not os.path.exists(jsonl_path):
+            self.logger.error(f"repositories.jsonl not found at {jsonl_path}")
+            return None
+
+        try:
+            with jsonlines.open(jsonl_path) as reader:
+                if repo_id is None:
+                    # Return the first repository
+                    for repo in reader:
+                        return repo
+                else:
+                    # Find repository with matching ID
+                    for repo in reader:
+                        if repo.get('id') == repo_id:
+                            return repo
+        except Exception as e:
+            self.logger.error(f"Error loading repository from {jsonl_path}: {e}")
+
+        return None
+
+    def _save_results_to_jsonl(self, results: Dict, output_path: Optional[str] = None) -> bool:
+        """
+        Save check results to results.jsonl or a custom output path
+
+        :param results: Check results to save
+        :param output_path: Custom output path (if None, uses default results.jsonl)
+        :return: True if successful, False otherwise
+        """
+        # Use the default path if no custom path is provided
+        if not output_path:
+            output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+
+        # Ensure results has the needed metadata
+        if 'engine_version' not in results:
+            results['engine_version'] = self.VERSION
+
+        if 'timestamp' not in results:
+            results['timestamp'] = datetime.now().isoformat()
+
+        if 'overall_score' not in results:
+            # Calculate overall score if not already present
+            total_score = 0.0
+            total_checks = 0
+
+            for category, checks in results.items():
+                if category not in ["repository", "timestamp", "engine_version", "overall_score", "total_checks", "total_processing_time"] and isinstance(checks, dict):
+                    for check_name, check_result in checks.items():
+                        score = check_result.get('score', 0)
+                        if isinstance(score, (int, float)):
+                            total_score += score
+                            total_checks += 1
+
+            results['overall_score'] = round(total_score / max(total_checks, 1), 3)
+            results['total_checks'] = total_checks
+
+        # Determine if we should save as JSON or JSONL based on file extension
+        if output_path.lower().endswith('.json'):
+            try:
+                # If the file already exists and has content, we need to load it first
+                existing_data = []
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    try:
+                        with open(output_path, 'r', encoding='utf-8') as f:
+                            existing_data = json.load(f)
+                            # If it's not a list, make it a list with the existing item
+                            if not isinstance(existing_data, list):
+                                existing_data = [existing_data]
+                    except json.JSONDecodeError:
+                        self.logger.warning(f"Existing file {output_path} is not valid JSON. Creating new file.")
+                        existing_data = []
+
+                # Append the new results and save
+                existing_data.append(results)
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    json.dump(existing_data, f, indent=2)
+
+                self.logger.info(f"Results saved to {output_path}")
+                return True
+            except Exception as e:
+                self.logger.error(f"Error saving data to {output_path}: {e}")
+                return False
+        else:
+            # Save to JSONL file using utility function
+            return save_to_jsonl(results, output_path)
+
+    def _force_cleanup_repository(self, repo_id: str, repo_name: str) -> None:
+        """
+        Force cleanup of a repository's resources, including terminating any running processes.
+        This is used when a repository processing times out or fails.
+
+        :param repo_id: Repository ID
+        :param repo_name: Repository name for logging
+        """
+        self.logger.info(f"Forcefully cleaning up resources for repository {repo_name}")
+
+        # Clean up cloned repository if it exists
+        if repo_id in self.cloned_repos:
+            repo_path = self.cloned_repos[repo_id]
+            try:
+                if os.path.exists(repo_path):
+                    # Use utility function for more robust cleanup
+                    # from check_orchestrator_utils import safe_cleanup_directory # Already imported
+                    safe_cleanup_directory(repo_path, timeout=30)
+
+                # Remove from the dictionary of cloned repos
+                del self.cloned_repos[repo_id]
+                self.logger.info(f"Removed cloned repository for {repo_name}")
+            except Exception as e:
+                self.logger.error(f"Error cleaning up repository {repo_name}: {e}")
+
+        # Force garbage collection
+        try:
+            import gc
+            gc.collect()
+        except Exception:
+            pass
+
+    def _cleanup_repository(self, repo_id: str) -> None:
+        """
+        Clean up a repository's resources after normal processing
+
+        :param repo_id: Repository ID
+        """
+        # Clean up to free disk space
+        if repo_id in self.cloned_repos:
+            repo_path = self.cloned_repos[repo_id]
+            try:
+                if os.path.exists(repo_path):
+                    # Use safe cleanup here as well for consistency and robustness
+                    safe_cleanup_directory(repo_path, timeout=30)
+                del self.cloned_repos[repo_id]
+            except Exception as e:
+                self.logger.error(f"Failed to clean up repository {repo_path}: {e}")
+
 # Add command-line interface if script is run directly
 if __name__ == "__main__":
     import sys
@@ -1040,17 +1233,33 @@ if __name__ == "__main__":
         default="results.jsonl",
         help="Path to save results (default: results.jsonl). Use .json extension for JSON format."
     )
-    
+    # Add back the resilient mode arguments
+    parser.add_argument(
+        "--resilient",
+        action="store_true",
+        help="Enable resilient mode to skip repositories that take too long to process"
+    )
+    parser.add_argument(
+        "--resilient-timeout",
+        type=int,
+        default=60, # Default repository timeout in resilient mode
+        help="Timeout in seconds for entire repository processing when in resilient mode (default: 60)"
+    )
+
     # Parse arguments
     args = parser.parse_args(sys.argv[1:])
-    
+
     try:
-        # Create orchestrator with specified timeout
-        orchestrator = CheckOrchestrator(check_timeout=args.timeout)
-        
+        # Create orchestrator with specified timeout and resilient mode settings
+        orchestrator = CheckOrchestrator(
+            check_timeout=args.timeout,
+            resilient_mode=args.resilient,
+            resilient_timeout=args.resilient_timeout
+        )
+
         # Configure rate limiter
         orchestrator.rate_limiter = RateLimiter(max_calls=args.rate_limit, time_period=60)
-        
+
         # Override GitHub token if provided in command line
         if args.github_token:
             orchestrator.github_token = args.github_token
@@ -1071,6 +1280,10 @@ if __name__ == "__main__":
             checks = [chk.strip() for chk in args.checks.split(',')]
             console.print(f"[bold blue]Filtering checks by names:[/] {', '.join(checks)}")
         
+        # Inform about resilient mode if enabled
+        if args.resilient:
+            console.print(f"[bold blue]Resilient mode enabled[/] (repository timeout: {args.resilient_timeout}s)")
+
         # Inform about output format
         if args.output.lower().endswith('.json'):
             console.print(f"[bold blue]Results will be saved in JSON format to:[/] {args.output}")
@@ -1081,6 +1294,8 @@ if __name__ == "__main__":
             console.print(Panel(f"[bold blue]Processing all repositories[/]" + 
                                 (" [bold yellow](forcing reprocessing)[/]" if args.force else "")))
             
+            # Pass resilient mode settings to process_all_repositories if needed
+            # Note: process_all_repositories currently uses resilient mode settings from the orchestrator instance
             all_results = orchestrator.process_all_repositories(
                 force=args.force, 
                 categories=categories,
