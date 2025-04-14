@@ -838,6 +838,7 @@ class CheckOrchestrator:
         :return: List of results for all repositories
         """
         from check_orchestrator_utils import monitor_resource_usage
+        import signal
         
         console = Console()
         all_results = []
@@ -891,28 +892,96 @@ class CheckOrchestrator:
                         progress.advance(process_task)
                         continue
                     
+                    # Check for large repositories (quick pre-check)
+                    try:
+                        # Check size from API if available
+                        if 'size' in repository and repository['size'] and int(repository['size']) > 200000:  # >200MB
+                            self.logger.warning(f"Repository {repo_name} is extremely large ({repository['size']}KB). Skipping to avoid timeout.")
+                            repo_result = {
+                                "error": f"Repository is too large to process ({repository['size']}KB)",
+                                "repository": {
+                                    "id": repo_id,
+                                    "name": repository.get('name', 'Unknown'),
+                                    "full_name": repo_name
+                                },
+                                "timestamp": datetime.now().isoformat()
+                            }
+                            self._save_results_to_jsonl(repo_result, output_path)
+                            all_results.append(repo_result)
+                            batch_results.append(repo_result)
+                            progress.advance(process_task)
+                            continue
+                    except (ValueError, TypeError) as e:
+                        # Continue if we can't check the size
+                        self.logger.debug(f"Couldn't check repository size: {e}")
+                    
                     # Check memory usage before processing
                     if check_memory_usage:
                         memory_info = monitor_resource_usage(f"Before {repo_name}", threshold_mb=500)
                         self.logger.debug(f"Memory before {repo_name}: {memory_info['memory_mb']} MB")
                     
-                    # Process the repository with a smaller timeout specifically for batch mode
-                    # This helps prevent individual checks from hanging the entire batch
-                    self.logger.info(f"Processing repository: {repo_name}")
-                    results = self.run_checks(repository, categories=categories, checks=checks)
+                    # --- Robust Timeout wrapper for per-repo processing ---
+                    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+                    repo_result = None
+                    executor = None
+                    future = None
                     
-                    # Save results to the specified output path
-                    self._save_results_to_jsonl(results, output_path)
-                    
-                    # Add to processed repos - both ID and full name
-                    self.processed_repos.add(repo_id)
-                    self.processed_repos.add(repo_name)
-                    
-                    all_results.append(results)
-                    batch_results.append(results)
-                    
+                    try:
+                        self.logger.info(f"Starting repository processing with 60s timeout: {repo_name}")
+                        executor = ThreadPoolExecutor(max_workers=1)
+                        future = executor.submit(self.run_checks, repository, categories=categories, checks=checks)
+                        try:
+                            repo_result = future.result(timeout=60)
+                            self.logger.info(f"Repository {repo_name} processed successfully within timeout")
+                        except FuturesTimeoutError:
+                            self.logger.warning(f"Repository {repo_name} processing timed out after 60s. Skipping to next repository.")
+                            if future and not future.done():
+                                # Force cancel future
+                                future_cancelled = future.cancel()
+                                self.logger.info(f"Future cancellation result: {future_cancelled}")
+                            
+                            # Force cleanup with extreme measures
+                            self._emergency_cleanup_repository(repo_id, repo_name)
+                            
+                            repo_result = {
+                                "error": f"Repository processing timed out after 60 seconds",
+                                "repository": {
+                                    "id": repo_id,
+                                    "name": repository.get('name', 'Unknown'),
+                                    "full_name": repo_name
+                                },
+                                "timestamp": datetime.now().isoformat()
+                            }
+                    except Exception as e:
+                        self.logger.error(f"Error processing repository {repo_name}: {e}", exc_info=True)
+                        self._force_cleanup_repository(repo_id, repo_name)
+                        repo_result = {
+                            "error": str(e),
+                            "repository": {
+                                "id": repo_id,
+                                "name": repository.get('name', 'Unknown'),
+                                "full_name": repo_name
+                            },
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    finally:
+                        # Ensure executor is properly shut down to prevent thread leaks
+                        if executor:
+                            executor.shutdown(wait=False)
+                    # --- End Timeout wrapper ---
+
+                    # Always save result (even if error/timeout)
+                    self._save_results_to_jsonl(repo_result, output_path)
+                    if repo_result and "error" not in repo_result:
+                        self.processed_repos.add(repo_id)
+                        self.processed_repos.add(repo_name)
+
+                    all_results.append(repo_result)
+                    batch_results.append(repo_result)
+
                     # Clean up to free disk space
                     if repo_id in self.cloned_repos:
+                        self.logger.info(f"Cleaning up after processing {repo_name}")
                         repo_path = self.cloned_repos[repo_id]
                         try:
                             if os.path.exists(repo_path):
@@ -920,31 +989,75 @@ class CheckOrchestrator:
                             del self.cloned_repos[repo_id]
                         except Exception as e:
                             self.logger.error(f"Failed to clean up repository {repo_path}: {e}")
-                
-                # Update progress
+
                 progress.advance(process_task)
-                
-                # Perform batch cleanup and monitoring
+
                 batch_count += 1
                 if batch_count >= batch_size or i == len(repositories) - 1:
-                    # End of batch or last repository - perform cleanup
                     self.logger.info(f"Completed batch of {batch_count} repositories. Performing cleanup...")
-                    
-                    # Force garbage collection to free memory
                     import gc
                     gc.collect()
-                    
-                    # Check memory usage after processing batch
                     if check_memory_usage:
                         memory_info = monitor_resource_usage("After batch", threshold_mb=500)
                         self.logger.info(f"Memory after batch: {memory_info['memory_mb']} MB, Threads: {memory_info['num_threads']}")
-                    
-                    # Reset batch counter and results
                     batch_count = 0
                     batch_results = []
-        
+
         return all_results
-    
+
+    def _emergency_cleanup_repository(self, repo_id: str, repo_name: str) -> None:
+        """
+        Extra aggressive cleanup for repositories that timed out.
+        Uses more force than regular cleanup methods.
+        
+        :param repo_id: Repository ID
+        :param repo_name: Repository name for logging
+        """
+        self.logger.warning(f"Emergency cleanup for repository {repo_name}")
+
+        # First try regular cleanup
+        self._force_cleanup_repository(repo_id, repo_name)
+        
+        # Try additional cleanup measures
+        try:
+            # Force any git processes to terminate (Linux/Mac)
+            import subprocess
+            try:
+                subprocess.run(
+                    "pkill -f 'git'", 
+                    shell=True, 
+                    timeout=5,
+                    stderr=subprocess.PIPE, 
+                    stdout=subprocess.PIPE
+                )
+                self.logger.info("Attempted to terminate git processes")
+            except Exception as e:
+                self.logger.debug(f"Error terminating git processes: {e}")
+                
+            # Force garbage collection multiple times
+            import gc
+            for _ in range(3):
+                gc.collect()
+                
+            # Recreate the temp directory if needed
+            if os.path.exists(self.temp_dir):
+                try:
+                    # Remove any contents from temp directory that might still exist
+                    items = os.listdir(self.temp_dir)
+                    for item in items:
+                        item_path = os.path.join(self.temp_dir, item)
+                        try:
+                            if os.path.isdir(item_path):
+                                shutil.rmtree(item_path, ignore_errors=True)
+                            else:
+                                os.remove(item_path)
+                        except Exception as inner_e:
+                            self.logger.debug(f"Could not remove {item_path}: {inner_e}")
+                except Exception as e:
+                    self.logger.error(f"Error cleaning temp directory: {e}")
+        except Exception as e:
+            self.logger.error(f"Error during emergency cleanup: {e}")
+
     def _load_all_repositories(self) -> List[Dict]:
         """
         Load all repositories from repositories.jsonl
