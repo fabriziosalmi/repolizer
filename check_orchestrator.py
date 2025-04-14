@@ -23,6 +23,7 @@ try:
     from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
     from rich.table import Table
     from rich import print as rich_print
+    from rich.logging import RichHandler # Import RichHandler
 except ImportError:
     # If direct import fails, use the utility function to install and import
     from check_orchestrator_utils import ensure_dependencies
@@ -40,6 +41,7 @@ except ImportError:
     TimeElapsedColumn = deps.get('TimeElapsedColumn')
     Table = deps.get('Table')
     rich_print = deps.get('rich_print')
+    RichHandler = deps.get('RichHandler') # Get RichHandler from deps if needed
 
 # Import other utility functions and classes
 from check_orchestrator_utils import (
@@ -50,7 +52,7 @@ from check_orchestrator_utils import (
 )
 
 # Verify the required classes are available
-if not all([Console, Panel, Progress, Table]):
+if not all([Console, Panel, Progress, Table, RichHandler]): # Add RichHandler check
     raise ImportError("Required rich components could not be imported")
 
 class CheckOrchestrator:
@@ -123,21 +125,20 @@ class CheckOrchestrator:
             file_handler = logging.FileHandler(log_file, mode='a')
             file_handler.setLevel(logging.DEBUG)  # Log everything to file
             
-            # Create console handler with a higher log level
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.INFO)  # Only INFO and above to console
+            # Create Rich console handler
+            console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False) # Use RichHandler
             
-            # Create formatters
+            # Create formatters (only needed for file handler now)
             file_formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
-            console_formatter = logging.Formatter(
-                '%(levelname)s: %(message)s'
-            )
+            # console_formatter = logging.Formatter( # No longer needed for RichHandler
+            #     '%(levelname)s: %(message)s'
+            # )
             
             # Add formatters to handlers
             file_handler.setFormatter(file_formatter)
-            console_handler.setFormatter(console_formatter)
+            # console_handler.setFormatter(console_formatter) # Not needed for RichHandler
             
             # Add handlers to logger
             self.logger.addHandler(file_handler)
@@ -1165,14 +1166,11 @@ if __name__ == "__main__":
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     ))
     
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    # Use a custom formatter to avoid duplicating the level in output
-    # This way we avoid "INFO: INFO: message" patterns
-    console_handler.setFormatter(logging.Formatter(
-        '%(message)s'  # Show only the message, not the level prefix
-    ))
+    # Rich Console handler
+    console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False) # Use RichHandler
+    # console_handler.setFormatter(logging.Formatter( # No longer needed
+    #     '%(message)s'  # Show only the message, not the level prefix
+    # ))
     
     # Add handlers
     root_logger.addHandler(file_handler)

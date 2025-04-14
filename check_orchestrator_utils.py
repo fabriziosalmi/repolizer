@@ -18,47 +18,59 @@ from urllib.parse import urlparse
 from datetime import datetime
 from typing import Dict, Optional, List, Set, Any
 
+# Try importing RichHandler
+try:
+    from rich.logging import RichHandler
+    HAS_RICH = True
+except ImportError:
+    HAS_RICH = False
+    RichHandler = None # Define as None if not available
+
 # Configure logging
 def setup_utils_logging():
     """Set up logging for the utils module"""
     logger = logging.getLogger(__name__)
-    
+
     # Skip if root logger has handlers or this logger already has handlers
-    if logger.handlers or (hasattr(logging.getLogger(), "root_handlers_configured") and 
+    if logger.handlers or (hasattr(logging.getLogger(), "root_handlers_configured") and
                           getattr(logging.getLogger(), "root_handlers_configured")):
         return logger
-    
+
     logger.setLevel(logging.DEBUG)
-    
+
     # Create log directory if it doesn't exist
     log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
     os.makedirs(log_dir, exist_ok=True)
-    
+
     # Create file handler for debug.log
     log_file = os.path.join(log_dir, 'debug.log')
     file_handler = logging.FileHandler(log_file, mode='a')
     file_handler.setLevel(logging.DEBUG)
-    
-    # Create console handler with a higher log level
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    
-    # Create formatters
+
+    # Create console handler (use RichHandler if available)
+    if HAS_RICH and RichHandler:
+        console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False)
+    else:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+    # Create formatters (only needed for file handler and fallback console handler)
     file_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    console_formatter = logging.Formatter(
+    console_formatter = logging.Formatter( # Used only if RichHandler is not available
         '%(levelname)s: %(message)s'
     )
-    
+
     # Add formatters to handlers
     file_handler.setFormatter(file_formatter)
-    console_handler.setFormatter(console_formatter)
-    
+    if not (HAS_RICH and RichHandler): # Only set formatter if not using RichHandler
+        console_handler.setFormatter(console_formatter)
+
     # Add handlers to logger
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
-    
+
     return logger
 
 # Get logger
@@ -449,42 +461,69 @@ def ensure_dependencies() -> Dict[str, any]:
     Returns a dictionary of imported modules.
     """
     dependencies = {}
-    
+
     # Required dependencies with their import names
     required_deps = {
         "jsonlines": "jsonlines",
-        "rich": ["rich.console", "rich.panel", "rich.progress", "rich.table"],
+        "rich": ["rich.console", "rich.panel", "rich.progress", "rich.table", "rich.logging"], # Add rich.logging
         "gitpython": "git"
     }
-    
+
     for package, modules in required_deps.items():
         if isinstance(modules, str):
             modules = [modules]
-            
+
         for module_name in modules:
             try:
+                # Import the top-level package first if needed (e.g., 'rich')
+                top_level_package = module_name.split('.')[0]
+                __import__(top_level_package)
+
+                # Then import the specific module/submodule
                 module = __import__(module_name, fromlist=['*'])
+
                 # Store the module itself, not its name
                 if '.' in module_name:
                     # For submodules like rich.console, store the last part as key
-                    dependencies[module_name.split('.')[-1]] = module
+                    # Handle rich.logging specifically for RichHandler
+                    if module_name == "rich.logging":
+                        dependencies['RichHandler'] = getattr(module, 'RichHandler', None)
+                    else:
+                        # Get the actual class/function if possible (e.g., Console)
+                        component_name = module_name.split('.')[-1].capitalize()
+                        dependencies[component_name] = getattr(module, component_name, module)
+
                 else:
                     dependencies[module_name] = module
             except ImportError:
                 logger.info(f"{module_name} module not found. Attempting to install {package}...")
                 try:
                     subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                    # Re-attempt import after installation
+                    top_level_package = module_name.split('.')[0]
+                    __import__(top_level_package)
                     module = __import__(module_name, fromlist=['*'])
+
                     if '.' in module_name:
-                        dependencies[module_name.split('.')[-1]] = module
+                         if module_name == "rich.logging":
+                            dependencies['RichHandler'] = getattr(module, 'RichHandler', None)
+                         else:
+                            component_name = module_name.split('.')[-1].capitalize()
+                            dependencies[component_name] = getattr(module, component_name, module)
                     else:
                         dependencies[module_name] = module
                     logger.info(f"{package} module installed successfully.")
                 except Exception as e:
                     logger.error(f"Failed to install {package}: {e}")
-                    raise
-    
-    # Import specific classes directly and add them to dependencies
+                    # Don't raise here, let the main script handle missing deps if critical
+                    if '.' in module_name:
+                        component_name = module_name.split('.')[-1].capitalize()
+                        dependencies[component_name] = None
+                    else:
+                        dependencies[module_name] = None
+
+
+    # Import specific classes directly and add them to dependencies if not already added
     try:
         # Direct imports for rich components
         from rich.console import Console
@@ -492,22 +531,23 @@ def ensure_dependencies() -> Dict[str, any]:
         from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
         from rich.table import Table
         from rich import print as rich_print
-        
-        # Add the actual classes to dependencies, not just the modules
-        dependencies.update({
-            'Console': Console,
-            'Panel': Panel,
-            'Progress': Progress,
-            'SpinnerColumn': SpinnerColumn,
-            'TextColumn': TextColumn,
-            'BarColumn': BarColumn,
-            'TimeElapsedColumn': TimeElapsedColumn,
-            'Table': Table,
-            'rich_print': rich_print
-        })
+        from rich.logging import RichHandler # Ensure RichHandler is imported here too
+
+        # Add the actual classes to dependencies, checking if they exist first
+        if 'Console' not in dependencies: dependencies['Console'] = Console
+        if 'Panel' not in dependencies: dependencies['Panel'] = Panel
+        if 'Progress' not in dependencies: dependencies['Progress'] = Progress
+        if 'SpinnerColumn' not in dependencies: dependencies['SpinnerColumn'] = SpinnerColumn
+        if 'TextColumn' not in dependencies: dependencies['TextColumn'] = TextColumn
+        if 'BarColumn' not in dependencies: dependencies['BarColumn'] = BarColumn
+        if 'TimeElapsedColumn' not in dependencies: dependencies['TimeElapsedColumn'] = TimeElapsedColumn
+        if 'Table' not in dependencies: dependencies['Table'] = Table
+        if 'rich_print' not in dependencies: dependencies['rich_print'] = rich_print
+        if 'RichHandler' not in dependencies: dependencies['RichHandler'] = RichHandler
+
     except ImportError as e:
         logger.error(f"Error importing from rich: {e}")
-    
+
     return dependencies
 
 def create_temp_directory(prefix: str = "repolizer_") -> str:
