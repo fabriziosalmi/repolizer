@@ -173,7 +173,8 @@ class CheckOrchestrator:
                         self.logger.debug(f"Skipping __init__.py file: {check_file.name}")
                         continue
                     if check_file.name.startswith("test_"):
-                        self.logger.debug(f"Skipping test file: {check_file.name}")
+                        # Log skipped test files at INFO level
+                        self.logger.info(f"Skipping test file: {check_file.name}")
                         continue
 
                     module_name = f"checks.{category}.{check_file.stem}"
