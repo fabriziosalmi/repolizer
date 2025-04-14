@@ -8,6 +8,7 @@ import threading
 from typing import Dict, Any, List, Tuple, Optional
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError, as_completed
+import concurrent.futures
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -716,64 +717,62 @@ def calculate_comment_quality(comments: List[str]) -> float:
 
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Run the code comments check
-    
-    Args:
-        repository: Repository data dictionary which might include a local_path
-        
-    Returns:
-        Check results with score on 0-100 scale
+    Run the code comments check with a hard process-level timeout.
     """
-    try:
-        # Check if we have a local path to the repository
-        local_path = repository.get('local_path')
-        
-        # Set a global timeout for the entire process
-        global STOP_ANALYSIS
-        STOP_ANALYSIS = False
-        
-        # Create a timer that will set the flag after timeout
-        timer = threading.Timer(40, lambda: setattr(globals(), 'STOP_ANALYSIS', True))  # Lowered from 60s
-        timer.daemon = True
-        timer.start()
-        
+    import multiprocessing
+
+    # Helper to run in a subprocess
+    def _run_check_code_comments(local_path, repository, timeout_seconds):
         try:
-            # Use a thread with timeout to ensure the check completes
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(check_code_comments, local_path, repository, timeout_seconds=35)  # Lowered from 55
-                try:
-                    # Force a hard timeout after 40 seconds
-                    result = future.result(timeout=40)  # Lowered from 60
-                    
-                    # Return the result
-                    return {
-                        "score": result["comment_score"],
-                        "result": result
-                    }
-                except Exception as e:
-                    logger.error(f"Code comments check did not complete within the timeout period: {e}")
-                    # Try to cancel the future
-                    future.cancel()
-                    STOP_ANALYSIS = True
-                    # Return a timeout result
-                    return {
-                        "score": 0,
-                        "result": {
-                            "error": "Analysis timed out or failed after 40 seconds",
-                            "timed_out": True,
-                            "processing_time": 40,
-                            "total_files_analyzed": 0  # We couldn't analyze any files
-                        }
-                    }
-        finally:
-            # Cancel the timer
-            timer.cancel()
-            
-    except BaseException as e:
-        logger.error(f"Error running code comments check: {e}")
-        return {
-            "score": 0,
-            "result": {
+            return check_code_comments(local_path, repository, timeout_seconds=timeout_seconds)
+        except Exception as e:
+            return {
+                "total_files_analyzed": 0,
+                "files_with_comments": 0,
+                "total_code_lines": 0,
+                "total_comment_lines": 0,
+                "comment_ratio": 0,
+                "files_with_docstrings": 0,
+                "comment_quality_score": 0,
+                "comment_distribution_score": 0,
+                "comment_score": 0,
+                "timed_out": True,
+                "processing_time": timeout_seconds,
                 "error": str(e)
             }
-        }
+
+    local_path = repository.get('local_path')
+    timeout_seconds = 35  # hard timeout for the check (should be < orchestrator's per-check timeout)
+    hard_timeout = 40     # hard process kill timeout
+
+    # Use a process pool for hard timeout protection
+    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_run_check_code_comments, local_path, repository, timeout_seconds)
+        try:
+            result = future.result(timeout=hard_timeout)
+            return {
+                "score": result.get("comment_score", 0),
+                "result": result
+            }
+        except concurrent.futures.TimeoutError:
+            # Kill the process and return a minimal result
+            future.cancel()
+            return {
+                "score": 0,
+                "result": {
+                    "error": f"Analysis timed out after {hard_timeout} seconds (process killed)",
+                    "timed_out": True,
+                    "processing_time": hard_timeout,
+                    "total_files_analyzed": 0
+                }
+            }
+        except Exception as e:
+            return {
+                "score": 0,
+                "result": {
+                    "error": str(e),
+                    "timed_out": True,
+                    "processing_time": hard_timeout,
+                    "total_files_analyzed": 0
+                }
+            }
