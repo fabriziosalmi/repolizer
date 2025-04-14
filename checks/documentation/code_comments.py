@@ -13,12 +13,13 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 logger = logging.getLogger(__name__)
 
 # Check operating system for timeout implementation
+IS_UNIX_SIGALRM = platform.system() in ('Linux', 'Darwin')
 IS_WINDOWS = platform.system() == 'Windows'
 
 # Global flag to indicate if analysis should stop
 STOP_ANALYSIS = False
 
-# Timeout decorator for functions - only used on Unix systems
+# Timeout decorator for functions - only used on Unix systems (Linux, macOS)
 def timeout_decorator(seconds):
     def decorator(func):
         @wraps(func)
@@ -27,7 +28,7 @@ def timeout_decorator(seconds):
                 raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
             
             # Set the timeout handler
-            if not IS_WINDOWS:
+            if IS_UNIX_SIGALRM:
                 original_handler = signal.signal(signal.SIGALRM, handler)
                 signal.alarm(seconds)
             
@@ -35,17 +36,28 @@ def timeout_decorator(seconds):
                 # On Windows, we'll rely on other timeout mechanisms
                 if IS_WINDOWS:
                     return func(*args, **kwargs)
+                elif IS_UNIX_SIGALRM:
+                    result = func(*args, **kwargs)
                 else:
                     result = func(*args, **kwargs)
             finally:
                 # Reset the handler and alarm
-                if not IS_WINDOWS:
+                if IS_UNIX_SIGALRM:
                     signal.signal(signal.SIGALRM, original_handler)
                     signal.alarm(0)
             
             return result
         return wrapper
     return decorator
+
+def should_abort(hard_timeout=None):
+    global STOP_ANALYSIS
+    if STOP_ANALYSIS:
+        return True
+    if hard_timeout is not None and time.time() > hard_timeout:
+        STOP_ANALYSIS = True
+        return True
+    return False
 
 def check_code_comments(repo_path: str = None, repo_data: Dict = None, timeout_seconds: int = 60) -> Dict[str, Any]:
     """
@@ -122,80 +134,87 @@ def check_code_comments(repo_path: str = None, repo_data: Dict = None, timeout_s
         exclude_dirs = [".git", "node_modules", "venv", "env", ".venv", "__pycache__", "build", "dist", ".github"]
         
         # File size limit (in MB)
-        file_size_limit = 5
+        file_size_limit = 2  # Lowered from 5 to 2 MB for faster reads
         
         # Collect all valid files first to better distribute processing
         files_to_analyze = []
         
         # Create a safe version of os.walk that respects timeouts
         def safe_walk():
-            max_dirs_to_check = 1000  # Limit directory traversal 
-            dirs_checked = 0
-            
-            for root, dirs, files in os.walk(repo_path):
-                # Check for timeout or if we've checked too many directories
-                if STOP_ANALYSIS or time.time() > hard_timeout or dirs_checked > max_dirs_to_check:
-                    return
+            try:
+                max_dirs_to_check = 500  # Lowered from 1000
+                dirs_checked = 0
                 
-                dirs_checked += 1
-                
-                # Skip excluded directories
-                dirs[:] = [d for d in dirs if d not in exclude_dirs and not d.startswith(".")]
-                
-                # Further limit directory traversal for very large repos
-                if len(dirs) > 50:
-                    dirs[:] = dirs[:50]
-                
-                for file in files:
-                    # Check timeout again for each file
-                    if STOP_ANALYSIS or time.time() > hard_timeout:
+                for root, dirs, files in os.walk(repo_path):
+                    # Check for timeout or if we've checked too many directories
+                    if should_abort(hard_timeout):
                         return
+                
+                    dirs_checked += 1
+                
+                    # Skip excluded directories
+                    dirs[:] = [d for d in dirs if d not in exclude_dirs and not d.startswith(".")]
+                
+                    # Further limit directory traversal for very large repos
+                    if len(dirs) > 20:  # Lowered from 50
+                        dirs[:] = dirs[:20]
+                
+                    for file in files:
+                        # Check timeout again for each file
+                        if should_abort(hard_timeout):
+                            return
                         
-                    file_ext = os.path.splitext(file)[1].lower()
-                    if file_ext in code_extensions:
-                        file_path = os.path.join(root, file)
+                        file_ext = os.path.splitext(file)[1].lower()
+                        if file_ext in code_extensions:
+                            file_path = os.path.join(root, file)
                         
-                        # Check file size before adding to analysis list
-                        try:
-                            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-                            if file_size_mb <= file_size_limit:
-                                files_to_analyze.append((file_path, code_extensions[file_ext]))
-                                # Early stopping if we have enough files
-                                if len(files_to_analyze) >= 1000:
-                                    return
-                            else:
-                                logger.info(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
-                        except Exception as e:
-                            logger.error(f"Error checking file size {file_path}: {e}")
-                            continue
+                            # Check file size before adding to analysis list
+                            try:
+                                file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                                if file_size_mb <= file_size_limit:
+                                    files_to_analyze.append((file_path, code_extensions[file_ext]))
+                                    # Early stopping if we have enough files
+                                    if len(files_to_analyze) >= 400:  # Lowered from 1000
+                                        return
+                                else:
+                                    logger.info(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
+                            except Exception as e:
+                                logger.error(f"Error checking file size {file_path}: {e}")
+                                continue
                             
-                # Periodically check if we need to stop
-                if len(files_to_analyze) % 100 == 0:
-                    if STOP_ANALYSIS or time.time() > hard_timeout:
-                        return
+                    # Periodically check if we need to stop
+                    if len(files_to_analyze) % 50 == 0:  # More frequent check
+                        if should_abort(hard_timeout):
+                            return
+            except BaseException as e:
+                logger.error(f"safe_walk failed: {e}")
+                STOP_ANALYSIS = True
+                return
             
         try:
             # Set a timeout for the file collection phase
-            file_collection_timeout = min(timeout_seconds * 0.3, 15)  # Max 15 seconds or 30% of total time
+            file_collection_timeout = min(timeout_seconds * 0.2, 7)  # Lowered max to 7s or 20%
             with ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(safe_walk)
                 try:
                     future.result(timeout=file_collection_timeout)
-                except FutureTimeoutError:
-                    logger.warning(f"File collection timed out after {file_collection_timeout:.1f} seconds")
+                except Exception as e:
+                    logger.warning(f"File collection timed out or failed: {e}")
                     result["timed_out"] = True
-        except Exception as e:
+                    STOP_ANALYSIS = True
+        except BaseException as e:
             logger.error(f"Error walking repository: {e}")
+            STOP_ANALYSIS = True
         
         # Check if we should continue
-        if STOP_ANALYSIS or time.time() > hard_timeout:
+        if should_abort(hard_timeout):
             result["timed_out"] = True
             result["processing_time"] = round(time.time() - start_time, 2)
             return result
         
         # Limit the number of files to analyze if there are too many
         # This helps ensure we complete within the timeout
-        max_files_to_analyze = 100  # Reduced from 200 to ensure completion
+        max_files_to_analyze = 20  # Lowered from 40
         if len(files_to_analyze) > max_files_to_analyze:
             logger.info(f"Limiting analysis to {max_files_to_analyze} files out of {len(files_to_analyze)}")
             
@@ -226,7 +245,7 @@ def check_code_comments(repo_path: str = None, repo_data: Dict = None, timeout_s
                 remaining = max_files_to_analyze - len(sampled_files)
                 for ext, files in files_by_extension.items():
                     remaining_files = [f for f in files if f not in sampled_files]
-                    sampled_files.extend(remaining_files[:remaining//len(files_by_extension)])
+                    sampled_files.extend(remaining_files[:max(1, remaining//len(files_by_extension))])
                     if len(sampled_files) >= max_files_to_analyze:
                         break
             
@@ -246,67 +265,68 @@ def check_code_comments(repo_path: str = None, repo_data: Dict = None, timeout_s
         remaining_ratio = remaining_time / timeout_seconds
         
         # Adjust per-file timeout based on total files and remaining time
-        time_per_file = min(1.0, remaining_time / max(1, len(files_to_analyze)))
+        time_per_file = min(0.2, remaining_time / max(1, len(files_to_analyze)))  # Lowered max per file to 0.2s
         logger.info(f"Allocating {time_per_file:.2f} seconds per file analysis for {len(files_to_analyze)} files")
         
         # If we have very little time left, reduce the number of files further
-        if remaining_ratio < 0.5 and len(files_to_analyze) > 50:
-            files_to_analyze = files_to_analyze[:50]
-            logger.warning(f"Time constraints severe: limiting to 50 files. {remaining_time:.1f}s remaining")
+        if remaining_ratio < 0.5 and len(files_to_analyze) > 10:
+            files_to_analyze = files_to_analyze[:10]
+            logger.warning(f"Time constraints severe: limiting to 10 files. {remaining_time:.1f}s remaining")
         
         # Use a thread pool to process files with timeout per file - now using as_completed
-        with ThreadPoolExecutor(max_workers=min(os.cpu_count() or 4, len(files_to_analyze))) as executor:
-            futures = {
-                executor.submit(analyze_file_with_timeout, file_path, language, time_per_file): 
-                (file_path, language)
-                for file_path, language in files_to_analyze
-            }
-            
-            # Process results as they complete
-            for future in as_completed(futures):
-                # Check if we should stop
-                if STOP_ANALYSIS or time.time() > hard_timeout:
-                    result["timed_out"] = True
-                    logger.warning(f"Analysis timed out after {time.time() - start_time:.2f} seconds")
+        try:
+            with ThreadPoolExecutor(max_workers=min(os.cpu_count() or 4, len(files_to_analyze))) as executor:
+                futures = {
+                    executor.submit(analyze_file_with_timeout, file_path, language, time_per_file): 
+                    (file_path, language)
+                    for file_path, language in files_to_analyze
+                }
+                
+                # Process results as they complete
+                for future in as_completed(futures):
+                    # Check if we should stop
+                    if should_abort(hard_timeout):
+                        result["timed_out"] = True
+                        logger.warning(f"Analysis timed out after {time.time() - start_time:.2f} seconds")
+                        
+                        # Cancel remaining futures
+                        for f in futures:
+                            if not f.done():
+                                f.cancel()
+                        break
                     
-                    # Cancel remaining futures
-                    for f in futures:
-                        if not f.done():
-                            f.cancel()
-                    break
-                
-                file_path, language = futures[future]
-                
-                try:
-                    analysis_result = future.result(timeout=0.1)  # Just grab completed result
-                    if analysis_result:
-                        code_lines, comment_lines, has_docstrings, quality_score, file_timed_out = analysis_result
-                        
-                        if file_timed_out:
-                            logger.warning(f"Analysis of {file_path} timed out")
-                            continue
-                        
-                        total_files += 1
-                        total_code_lines += code_lines
-                        total_comment_lines += comment_lines
-                        
-                        # Calculate per-file comment ratio
-                        file_ratio = 0 if code_lines == 0 else (comment_lines / code_lines) * 100
-                        file_comment_ratios.append(file_ratio)
-                        
-                        if comment_lines > 0:
-                            files_with_comments += 1
-                            comment_quality_scores.append(quality_score)
-                        
-                        if has_docstrings:
-                            files_with_docstrings += 1
-                except FutureTimeoutError:
-                    # This shouldn't happen with a small timeout, but just in case
-                    logger.warning(f"Retrieving result for {file_path} timed out")
-                    continue
-                except Exception as e:
-                    logger.error(f"Error processing file {file_path}: {e}")
-                    continue
+                    file_path, language = futures[future]
+                    
+                    try:
+                        analysis_result = future.result(timeout=0.1)  # Just grab completed result
+                        if analysis_result:
+                            code_lines, comment_lines, has_docstrings, quality_score, file_timed_out = analysis_result
+                            
+                            if file_timed_out or should_abort(hard_timeout):
+                                logger.warning(f"Analysis of {file_path} timed out or aborted")
+                                continue
+                            
+                            total_files += 1
+                            total_code_lines += code_lines
+                            total_comment_lines += comment_lines
+                            
+                            # Calculate per-file comment ratio
+                            file_ratio = 0 if code_lines == 0 else (comment_lines / code_lines) * 100
+                            file_comment_ratios.append(file_ratio)
+                            
+                            if comment_lines > 0:
+                                files_with_comments += 1
+                                comment_quality_scores.append(quality_score)
+                            
+                            if has_docstrings:
+                                files_with_docstrings += 1
+                    except Exception as e:
+                        logger.error(f"Error processing file {file_path}: {e}")
+                        STOP_ANALYSIS = True
+                        continue
+        except BaseException as e:
+            logger.error(f"ThreadPoolExecutor failed: {e}")
+            STOP_ANALYSIS = True
         
         # Calculate comment ratio and scores
         comment_ratio = 0 if total_code_lines == 0 else (total_comment_lines / total_code_lines) * 100
@@ -373,10 +393,26 @@ def check_code_comments(repo_path: str = None, repo_data: Dict = None, timeout_s
         result["processing_time"] = round(time.time() - start_time, 2)
         
         # Force timed_out flag if we exceeded timeout or if global flag is set
-        if result["processing_time"] >= timeout_seconds or STOP_ANALYSIS:
+        if result["processing_time"] >= timeout_seconds or STOP_ANALYSIS or should_abort(hard_timeout):
             result["timed_out"] = True
         
         return result
+    except BaseException as e:
+        logger.error(f"check_code_comments failed: {e}")
+        return {
+            "total_files_analyzed": 0,
+            "files_with_comments": 0,
+            "total_code_lines": 0,
+            "total_comment_lines": 0,
+            "comment_ratio": 0,
+            "files_with_docstrings": 0,
+            "comment_quality_score": 0,
+            "comment_distribution_score": 0,
+            "comment_score": 0,
+            "timed_out": True,
+            "processing_time": round(time.time() - start_time, 2) if 'start_time' in locals() else 0,
+            "error": str(e)
+        }
     finally:
         # Clean up the timer
         timeout_timer.cancel()
@@ -401,20 +437,24 @@ def analyze_file_with_timeout(file_path: str, language: str, timeout: float = 1.
     
     try:
         # Set a slightly shorter timeout to ensure we return before the outer timeout hits
-        actual_timeout = max(0.2, timeout * 0.9)
+        actual_timeout = max(0.05, timeout * 0.8)  # Lowered from 0.1
         
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(analyze_file, file_path, language)
             try:
                 result = future.result(timeout=actual_timeout)
+                if STOP_ANALYSIS:
+                    return (0, 0, False, 0, True)
                 return (*result, False)  # False indicates no timeout
-            except FutureTimeoutError:
-                logger.warning(f"Analysis of {file_path} timed out after {timeout} seconds")
+            except Exception as e:
+                logger.warning(f"Analysis of {file_path} timed out or failed: {e}")
+                STOP_ANALYSIS = True
                 future.cancel()
                 return (0, 0, False, 0, True)  # True indicates timeout
-    except Exception as e:
+    except BaseException as e:
         logger.error(f"Error analyzing file {file_path}: {e}")
-        return None
+        STOP_ANALYSIS = True
+        return (0, 0, False, 0, True)
 
 def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
     """
@@ -436,16 +476,17 @@ def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
     try:
         # Safety check for file size before reading
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-        if file_size_mb > 5:  # Skip files larger than 5MB
+        if file_size_mb > 2:  # Lowered from 5MB
             logger.info(f"Skipping large file during analysis: {file_path} ({file_size_mb:.2f} MB)")
             return 0, 0, False, 0
         
         # Read with a limit on content size
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             # Read limited amount to avoid memory issues
-            content = f.read(1024 * 1024)  # Read at most 1MB
+            content = f.read(256 * 1024)  # Lowered from 512KB to 256KB
     except Exception as e:
         logger.error(f"Could not read file {file_path}: {e}")
+        STOP_ANALYSIS = True
         return 0, 0, False, 0
     
     # If file reading took too long, we might need to exit
@@ -460,10 +501,15 @@ def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
     lines = content.split('\n')
     
     # Limit lines to avoid excessive processing
-    max_lines = 5000
+    max_lines = 500  # Lowered from 2000
     if len(lines) > max_lines:
         logger.info(f"Limiting analysis to {max_lines} lines for {file_path}")
         lines = lines[:max_lines]
+    
+    # Frequent timeout check
+    for i in range(0, len(lines), 100):
+        if STOP_ANALYSIS:
+            return 0, 0, False, 0
     
     code_lines = sum(1 for line in lines if line.strip())
     
@@ -491,15 +537,14 @@ def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
     # Collect all comments for quality analysis
     all_comments = []
     
-    # Periodic timeout check
+    # Frequent timeout check
     if STOP_ANALYSIS:
         return code_lines, 0, False, 0
     
     # Count single-line comments
     if single_line_comment:
         for i, line in enumerate(lines):
-            # Periodic timeout check for very large files
-            if i % 1000 == 0 and STOP_ANALYSIS:
+            if i % 100 == 0 and STOP_ANALYSIS:
                 return code_lines, comment_lines, False, 0
                 
             if re.match(single_line_comment, line):
@@ -508,7 +553,7 @@ def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
                 if comment_text:  # Only add non-empty comments
                     all_comments.append(comment_text)
     
-    # Periodic timeout check
+    # Frequent timeout check
     if STOP_ANALYSIS:
         return code_lines, comment_lines, False, 0
     
@@ -518,8 +563,7 @@ def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
         current_comment = []
         
         for i, line in enumerate(lines):
-            # Periodic timeout check for very large files
-            if i % 1000 == 0 and STOP_ANALYSIS:
+            if i % 100 == 0 and STOP_ANALYSIS:
                 return code_lines, comment_lines, has_docstrings, 0
             
             # Handle entire comment on one line
@@ -554,7 +598,7 @@ def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
                     all_comments.append(" ".join(current_comment))
                 current_comment = []
     
-    # Periodic timeout check
+    # Frequent timeout check
     if STOP_ANALYSIS:
         return code_lines, comment_lines, False, 0
     
@@ -568,15 +612,15 @@ def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
                     future = executor.submit(
                         re.search, docstring_pattern, content, re.MULTILINE | re.DOTALL
                     )
-                    has_docstrings = bool(future.result(timeout=0.5))
+                    has_docstrings = bool(future.result(timeout=0.1))  # Lowered from 0.2s
                     
                     # Extract docstrings for quality analysis if we have time
                     if has_docstrings and not STOP_ANALYSIS:
                         future = executor.submit(
                             re.finditer, docstring_pattern, content, re.MULTILINE | re.DOTALL
                         )
-                        docstring_matches = list(future.result(timeout=0.5))
-                        for match in docstring_matches[:10]:  # Limit to first 10 matches
+                        docstring_matches = list(future.result(timeout=0.1))  # Lowered from 0.2s
+                        for match in docstring_matches[:1]:  # Lowered from 3
                             docstring_text = match.group(0).strip()
                             if docstring_text:
                                 all_comments.append(docstring_text)
@@ -589,7 +633,12 @@ def analyze_file(file_path: str, language: str) -> Tuple[int, int, bool, float]:
     if STOP_ANALYSIS:
         return code_lines, comment_lines, has_docstrings, 0
         
-    quality_score = calculate_comment_quality(all_comments)
+    try:
+        quality_score = calculate_comment_quality(all_comments)
+    except BaseException as e:
+        logger.error(f"calculate_comment_quality failed: {e}")
+        STOP_ANALYSIS = True
+        return code_lines, comment_lines, has_docstrings, 0
     
     return code_lines, comment_lines, has_docstrings, quality_score
 
@@ -607,8 +656,8 @@ def calculate_comment_quality(comments: List[str]) -> float:
         return 0.0
     
     # Limit the number of comments analyzed to avoid timeout
-    if len(comments) > 100:
-        comments = comments[:100]
+    if len(comments) > 30:  # Lowered from 100
+        comments = comments[:30]
     
     total_score = 0.0
     
@@ -616,8 +665,8 @@ def calculate_comment_quality(comments: List[str]) -> float:
         comment_score = 0.0
         
         # Limit comment length to avoid excessive processing
-        if len(comment) > 1000:
-            comment = comment[:1000]
+        if len(comment) > 300:  # Lowered from 1000
+            comment = comment[:300]
         
         # Length factor (too short comments are less useful)
         length = len(comment)
@@ -684,34 +733,35 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         STOP_ANALYSIS = False
         
         # Create a timer that will set the flag after timeout
-        timer = threading.Timer(60, lambda: setattr(globals(), 'STOP_ANALYSIS', True))
+        timer = threading.Timer(40, lambda: setattr(globals(), 'STOP_ANALYSIS', True))  # Lowered from 60s
         timer.daemon = True
         timer.start()
         
         try:
             # Use a thread with timeout to ensure the check completes
             with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(check_code_comments, local_path, repository, timeout_seconds=55)
+                future = executor.submit(check_code_comments, local_path, repository, timeout_seconds=35)  # Lowered from 55
                 try:
-                    # Force a hard timeout after 60 seconds
-                    result = future.result(timeout=60)
+                    # Force a hard timeout after 40 seconds
+                    result = future.result(timeout=40)  # Lowered from 60
                     
                     # Return the result
                     return {
                         "score": result["comment_score"],
                         "result": result
                     }
-                except FutureTimeoutError:
-                    logger.error("Code comments check did not complete within the timeout period")
+                except Exception as e:
+                    logger.error(f"Code comments check did not complete within the timeout period: {e}")
                     # Try to cancel the future
                     future.cancel()
+                    STOP_ANALYSIS = True
                     # Return a timeout result
                     return {
                         "score": 0,
                         "result": {
-                            "error": "Analysis timed out after 60 seconds",
+                            "error": "Analysis timed out or failed after 40 seconds",
                             "timed_out": True,
-                            "processing_time": 60,
+                            "processing_time": 40,
                             "total_files_analyzed": 0  # We couldn't analyze any files
                         }
                     }
@@ -719,7 +769,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             # Cancel the timer
             timer.cancel()
             
-    except Exception as e:
+    except BaseException as e:
         logger.error(f"Error running code comments check: {e}")
         return {
             "score": 0,
