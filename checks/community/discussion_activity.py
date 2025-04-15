@@ -40,7 +40,7 @@ def check_discussion_activity(repo_path: str = None, repo_data: Dict = None) -> 
     
     # Prioritize local repository analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info("Analyzing discussion activity from local clone")
+        logger.debug("Analyzing discussion activity from local clone")
         
         # Look for discussion platform links in repository files with expanded file list
         community_files = [

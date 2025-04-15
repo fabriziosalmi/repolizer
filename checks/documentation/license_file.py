@@ -231,7 +231,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_license_file(local_path, repository)
         
-        logger.info(f"✅ License file check completed with score: {result.get('license_score', 0)}")
+        logger.debug(f"✅ License file check completed with score: {result.get('license_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

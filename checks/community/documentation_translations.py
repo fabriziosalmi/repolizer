@@ -55,7 +55,7 @@ def check_documentation_translations(repo_path: str = None, repo_data: Dict = No
         return result
     
     # Prioritize local repository analysis
-    logger.info(f"Analyzing documentation translations in local repository")
+    logger.debug(f"Analyzing documentation translations in local repository")
     
     # Common translation directory structures
     translation_dirs = [
@@ -417,7 +417,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             result["translation_score"] = score
             
         # Debug log the score calculation factors
-        logger.info(f"Translation check score: {score} (has_translations={result.get('has_translations')}, "
+        logger.debug(f"Translation check score: {score} (has_translations={result.get('has_translations')}, "
                    f"languages={len(result.get('languages', []))}, "
                    f"completeness={result.get('translation_completeness', 0)}, "
                    f"has_process={result.get('has_translation_process')}")

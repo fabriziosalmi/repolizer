@@ -316,7 +316,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         local_path = repository.get('local_path')
         result = check_snapshot_testing(local_path, repository)
         score = result.get("snapshot_testing_score", 0)
-        logger.info(f"Snapshot testing score: {score}")
+        logger.debug(f"Snapshot testing score: {score}")
         return {
             "status": "completed",
             "score": score,

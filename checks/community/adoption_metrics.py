@@ -41,7 +41,7 @@ def check_adoption_metrics(repo_path: str = None, repo_data: Dict = None) -> Dic
     
     # Start with comprehensive local analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Performing comprehensive local analysis for adoption metrics")
+        logger.debug(f"Performing comprehensive local analysis for adoption metrics")
         result["analysis_method"] = "local_clone"
         
         # Extract package details from package files
@@ -82,7 +82,7 @@ def check_adoption_metrics(repo_path: str = None, repo_data: Dict = None) -> Dic
                 break
                 
         if missing_data:
-            logger.info("Supplementing local analysis with API data for missing metrics")
+            logger.debug("Supplementing local analysis with API data for missing metrics")
             
             # Only extract metrics that weren't found in local analysis
             if "stars_count" not in result or result["stars_count"] == 0:

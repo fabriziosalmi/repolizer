@@ -340,7 +340,7 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     result["performance_info"]["file_scan_time"] = round(file_scan_time, 2)
     
     # Log statistics
-    logger.info(f"Found {len(eligible_files)} eligible files for analysis across {len(files_per_language)} languages in {file_scan_time:.2f}s")
+    logger.debug(f"Found {len(eligible_files)} eligible files for analysis across {len(files_per_language)} languages in {file_scan_time:.2f}s")
     
     # Early return: If no files to analyze or too few, just return basic results
     # This helps avoid processing overhead for simple repos
@@ -669,7 +669,7 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     
     # Performance metrics
     execution_time = time.time() - start_time
-    logger.info(f"Type safety check completed processing in {execution_time:.2f} seconds, analyzed {files_checked} files")
+    logger.debug(f"Type safety check completed processing in {execution_time:.2f} seconds, analyzed {files_checked} files")
     
     # Add note if execution was early terminated due to internal limits
     if result["performance_info"]["early_termination"]:

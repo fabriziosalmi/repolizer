@@ -292,7 +292,7 @@ def check_code_duplication(repo_path: str = None, repo_data: Dict = None, timeou
     
     # Add execution time info
     execution_time = time.time() - start_time
-    logger.info(f"✅ Code duplication check completed in {execution_time:.2f} seconds, analyzed {files_checked} files, skipped {result['files_skipped']}, timed out {result['files_timed_out']}")
+    logger.debug(f"✅ Code duplication check completed in {execution_time:.2f} seconds, analyzed {files_checked} files, skipped {result['files_skipped']}, timed out {result['files_timed_out']}")
     
     # Round and convert to integer if it's a whole number
     rounded_score = round(duplication_score, 1)

@@ -299,7 +299,7 @@ def check_build_status(repo_path: str = None, repo_data: Dict = None) -> Dict[st
         build_data = repo_data.get('build_status', {})
         
         if not result["recent_build_status"] and 'status' in build_data:
-            logger.info("Supplementing local analysis with build status from API data")
+            logger.debug("Supplementing local analysis with build status from API data")
             result["recent_build_status"] = build_data.get('status')
         
         if not result["build_success_rate"] and 'success_rate' in build_data:

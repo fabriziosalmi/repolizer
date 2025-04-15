@@ -649,7 +649,7 @@ def check_documentation_coverage(repo_path: str = None, repo_data: Dict = None) 
     
     # Add performance info
     execution_time = time.time() - start_time
-    logger.info(f"Documentation coverage check completed processing in {execution_time:.2f} seconds")
+    logger.debug(f"Documentation coverage check completed processing in {execution_time:.2f} seconds")
     
     # Add note if execution was early terminated due to internal limits
     if result["performance_info"]["early_termination"]:

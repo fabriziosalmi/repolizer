@@ -96,7 +96,7 @@ def check_contribution_guide(repo_path: str = None, repo_data: Dict = None) -> D
         return result
     
     # Prioritize local repository analysis
-    logger.info(f"Analyzing contribution guidelines in local repository")
+    logger.debug(f"Analyzing contribution guidelines in local repository")
     
     # Common locations for contribution guides
     guide_locations = [

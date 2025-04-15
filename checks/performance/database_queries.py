@@ -339,7 +339,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_database_queries(local_path, repository)
         
-        logger.info(f"✅ Database query check completed with score: {result.get('database_query_score', 0)}")
+        logger.debug(f"✅ Database query check completed with score: {result.get('database_query_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

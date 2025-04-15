@@ -221,7 +221,7 @@ def check_pipeline_speed(repo_path: str = None, repo_data: Dict = None) -> Dict[
         
     # Use API data as a supplement for duration data if not found locally
     if repo_data and 'build_history' in repo_data and result["average_duration"] is None:
-        logger.info("Supplementing local analysis with build history from API data")
+        logger.debug("Supplementing local analysis with build history from API data")
         
         # Parse build history from API data
         build_history = repo_data.get('build_history', [])

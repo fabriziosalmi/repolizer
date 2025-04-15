@@ -430,7 +430,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             result["test_data_quality_score"] = score
             
         # Log score calculation factors for debugging
-        logger.info(f"Test data score: {score} (test_count={result.get('test_count')}, "
+        logger.debug(f"Test data score: {score} (test_count={result.get('test_count')}, "
                   f"data_files={result.get('test_data_files_count')}, "
                   f"fixtures={result.get('has_fixtures')}, "
                   f"factories={result.get('uses_factories')}, "

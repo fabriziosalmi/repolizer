@@ -387,7 +387,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         Check results with score on 0-100 scale
     """
     repo_name = repository.get('name', 'unknown')
-    logger.info(f"Starting license compliance check for repository: {repo_name}")
+    logger.debug(f"Starting license compliance check for repository: {repo_name}")
     
     try:
         # Check if we have a cached result
@@ -425,7 +425,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         if '_cache' in repository:
             repository['_cache'][cache_key] = final_result
         
-        logger.info(f"Completed license compliance check for {repo_name} with score: {final_result['score']}")
+        logger.info(f"✅ Completed license compliance check for {repo_name} with score: {final_result['score']}")
         return final_result
         
     except Exception as e:

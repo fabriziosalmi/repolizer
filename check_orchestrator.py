@@ -105,7 +105,7 @@ class CheckOrchestrator:
                     config = json.load(f)
                     token = config.get('github_token')
                     if token:
-                        self.logger.info("✅ GitHub token loaded from config.json")
+                        self.logger.info("🔑 GitHub token loaded from config.json")
                         return token
         except Exception as e:
             self.logger.warning(f"Could not load GitHub token from config.json: {e}")
@@ -204,7 +204,7 @@ class CheckOrchestrator:
 
         # Log summary of loaded checks
         total_loaded = sum(len(c) for c in checks.values())
-        self.logger.info(f"✅ Finished loading checks. Total checks loaded: {total_loaded}")
+        self.logger.info(f"📊 Finished loading checks. Total checks loaded: {total_loaded}")
         for category, check_list in checks.items():
              self.logger.debug(f"  Category '{category}': {len(check_list)} checks")
 
@@ -683,7 +683,7 @@ class CheckOrchestrator:
             repository['full_name'] = repo_name
 
         # Run checks
-        self.logger.info(f"⚙️ Processing repository: {repo_name}")
+        self.logger.info(f"▶️ Processing repository: {repo_name}")
 
         results = None
         # Use a more generic status message that doesn't repeat the repo name
@@ -1307,7 +1307,7 @@ class CheckOrchestrator:
 
 
             self.console.print(Panel(f"[bold blue]Processing [bold yellow]{len(repositories)}[/] repositories in parallel with [bold green]{num_workers}[/] workers")) # Use self.console
-            self.logger.info(f"Starting parallel processing of {len(repositories)} repositories with {num_workers} workers.")
+            self.logger.debug(f"Starting parallel processing of {len(repositories)} repositories with {num_workers} workers.")
 
             # Process repositories in parallel using a Pool with the spawn context
             with ctx.Pool(processes=num_workers) as pool:
@@ -1760,7 +1760,7 @@ if __name__ == "__main__":
             force_display = " [bold yellow](forcing reprocessing)[/]" if args.force else ""
 
             # Log repository processing with consistent format
-            orchestrator.logger.info(f"⚙️ Processing single repository{' with ID ' + args.repo_id if args.repo_id else ''}. Force={args.force}")
+            orchestrator.logger.info(f"⚙️ Processing single repository {' with ID ' + args.repo_id if args.repo_id else ''}. Force={args.force}")
 
             results = orchestrator.process_repository_from_jsonl(
                 args.repo_id,

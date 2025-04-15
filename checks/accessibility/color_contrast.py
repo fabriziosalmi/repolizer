@@ -355,7 +355,7 @@ def check_color_contrast(repo_path: str = None, repo_data: Dict = None) -> Dict[
         colors_list = sampled_colors
         
         # Log that we sampled
-        logger.info(f"Sampled {len(colors_list)} colors from {result['colors_extracted']} total for contrast analysis")
+        logger.debug(f"Sampled {len(colors_list)} colors from {result['colors_extracted']} total for contrast analysis")
     
     for i in range(len(colors_list)):
         for j in range(i+1, len(colors_list)):

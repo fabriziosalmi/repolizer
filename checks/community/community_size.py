@@ -39,7 +39,7 @@ def check_community_size(repo_path: str = None, repo_data: Dict = None) -> Dict[
     
     # Local analysis is preferred when possible
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing community size from local clone")
+        logger.debug(f"Analyzing community size from local clone")
         
         # Try to get git history information
         try:

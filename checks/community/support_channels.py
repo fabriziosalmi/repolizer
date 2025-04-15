@@ -42,7 +42,7 @@ def check_support_channels(repo_path: str = None, repo_data: Dict = None) -> Dic
     
     # Prioritize local repository analysis if available
     if repo_path and os.path.isdir(repo_path):
-        logger.info("Analyzing support channels from local clone")
+        logger.debug("Analyzing support channels from local clone")
         
         # Look for common support files - prioritized by likelihood
         support_files = [

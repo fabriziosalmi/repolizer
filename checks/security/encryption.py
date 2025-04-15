@@ -440,7 +440,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_encryption_security(local_path, repository)
         
-        logger.info(f"✅ Encryption security check completed with score: {result.get('encryption_score', 0)}")
+        logger.debug(f"✅ Encryption security check completed with score: {result.get('encryption_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

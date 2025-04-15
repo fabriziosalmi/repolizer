@@ -390,7 +390,7 @@ def check_deployment_frequency(repo_path: str = None, repo_data: Dict = None) ->
     
     # Supplement with API data if available and we don't have enough local data
     if repo_data and ('releases' in repo_data) and (result["deployments_detected"] < 3):
-        logger.info("Supplementing local analysis with release information from API data")
+        logger.debug("Supplementing local analysis with release information from API data")
         
         releases = repo_data.get('releases', [])
         if releases:

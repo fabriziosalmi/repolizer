@@ -41,7 +41,7 @@ def check_pull_request_handling(repo_path: str = None, repo_data: Dict = None) -
     
     # Prioritize local repository analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info("Analyzing pull request handling from local clone")
+        logger.debug("Analyzing pull request handling from local clone")
         
         # Check for PR template
         pr_template_paths = [

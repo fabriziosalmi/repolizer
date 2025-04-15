@@ -40,7 +40,7 @@ def check_issue_response_time(repo_path: str = None, repo_data: Dict = None) -> 
     
     # Prioritize local repository analysis if available
     if repo_path and os.path.isdir(repo_path):
-        logger.info("Analyzing issue response time from local clone")
+        logger.debug("Analyzing issue response time from local clone")
         
         # Check for issue templates
         issue_template_paths = [

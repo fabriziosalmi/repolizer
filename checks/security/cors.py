@@ -426,7 +426,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_cors_security(local_path, repository)
         
-        logger.info(f"✅ CORS security check completed with score: {result.get('cors_security_score', 0)}")
+        logger.debug(f"✅ CORS security check completed with score: {result.get('cors_security_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

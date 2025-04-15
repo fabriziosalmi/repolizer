@@ -37,7 +37,7 @@ def check_code_of_conduct(repo_path: str = None, repo_data: Dict = None) -> Dict
     
     # First prioritize local analysis if repository is available locally
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Performing local analysis for code of conduct check")
+        logger.debug(f"Performing local analysis for code of conduct check")
         
         # Common locations for code of conduct files
         coc_file_locations = [
