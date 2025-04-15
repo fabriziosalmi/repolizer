@@ -64,8 +64,9 @@ class CheckOrchestrator:
     # Engine version
     VERSION = "0.1.0"
 
-    def __init__(self, max_parallel_analysis: int = 10, temp_dir: str = None, check_timeout: int = 60, resilient_mode: bool = False, resilient_timeout: int = 60):
+    def __init__(self, max_parallel_analysis: int = 10, temp_dir: str = None, check_timeout: int = 60, resilient_mode: bool = False, resilient_timeout: int = 60, console: Optional[Console] = None): # Add console parameter
         self.max_parallel_analysis = max_parallel_analysis
+        self.console = console or Console() # Store or create console instance
         self._setup_logging()
         self.checks = self._load_checks()
         self.check_timeout = check_timeout  # Timeout per individual check
@@ -117,7 +118,10 @@ class CheckOrchestrator:
 
         # Only set up handlers if we're being used as a library
         # (if called from main, the root logger will handle everything)
-        if not self.logger.handlers and not logging.getLogger().handlers:
+        # Check if root logger has the custom attribute indicating it's configured
+        root_logger_configured = getattr(logging.getLogger(), "root_handlers_configured", False)
+
+        if not self.logger.handlers and not root_logger_configured:
             self.logger.setLevel(logging.DEBUG)
 
             # Create log directory if it doesn't exist
@@ -129,8 +133,13 @@ class CheckOrchestrator:
             file_handler = logging.FileHandler(log_file, mode='a')
             file_handler.setLevel(logging.DEBUG)  # Log everything to file
 
-            # Create Rich console handler
-            console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False) # Use RichHandler
+            # Create Rich console handler using the instance's console
+            console_handler = RichHandler(
+                level=logging.INFO,
+                rich_tracebacks=True,
+                show_path=False,
+                console=self.console # Use the shared console
+            )
 
             file_formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -144,7 +153,7 @@ class CheckOrchestrator:
             self.logger.addHandler(file_handler)
             self.logger.addHandler(console_handler)
 
-            self.logger.info("✅ Logging system initialized")
+            self.logger.info("✅ Logging system initialized (library mode)")
             self.logger.debug(f"Detailed logs being written to {log_file}")
 
     def _load_checks(self) -> Dict[str, List[Dict]]:
@@ -253,12 +262,19 @@ class CheckOrchestrator:
             self._cleanup_cloned_repos()
 
             # Remove temp directory if it exists and is empty
-            if os.path.exists(self.temp_dir) and not os.listdir(self.temp_dir):
-                os.rmdir(self.temp_dir)
-                self.logger.info(f"✅ Removed temporary directory: {self.temp_dir}")
+            # Use safe_exists and safe_listdir from utils if available, otherwise os functions
+            temp_dir_exists = safe_exists(self.temp_dir) if 'safe_exists' in globals() else os.path.exists(self.temp_dir)
+            if temp_dir_exists:
+                temp_dir_contents = safe_listdir(self.temp_dir) if 'safe_listdir' in globals() else os.listdir(self.temp_dir)
+                if not temp_dir_contents:
+                    os.rmdir(self.temp_dir)
+                    self.logger.info(f"✅ Removed temporary directory: {self.temp_dir}")
+        except AttributeError:
+             # Logger might already be gone during interpreter shutdown
+             print(f"Cleanup skipped: Logger unavailable.")
         except Exception as e:
             # Can't use self.logger here as it might be destroyed already
-            print(f"Error during cleanup: {e}")
+            print(f"⚠️ Error during cleanup: {e}")
 
     def run_checks(self, repository: Dict, local_eval: bool = True, categories: Optional[List[str]] = None, checks: Optional[List[str]] = None):
         """
@@ -634,9 +650,10 @@ class CheckOrchestrator:
         # Start the timer for total processing time
         total_start_time = time.time()
 
-        console = Console()
+        # Use the instance's console
+        # console = Console() # Remove local console creation
 
-        with console.status(f"Loading repository data...", spinner="dots"):
+        with self.console.status(f"Loading repository data...", spinner="dots"): # Use self.console
             # Load repository from repositories.jsonl
             repository = self._load_repository_from_jsonl(repo_id)
 
@@ -652,7 +669,7 @@ class CheckOrchestrator:
             self.logger.warning(f"Repository {repo_name} (ID: {repo_id}) has already been processed. Skipping.")
 
             # Return existing results
-            with console.status(f"Loading existing results for {repo_name}...", spinner="dots"):
+            with self.console.status(f"Loading existing results for {repo_name}...", spinner="dots"): # Use self.console
                 existing_results = self._get_existing_results(repo_id, repo_name)
 
             if existing_results:
@@ -666,10 +683,11 @@ class CheckOrchestrator:
             repository['full_name'] = repo_name
 
         # Run checks
-        console.print(Panel(f"[bold blue]Processing repository:[/] [bold green]{repo_name}[/]"))
+        self.console.print(Panel(f"[bold blue]Processing repository:[/] [bold green]{repo_name}[/]")) # Use self.console
 
         results = None
-        with console.status(f"[bold blue]Repolizing...[/]", spinner="dots"):
+        # Use a more generic status message that doesn't repeat the repo name
+        with self.console.status(f"[bold blue]Running checks...[/]", spinner="dots"): # Use self.console
             # If in resilient mode, use timeout for entire repository processing
             if self.resilient_mode:
                 try:
@@ -743,7 +761,7 @@ class CheckOrchestrator:
         # Save results to the specified output path (only if successful)
         if results and "error" not in results:
             output_file = output_path or 'results.jsonl'
-            with console.status(f"Saving results to {output_file}...", spinner="dots"):
+            with self.console.status(f"Saving results to {output_file}...", spinner="dots"): # Use self.console
                 self._save_results_to_jsonl(results, output_path)
 
             # Add to processed repos set - both ID and full name
@@ -789,25 +807,28 @@ class CheckOrchestrator:
         from check_orchestrator_utils import monitor_resource_usage
         import signal
 
-        console = Console()
+        # Use the instance's console
+        # console = Console() # Remove local console creation
         all_results = []
 
-        with console.status(f"Loading all repositories...", spinner="dots"):
+        with self.console.status(f"Loading all repositories...", spinner="dots"): # Use self.console
             repositories = self._load_all_repositories()
 
         if not repositories:
-            console.print("[bold red]No repositories found in repositories.jsonl[/]")
+            self.console.print("[bold red]No repositories found in repositories.jsonl[/]") # Use self.console
             return all_results
 
-        console.print(Panel(f"[bold blue]Found [bold yellow]{len(repositories)}[/] repositories to process"))
+        self.console.print(Panel(f"[bold blue]Found [bold yellow]{len(repositories)}[/] repositories to process")) # Use self.console
 
+        # Pass the shared console to the Progress bar
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
             TimeElapsedColumn(),
-            console=console
+            console=self.console, # Use self.console
+            transient=True # Make progress bar disappear after completion
         ) as progress:
             process_task = progress.add_task(f"Processing repositories...", total=len(repositories))
 
@@ -819,8 +840,8 @@ class CheckOrchestrator:
                 repo_id = repository.get('id')
                 repo_name = repository.get('full_name', f"{repository.get('owner', {}).get('login', 'unknown')}/{repository.get('name', 'unknown')}")
 
-                # Update task description
-                progress.update(process_task, description=f"Processing {repo_name}...")
+                # Update task description - Keep this short for better display with logs
+                progress.update(process_task, description=f"Repo {i+1}/{len(repositories)}")
 
                 # Ensure repository has a full_name
                 if 'full_name' not in repository:
@@ -829,7 +850,7 @@ class CheckOrchestrator:
                 if repo_id:
                     # Skip if already processed (by ID or full name) and not forcing
                     if not force and (repo_id in self.processed_repos or repo_name in self.processed_repos):
-                        self.logger.warning(f"Repository {repo_name} (ID: {repo_id}) already processed. Skipping.")
+                        self.logger.warning(f"Skipping already processed: {repo_name} (ID: {repo_id})") # Shorten log
 
                         # Add existing results to the list
                         existing_results = self._get_existing_results(repo_id, repo_name)
@@ -845,7 +866,7 @@ class CheckOrchestrator:
                     try:
                         # Check size from API if available
                         if 'size' in repository and repository['size'] and int(repository['size']) > 200000:  # >200MB
-                            self.logger.warning(f"Repository {repo_name} is extremely large ({repository['size']}KB). Skipping to avoid timeout.")
+                            self.logger.warning(f"Skipping large repo: {repo_name} ({repository['size']}KB)") # Shorten log
                             repo_result = {
                                 "error": f"Repository is too large to process ({repository['size']}KB)",
                                 "repository": {
@@ -876,14 +897,15 @@ class CheckOrchestrator:
                     future = None
 
                     try:
-                        self.logger.info(f"⚙️ Starting repository processing with 60s timeout: {repo_name}")
+                        # Log start with repo name
+                        self.logger.info(f"⚙️ Processing: {repo_name}")
                         executor = ThreadPoolExecutor(max_workers=1)
                         future = executor.submit(self.run_checks, repository, categories=categories, checks=checks)
                         try:
                             repo_result = future.result(timeout=60)
-                            self.logger.info(f"✅ Repository {repo_name} processed successfully within timeout")
+                            self.logger.info(f"✅ Completed: {repo_name}") # Shorten log
                         except FuturesTimeoutError:
-                            self.logger.warning(f"⚠️ Repository {repo_name} processing timed out after 60s. Skipping to next repository.")
+                            self.logger.warning(f"⚠️ Timeout (60s): {repo_name}") # Shorten log
                             if future and not future.done():
                                 # Force cancel future
                                 future_cancelled = future.cancel()
@@ -902,7 +924,7 @@ class CheckOrchestrator:
                                 "timestamp": datetime.now().isoformat()
                             }
                     except Exception as e:
-                        self.logger.error(f"Error processing repository {repo_name}: {e}", exc_info=True)
+                        self.logger.error(f"Error processing {repo_name}: {e}", exc_info=True)
                         self._force_cleanup_repository(repo_id, repo_name)
                         repo_result = {
                             "error": str(e),
@@ -930,20 +952,14 @@ class CheckOrchestrator:
 
                     # Clean up to free disk space
                     if repo_id in self.cloned_repos:
-                        self.logger.debug(f"ℹ️ Cleaning up after processing {repo_name}")
-                        repo_path = self.cloned_repos[repo_id]
-                        try:
-                            if os.path.exists(repo_path):
-                                shutil.rmtree(repo_path)
-                            del self.cloned_repos[repo_id]
-                        except Exception as e:
-                            self.logger.error(f"Failed to clean up repository {repo_path}: {e}")
+                        self.logger.debug(f"ℹ️ Cleaning up after {repo_name}")
+                        self._cleanup_repository(repo_id) # Use the dedicated method
 
                 progress.advance(process_task)
 
                 batch_count += 1
                 if batch_count >= batch_size or i == len(repositories) - 1:
-                    self.logger.debug(f"ℹ️ Completed batch of {batch_count} repositories. Performing cleanup...")
+                    self.logger.debug(f"ℹ️ Completed batch of {batch_count}. Performing cleanup...")
                     import gc
                     gc.collect()
                     if check_memory_usage:
@@ -1105,24 +1121,29 @@ class CheckOrchestrator:
             output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
 
         # Ensure results has the needed metadata
-        if 'engine_version' not in results:
+        if results and 'engine_version' not in results: # Check if results is not None
             results['engine_version'] = self.VERSION
 
-        if 'timestamp' not in results:
+        if results and 'timestamp' not in results: # Check if results is not None
             results['timestamp'] = datetime.now().isoformat()
 
-        if 'overall_score' not in results:
+        if results and 'overall_score' not in results: # Check if results is not None
             # Calculate overall score if not already present
             total_score = 0.0
             total_checks = 0
 
             for category, checks in results.items():
-                if category not in ["repository", "timestamp", "engine_version", "overall_score", "total_checks", "total_processing_time"] and isinstance(checks, dict):
+                if category not in ["repository", "timestamp", "engine_version", "overall_score", "total_checks", "total_processing_time", "error"] and isinstance(checks, dict): # Add "error"
                     for check_name, check_result in checks.items():
-                        score = check_result.get('score', 0)
-                        if isinstance(score, (int, float)):
-                            total_score += score
-                            total_checks += 1
+                        # Ensure check_result is a dictionary before accessing 'score'
+                        if isinstance(check_result, dict):
+                            score = check_result.get('score', 0)
+                            if isinstance(score, (int, float)):
+                                total_score += score
+                                total_checks += 1
+                        else:
+                             self.logger.warning(f"Unexpected check result format for {category}/{check_name}: {check_result}")
+
 
             results['overall_score'] = round(total_score / max(total_checks, 1), 3)
             results['total_checks'] = total_checks
@@ -1144,18 +1165,25 @@ class CheckOrchestrator:
                         existing_data = []
 
                 # Append the new results and save
-                existing_data.append(results)
+                if results: # Only append if results is not None
+                    existing_data.append(results)
                 with open(output_path, 'w', encoding='utf-8') as f:
                     json.dump(existing_data, f, indent=2)
 
-                self.logger.info(f"💾 Results saved to {output_path}")
+                # Log saving only if results were actually saved
+                if results:
+                    self.logger.info(f"💾 Results saved to {output_path}")
                 return True
             except Exception as e:
                 self.logger.error(f"⚠️ Error saving data to {output_path}: {e}")
                 return False
         else:
             # Save to JSONL file using utility function
-            return save_to_jsonl(results, output_path)
+            if results: # Only save if results is not None
+                return save_to_jsonl(results, output_path)
+            else:
+                self.logger.warning("Attempted to save None results. Skipping.")
+                return False # Indicate that nothing was saved
 
     def _force_cleanup_repository(self, repo_id: str, repo_name: str) -> None:
         """
@@ -1228,7 +1256,8 @@ class CheckOrchestrator:
         # Use 'spawn' context explicitly for better cross-platform compatibility
         ctx = multiprocessing.get_context('spawn')
 
-        console = Console()
+        # Use the instance's console
+        # console = Console() # Remove local console creation
         processed_repos = []
         output_path = output_path or 'results.jsonl'
 
@@ -1241,7 +1270,8 @@ class CheckOrchestrator:
             results_queue = manager.Queue()
 
             # Start writer process using the spawn context, passing the manager queue
-            writer_p = ctx.Process(target=writer_process, args=(results_queue, output_path))
+            # Pass the console instance to the writer process if needed for its logging
+            writer_p = ctx.Process(target=writer_process, args=(results_queue, output_path)) # Removed console passing for now
             writer_p.daemon = True
             writer_p.start()
 
@@ -1250,7 +1280,7 @@ class CheckOrchestrator:
             repositories = self._load_all_repositories()
 
             if not repositories:
-                console.print("[bold red]No repositories found in repositories.jsonl[/]")
+                self.console.print("[bold red]No repositories found in repositories.jsonl[/]") # Use self.console
                 # Signal writer process to terminate
                 results_queue.put(None)
                 writer_p.join()
@@ -1276,7 +1306,7 @@ class CheckOrchestrator:
                     self.logger.info(f"Skipped {skipped_count} already processed repositories.")
 
 
-            console.print(Panel(f"[bold blue]Processing [bold yellow]{len(repositories)}[/] repositories in parallel with [bold green]{num_workers}[/] workers"))
+            self.console.print(Panel(f"[bold blue]Processing [bold yellow]{len(repositories)}[/] repositories in parallel with [bold green]{num_workers}[/] workers")) # Use self.console
             self.logger.info(f"Starting parallel processing of {len(repositories)} repositories with {num_workers} workers.")
 
             # Process repositories in parallel using a Pool with the spawn context
@@ -1318,7 +1348,7 @@ class CheckOrchestrator:
                 # Wait for all tasks to complete and log progress
                 completed_count = 0
                 failed_count = 0
-                console.print(f"Waiting for {total_tasks} tasks to complete...")
+                self.console.print(f"Waiting for {total_tasks} tasks to complete...") # Use self.console
                 for repo_name, res in async_results:
                     try:
                         # Wait for the result (or exception)
@@ -1333,20 +1363,20 @@ class CheckOrchestrator:
                         self.logger.warning(f"Failed {repo_name} ({completed_count}/{total_tasks})")
                     # Simple progress update to console every N tasks or so
                     if completed_count % 10 == 0 or completed_count == total_tasks:
-                         console.print(f"Progress: {completed_count}/{total_tasks} tasks processed ({failed_count} failed).")
+                         self.console.print(f"Progress: {completed_count}/{total_tasks} tasks processed ({failed_count} failed).") # Use self.console
 
 
                 # Pool context manager automatically handles pool.close() and pool.join()
 
             # Signal writer process to terminate and wait for completion
-            console.print("[bold blue]All repository tasks submitted. Finalizing results...[/]")
+            self.console.print("[bold blue]All repository tasks submitted. Finalizing results...[/]") # Use self.console
             results_queue.put(None) # Sentinel value to stop the writer
             writer_p.join() # Wait for the writer process to finish
 
-        console.print(f"[bold green]Completed processing {len(repositories)} repositories.")
+        self.console.print(f"[bold green]Completed processing {len(repositories)} repositories.") # Use self.console
         if failed_count > 0:
-            console.print(f"[bold yellow]{failed_count} repositories failed during processing. Check logs for details.[/]")
-        console.print(f"[bold]Results saved to {output_path}[/]")
+            self.console.print(f"[bold yellow]{failed_count} repositories failed during processing. Check logs for details.[/]") # Use self.console
+        self.console.print(f"[bold]Results saved to {output_path}[/]") # Use self.console
 
         # Return the list of repository IDs that were attempted
         return processed_repos
@@ -1480,14 +1510,14 @@ def writer_process(results_queue, output_path="results.jsonl"):
         results_queue: Queue (created with spawn context) to read results from
         output_path: Path to write results to
     """
-    # Configure logging for the writer process
+    # Configure logging for the writer process (independent of main console)
     writer_logger = logging.getLogger("WriterProcess")
     writer_logger.setLevel(logging.INFO)
 
     # Add a handler for console output if none exists
     if not writer_logger.handlers:
+        # Use standard StreamHandler, not RichHandler, for simplicity in separate process
         handler = logging.StreamHandler()
-        # Corrected formatter typo
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         writer_logger.addHandler(handler)
@@ -1495,7 +1525,10 @@ def writer_process(results_queue, output_path="results.jsonl"):
     # Create a local orchestrator instance for saving results
     # Import locally to avoid potential issues with module state across processes
     from check_orchestrator import CheckOrchestrator
+    # Create orchestrator without passing console - it will create its own if needed for logging
     orchestrator = CheckOrchestrator()
+    # Assign the writer-specific logger
+    orchestrator.logger = writer_logger
 
     try:
         writer_logger.info(f"Writer process started. Writing results to {output_path}")
@@ -1509,12 +1542,12 @@ def writer_process(results_queue, output_path="results.jsonl"):
                 writer_logger.info("Received termination signal. Shutting down writer process.")
                 break
 
-            # Save result to file
+            # Save result to file using the orchestrator instance
             orchestrator._save_results_to_jsonl(result, output_path)
             # results_queue.task_done() # task_done is for JoinableQueue, not needed here
 
             # Log repository name
-            repo_name = result.get("repository", {}).get("full_name", "unknown")
+            repo_name = result.get("repository", {}).get("full_name", "unknown") if isinstance(result, dict) else "unknown"
             writer_logger.info(f"Wrote results for {repo_name}")
 
     except Exception as e:
@@ -1523,10 +1556,14 @@ def writer_process(results_queue, output_path="results.jsonl"):
     finally:
         writer_logger.info("Writer process terminated")
 
+
 # Add command-line interface if script is run directly
 if __name__ == "__main__":
     import sys
     import argparse
+
+    # --- Central Console Creation ---
+    console = Console() # Create the shared console instance
 
     # Configure root logger
     log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
@@ -1546,11 +1583,16 @@ if __name__ == "__main__":
     file_handler = logging.FileHandler(log_file, mode='a')
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'  # Corrected typo here
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s' # Corrected levellevel to levelname
     ))
 
-    # Rich Console handler for main process INFO level
-    console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False)
+    # Rich Console handler for main process INFO level, using the shared console
+    console_handler = RichHandler(
+        level=logging.INFO,
+        rich_tracebacks=True,
+        show_path=False,
+        console=console # Pass the shared console here
+    )
 
     # Add handlers to root logger
     root_logger.addHandler(file_handler)
@@ -1559,12 +1601,9 @@ if __name__ == "__main__":
     # Set property so orchestrator knows it doesn't need to set up its own handlers
     setattr(root_logger, "root_handlers_configured", True)
 
-    # Log startup information
+    # Log startup information (will now use the configured RichHandler)
     logging.info(f"✨ Starting Repolizer (version {CheckOrchestrator.VERSION})")
     logging.debug(f"Detailed logs being written to {log_file}")
-
-    # Create console - now we're sure Console is properly imported
-    console = Console()
 
     # Create parser
     parser = argparse.ArgumentParser(description="Repository check orchestrator")
@@ -1639,13 +1678,14 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
 
     try:
-        # Create orchestrator with specified timeout and resilient mode settings
+        # Create orchestrator, passing the shared console
         orchestrator = CheckOrchestrator(
             check_timeout=args.timeout,
             resilient_mode=args.resilient,
-            resilient_timeout=args.resilient_timeout
+            resilient_timeout=args.resilient_timeout,
+            console=console # Pass the shared console here
         )
-        # Assign the main logger to this instance
+        # Assign the main logger to this instance (already configured with RichHandler)
         orchestrator.logger = logging.getLogger(__name__) # Use the main logger
 
         # Configure rate limiter
@@ -1773,30 +1813,36 @@ if __name__ == "__main__":
             check_count = 0
 
             # Add rows to the table
-            for category, checks in results.items():
-                if category in ["repository", "timestamp", "engine_version", "overall_score", "total_checks", "total_processing_time"]:
+            for category, checks_dict in results.items(): # Rename variable
+                if category in ["repository", "timestamp", "engine_version", "overall_score", "total_checks", "total_processing_time", "error"]: # Add "error"
                     continue
 
-                if isinstance(checks, dict):
-                    for check_name, check_result in checks.items():
-                        status = check_result.get("status", "unknown")
-                        score = check_result.get("score", 0)
+                if isinstance(checks_dict, dict): # Use renamed variable
+                    for check_name, check_result in checks_dict.items(): # Use renamed variable
+                        # Ensure check_result is a dictionary before accessing keys
+                        if isinstance(check_result, dict):
+                            status = check_result.get("status", "unknown")
+                            score = check_result.get("score", 0)
 
-                        # Count checks
-                        check_count += 1
+                            # Count checks
+                            check_count += 1
 
-                        # Apply color based on status
-                        status_styled = f"[green]{status}[/]" if status == "completed" else f"[red]{status}[/]"
+                            # Apply color based on status
+                            status_styled = f"[green]{status}[/]" if status == "completed" else f"[red]{status}[/]"
 
-                        # Format score - display as int if it's a whole number
-                        score_display = str(int(score)) if score == int(score) else str(score)
+                            # Format score - display as int if it's a whole number
+                            score_display = str(int(score)) if score == int(score) else str(score)
 
-                        table.add_row(
-                            category.upper(),
-                            check_name,
-                            status_styled,
-                            score_display
-                        )
+                            table.add_row(
+                                category.upper(),
+                                check_name,
+                                status_styled,
+                                score_display
+                            )
+                        else:
+                            # Log if the format is unexpected
+                            orchestrator.logger.warning(f"Unexpected format for check result {category}/{check_name}: {check_result}")
+
 
             console.print(table)
 
@@ -1804,6 +1850,7 @@ if __name__ == "__main__":
 
             # Display the summary information after the table
             console.print("\n[bold]Check Results Summary:[/]")
+            console.print("")
             console.print(f"[bold]Repository:[/] {repo_name}" + (f" ({repo_full_name})" if repo_full_name else ""))
 
             # Display overall score with appropriate color, as integer if it's a whole number
@@ -1813,14 +1860,14 @@ if __name__ == "__main__":
 
             # Total processing time is shown only here in the summary
             total_time = results.get('total_processing_time', 0)
-            formatted_time = format_duration(total_time) if 'format_duration' in dir() else f"{total_time:.3f} seconds"
+            formatted_time = format_duration(total_time) if 'format_duration' in globals() else f"{total_time:.3f} seconds"
             console.print(f"[bold]Total Checks Run:[/] [bold blue]{check_count}[/]")
             console.print(f"[bold]Total Processing Time:[/] [bold blue]{formatted_time}[/]")
 
             console.print(f"[bold]Engine Version:[/] {engine_version}")
             console.print(f"[bold]Processed On:[/] {formatted_timestamp}")
 
-            console.print(f"\n[bold]Complete results saved to {args.output}[/]")
+            console.print(f"\n[bold]Complete results saved to[/] [bold green]{args.output}[/]")
 
     except Exception as e:
         console.print(f"[bold red]An error occurred:[/] {str(e)}")

@@ -18,16 +18,18 @@ from urllib.parse import urlparse
 from datetime import datetime
 from typing import Dict, Optional, List, Set, Any
 
-# Try importing RichHandler
+# Try importing RichHandler and Console
 try:
+    from rich.console import Console
     from rich.logging import RichHandler
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
     RichHandler = None # Define as None if not available
+    Console = None # Define as None if not available
 
 # Configure logging
-def setup_utils_logging():
+def setup_utils_logging(console: Optional['Console'] = None): # Add console parameter
     """Set up logging for the utils module"""
     logger = logging.getLogger(__name__)
 
@@ -48,8 +50,15 @@ def setup_utils_logging():
     file_handler.setLevel(logging.DEBUG)
 
     # Create console handler (use RichHandler if available)
-    if HAS_RICH and RichHandler:
-        console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False)
+    if HAS_RICH and RichHandler and Console: # Check for Console too
+        # Use the provided console instance if available, otherwise create one
+        console_instance = console or Console() # Now Console should be defined
+        console_handler = RichHandler(
+            level=logging.INFO,
+            rich_tracebacks=True,
+            show_path=False,
+            console=console_instance # Use the console instance
+        )
     else:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
@@ -73,8 +82,8 @@ def setup_utils_logging():
 
     return logger
 
-# Get logger
-logger = setup_utils_logging()
+# Get logger (pass None initially, it will create its own console if needed)
+logger = setup_utils_logging(console=None)
 
 class GitHubApiHandler:
     """
