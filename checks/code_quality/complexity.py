@@ -9,26 +9,23 @@ import logging
 import time
 import signal
 import platform
+import threading
 from typing import Dict, Any
 # ...existing code...
 
-timeout_occurred = False
 start_time = 0
 timeout_seconds = 0
 IS_WINDOWS = platform.system() == 'Windows'
 HAS_SIGALRM = hasattr(signal, "SIGALRM")
-
-def timeout_handler(signum, frame):
-    global timeout_occurred
-    timeout_occurred = True
+IS_MAIN_THREAD = threading.current_thread() is threading.main_thread()
 
 def check_timeout():
-    global start_time, timeout_seconds, timeout_occurred
+    global start_time, timeout_seconds
     if timeout_seconds and (time.time() - start_time >= timeout_seconds):
         raise TimeoutError("Timeout exceeded")
 
 def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
-    global timeout_occurred, start_time, timeout_seconds
+    global start_time, timeout_seconds
     result = {
         "average_complexity": 0,
         "complex_functions": [],
@@ -47,9 +44,12 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
     if not timeout_seconds:
         timeout_seconds = 35
 
+    # Set start time for manual timeout checks
+    start_time = time.time()
+
     sigalrm_set = False
-    if HAS_SIGALRM and not IS_WINDOWS:
-        signal.signal(signal.SIGALRM, timeout_handler)
+    # Only set the alarm in the main thread on compatible systems
+    if HAS_SIGALRM and not IS_WINDOWS and IS_MAIN_THREAD:
         signal.alarm(timeout_seconds)
         sigalrm_set = True
 
@@ -317,6 +317,9 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
     except TimeoutError:
         logger.warning("check_code_complexity timed out")
         result["timed_out"] = True
+        # Ensure score is 0 on timeout if not already set
+        if "complexity_score" not in result:
+             result["complexity_score"] = 0
     finally:
         if sigalrm_set:
             signal.alarm(0)
@@ -324,41 +327,68 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
     return result
 
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
-    global timeout_occurred, start_time, timeout_seconds
+    global start_time, timeout_seconds
     local_path = repository.get('local_path')
     timeout_seconds = 35
     start_time = time.time()
-    timeout_occurred = False
 
     sigalrm_set = False
-    if HAS_SIGALRM and not IS_WINDOWS:
-        signal.signal(signal.SIGALRM, timeout_handler)
+    # Only set the alarm in the main thread on compatible systems
+    if HAS_SIGALRM and not IS_WINDOWS and IS_MAIN_THREAD:
         signal.alarm(timeout_seconds)
         sigalrm_set = True
 
     try:
         result = check_code_complexity(local_path, repository)
+        # Add processing time if not timed out
+        if not result.get("timed_out"):
+            result["processing_time"] = round(time.time() - start_time, 2)
         return {
-            "status": "completed",
+            "status": "completed" if not result.get("timed_out") else "timeout",
             "score": result.get("complexity_score", 0),
             "result": result,
-            "errors": None
+            "errors": "timeout" if result.get("timed_out") else None
         }
     except TimeoutError:
+        # This block catches timeouts that might occur *before* check_code_complexity fully handles it
+        processing_time = time.time() - start_time
         return {
             "status": "timeout",
             "score": 0,
             "result": {
                 "error": f"Code complexity analysis timed out after {timeout_seconds} seconds",
-                "timed_out": True
+                "timed_out": True,
+                "processing_time": min(round(processing_time, 2), timeout_seconds),
+                # Add default values for keys expected by frontend/caller
+                "average_complexity": 0,
+                "complex_functions": [],
+                "complexity_distribution": {"simple": 0, "moderate": 0, "complex": 0, "very_complex": 0},
+                "functions_analyzed": 0,
+                "files_checked": 0,
+                "language_stats": {},
+                "complexity_score": 0
             },
             "errors": "timeout"
         }
     except Exception as e:
+        processing_time = time.time() - start_time
+        logger.error(f"Error during complexity check: {e}", exc_info=True)
         return {
             "status": "failed",
             "score": 0,
-            "result": {},
+            "result": {
+                 "error": str(e),
+                 "timed_out": False,
+                 "processing_time": round(processing_time, 2),
+                 # Add default values
+                 "average_complexity": 0,
+                 "complex_functions": [],
+                 "complexity_distribution": {"simple": 0, "moderate": 0, "complex": 0, "very_complex": 0},
+                 "functions_analyzed": 0,
+                 "files_checked": 0,
+                 "language_stats": {},
+                 "complexity_score": 0
+            },
             "errors": str(e)
         }
     finally:
