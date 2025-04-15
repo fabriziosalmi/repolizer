@@ -780,7 +780,7 @@ class CheckOrchestrator:
 
         :param force: If True, process repositories even if they have been processed before
         :param categories: Optional list of categories to include (all if None)
-        :param checks: Optional list of specific check names to include (all if None)
+        :param checks: Optional list of specific checks to include (all if None)
         :param output_path: Path to save results (default: results.jsonl)
         :param batch_size: Number of repositories to process before cleanup (default: 5)
         :param check_memory_usage: Whether to monitor memory usage (default: True)
@@ -1213,6 +1213,7 @@ class CheckOrchestrator:
                                          max_workers: Optional[int] = None) -> List[Dict]:
         """
         Process all repositories from repositories.jsonl in parallel using multiple processes.
+        (Progress bar disabled for cleaner output).
 
         Args:
             force: If True, process repositories even if they have been processed before
@@ -1233,7 +1234,7 @@ class CheckOrchestrator:
 
         # Initialize multiprocessing resources using the spawn context
         num_workers = max_workers or self.max_workers
-        self.logger.debug(f"Using 'spawn' context with {num_workers} worker processes for parallel processing")
+        self.logger.info(f"Using 'spawn' context with {num_workers} worker processes for parallel processing") # Use logger
 
         # Use a Manager queue for robust inter-process communication
         with ctx.Manager() as manager:
@@ -1244,8 +1245,9 @@ class CheckOrchestrator:
             writer_p.daemon = True
             writer_p.start()
 
-            with console.status(f"Loading all repositories...", spinner="dots"):
-                repositories = self._load_all_repositories()
+            # Load repositories (no status needed, logger covers it)
+            self.logger.info("Loading all repositories...")
+            repositories = self._load_all_repositories()
 
             if not repositories:
                 console.print("[bold red]No repositories found in repositories.jsonl[/]")
@@ -1257,6 +1259,7 @@ class CheckOrchestrator:
             # Filter already processed repositories if not forcing
             if not force:
                 unprocessed_repos = []
+                original_count = len(repositories)
                 for repo in repositories:
                     repo_id = repo.get('id')
                     repo_name = repo.get('full_name', f"{repo.get('owner', {}).get('login', 'unknown')}/{repo.get('name', 'unknown')}")
@@ -1268,13 +1271,17 @@ class CheckOrchestrator:
                         self.logger.warning(f"Skipping already processed repository: {repo_name}")
 
                 repositories = unprocessed_repos
+                skipped_count = original_count - len(repositories)
+                if skipped_count > 0:
+                    self.logger.info(f"Skipped {skipped_count} already processed repositories.")
+
 
             console.print(Panel(f"[bold blue]Processing [bold yellow]{len(repositories)}[/] repositories in parallel with [bold green]{num_workers}[/] workers"))
+            self.logger.info(f"Starting parallel processing of {len(repositories)} repositories with {num_workers} workers.")
 
             # Process repositories in parallel using a Pool with the spawn context
             with ctx.Pool(processes=num_workers) as pool:
                 # Prepare arguments for each repository
-                tasks = []
                 worker_args = []
 
                 for repository in repositories:
@@ -1298,47 +1305,47 @@ class CheckOrchestrator:
                     )
                     worker_args.append(args)
 
-                # Show progress bar
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    BarColumn(),
-                    TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-                    TimeElapsedColumn(),
-                    console=console
-                ) as progress:
-                    task = progress.add_task(f"Processing repositories...", total=len(repositories))
+                # Submit tasks without rich progress bar
+                async_results = []
+                total_tasks = len(worker_args)
+                self.logger.info(f"Submitting {total_tasks} tasks to the worker pool...")
+                for i, args in enumerate(worker_args):
+                    repo_name = args[0].get('full_name', "Unknown Repo")
+                    self.logger.debug(f"Submitting task {i+1}/{total_tasks}: {repo_name}")
+                    res = pool.apply_async(process_repository_worker, args=args)
+                    async_results.append((repo_name, res))
 
-                    async_results = []
-                    for args in worker_args:
-                        repo_name = args[0].get('full_name', "Unknown Repo")
-                        progress.update(task, description=f"Submitting {repo_name}...")
-                        # Submit task to the pool
-                        res = pool.apply_async(process_repository_worker, args=args)
-                        async_results.append((repo_name, res))
+                # Wait for all tasks to complete and log progress
+                completed_count = 0
+                failed_count = 0
+                console.print(f"Waiting for {total_tasks} tasks to complete...")
+                for repo_name, res in async_results:
+                    try:
+                        # Wait for the result (or exception)
+                        res.get() # Timeout could be added here if needed: res.get(timeout=...)
+                        completed_count += 1
+                        self.logger.info(f"Completed {repo_name} ({completed_count}/{total_tasks})")
+                    except Exception as e:
+                        # Log the error from the worker process
+                        self.logger.error(f"Error processing {repo_name} in worker: {e}", exc_info=False) # exc_info=False to avoid duplicate tracebacks if worker logged it
+                        failed_count += 1
+                        completed_count += 1 # Count as completed for progress tracking
+                        self.logger.warning(f"Failed {repo_name} ({completed_count}/{total_tasks})")
+                    # Simple progress update to console every N tasks or so
+                    if completed_count % 10 == 0 or completed_count == total_tasks:
+                         console.print(f"Progress: {completed_count}/{total_tasks} tasks processed ({failed_count} failed).")
 
-                    # Wait for all tasks to complete and update progress
-                    completed_count = 0
-                    for repo_name, res in async_results:
-                        try:
-                            progress.update(task, description=f"Waiting for {repo_name}...")
-                            res.get() # Wait for the result (or exception)
-                            completed_count += 1
-                            progress.update(task, completed=completed_count, description=f"Completed {repo_name}")
-                        except Exception as e:
-                            # Log the error from the worker process
-                            self.logger.error(f"Error processing {repo_name} in worker: {e}", exc_info=True)
-                            completed_count += 1 # Advance progress even on failure
-                            progress.update(task, completed=completed_count, description=f"[red]Failed {repo_name}[/]")
 
                 # Pool context manager automatically handles pool.close() and pool.join()
 
             # Signal writer process to terminate and wait for completion
-            console.print("[bold blue]All repositories processed. Finalizing results...[/]")
+            console.print("[bold blue]All repository tasks submitted. Finalizing results...[/]")
             results_queue.put(None) # Sentinel value to stop the writer
             writer_p.join() # Wait for the writer process to finish
 
         console.print(f"[bold green]Completed processing {len(repositories)} repositories.")
+        if failed_count > 0:
+            console.print(f"[bold yellow]{failed_count} repositories failed during processing. Check logs for details.[/]")
         console.print(f"[bold]Results saved to {output_path}[/]")
 
         # Return the list of repository IDs that were attempted
@@ -1347,6 +1354,7 @@ class CheckOrchestrator:
 def process_repository_worker(repository, results_queue, check_timeout, resilient_mode, resilient_timeout, github_token, categories=None, checks=None):
     """
     Worker function to process a single repository in a separate process.
+    Logs are directed to a file specific to the worker process.
 
     Args:
         repository: Repository data dictionary
@@ -1358,71 +1366,110 @@ def process_repository_worker(repository, results_queue, check_timeout, resilien
         categories: Optional list of categories to include
         checks: Optional list of specific checks to include
     """
-    # Configure logging for the worker process
-    worker_logger = logging.getLogger(f"Worker-{multiprocessing.current_process().pid}")
-    worker_logger.setLevel(logging.INFO)
+    pid = multiprocessing.current_process().pid
+    # Configure logging for the worker process to a file
+    worker_logger = logging.getLogger(f"Worker-{pid}")
+    worker_logger.setLevel(logging.DEBUG) # Log debug messages from workers
 
-    # Add a handler for console output if none exists
+    # Prevent double logging if already configured (e.g., during testing)
     if not worker_logger.handlers:
-        handler = logging.StreamHandler()
+        log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, f'worker-{pid}.log')
+
+        # File handler for worker log
+        file_handler = logging.FileHandler(log_file, mode='a')
+        file_handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        worker_logger.addHandler(handler)
+        file_handler.setFormatter(formatter)
+        worker_logger.addHandler(file_handler)
+
+        # Optional: Add a StreamHandler for critical errors only if needed for immediate feedback
+        # console_handler = logging.StreamHandler()
+        # console_handler.setLevel(logging.ERROR)
+        # console_handler.setFormatter(formatter)
+        # worker_logger.addHandler(console_handler)
 
     # Create a local orchestrator instance
+    # Import locally within the function to ensure fresh state in each worker
     from check_orchestrator import CheckOrchestrator
     orchestrator = CheckOrchestrator(
         check_timeout=check_timeout,
         resilient_mode=resilient_mode,
         resilient_timeout=resilient_timeout
     )
+    # Assign the logger to the orchestrator instance in the worker
+    orchestrator.logger = worker_logger
     orchestrator.github_token = github_token
 
     # Get repository name for logging
     repo_name = repository.get('full_name', repository.get('name', "Unknown repository"))
-    temp_dir = None
+    temp_dir = None # Initialize temp_dir
 
     try:
-        worker_logger.info(f"Worker {multiprocessing.current_process().pid} processing {repo_name}")
+        worker_logger.info(f"Worker {pid} starting processing for {repo_name}")
 
-        # Clone repository if needed
-        temp_dir = orchestrator._clone_repository(repository)
-        if temp_dir:
+        # Clone repository if needed (uses orchestrator's logger now)
+        temp_dir = orchestrator._clone_repository(repository) # Assign to temp_dir
+
+        # Check if cloning was successful before proceeding
+        if temp_dir and os.path.exists(temp_dir):
             # Add local path to repository data
             repository['local_path'] = temp_dir
+            worker_logger.info(f"Repository {repo_name} cloned to {temp_dir}")
 
             # Run checks
+            worker_logger.info(f"Running checks for {repo_name}")
             results = orchestrator.run_checks(repository, categories=categories, checks=checks)
+            worker_logger.info(f"Checks completed for {repo_name}")
 
             # Send results to the main process
             results_queue.put(results)
+            worker_logger.info(f"Results sent for {repo_name}")
         else:
-            worker_logger.error(f"Failed to clone repository {repo_name}")
+            # Handle cloning failure
+            error_msg = f"Failed to clone repository {repo_name}"
+            worker_logger.error(error_msg)
             results_queue.put({
-                "error": "Failed to clone repository",
-                "repository": repository,
+                "error": error_msg,
+                "repository": { # Include basic repo info in error
+                    "id": repository.get("id"),
+                    "full_name": repo_name
+                },
                 "timestamp": datetime.now().isoformat()
             })
 
     except Exception as e:
-        worker_logger.error(f"Error in worker {multiprocessing.current_process().pid} processing {repo_name}: {e}",
-                          exc_info=True)
+        worker_logger.error(f"Unhandled error in worker {pid} processing {repo_name}: {e}",
+                          exc_info=True) # Log traceback to worker file
+        # Send error result to the main process
         results_queue.put({
-            "error": str(e),
-            "repository": repository,
+            "error": f"Worker error: {str(e)}", # Prefix error message
+            "repository": { # Include basic repo info in error
+                 "id": repository.get("id"),
+                 "full_name": repo_name
+            },
             "timestamp": datetime.now().isoformat()
         })
 
     finally:
         # Clean up temporary directory
+        worker_logger.debug(f"Worker {pid} starting cleanup for {repo_name}")
         if temp_dir and os.path.exists(temp_dir):
             try:
                 # Use safe cleanup from utils
                 from check_orchestrator_utils import safe_cleanup_directory
-                safe_cleanup_directory(temp_dir)
+                worker_logger.debug(f"Attempting to clean up directory: {temp_dir}")
+                safe_cleanup_directory(temp_dir, timeout=60) # Increased timeout for safety
                 worker_logger.info(f"Cleaned up temporary directory: {temp_dir}")
             except Exception as cleanup_error:
-                worker_logger.error(f"Error cleaning up directory {temp_dir}: {cleanup_error}")
+                worker_logger.error(f"Error cleaning up directory {temp_dir}: {cleanup_error}", exc_info=True)
+        elif temp_dir:
+             worker_logger.warning(f"Temporary directory {temp_dir} not found during cleanup.")
+        else:
+             worker_logger.debug("No temporary directory was created or tracked for cleanup.")
+        worker_logger.info(f"Worker {pid} finished processing {repo_name}")
+
 
 def writer_process(results_queue, output_path="results.jsonl"):
     """
@@ -1499,16 +1546,13 @@ if __name__ == "__main__":
     file_handler = logging.FileHandler(log_file, mode='a')
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'  # Corrected typo here
     ))
 
-    # Rich Console handler
-    console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False) # Use RichHandler
-    # console_handler.setFormatter(logging.Formatter( # No longer needed
-    #     '%(message)s'  # Show only the message, not the level prefix
-    # ))
+    # Rich Console handler for main process INFO level
+    console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False)
 
-    # Add handlers
+    # Add handlers to root logger
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
@@ -1601,6 +1645,8 @@ if __name__ == "__main__":
             resilient_mode=args.resilient,
             resilient_timeout=args.resilient_timeout
         )
+        # Assign the main logger to this instance
+        orchestrator.logger = logging.getLogger(__name__) # Use the main logger
 
         # Configure rate limiter
         orchestrator.rate_limiter = RateLimiter(max_calls=args.rate_limit, time_period=60)
@@ -1636,43 +1682,54 @@ if __name__ == "__main__":
             console.print(f"[bold blue]Results will be saved in JSONL format to:[/] {args.output}")
 
         if args.process_all:
+            # Use Panel for the initial message, but rely on logging/prints during processing
             console.print(Panel(f"[bold blue]Processing all repositories[/]" +
-                                (" [bold yellow](forcing reprocessing)[/]" if args.force else "")))
+                                (" [bold yellow](forcing reprocessing)[/]" if args.force else "") +
+                                (f" [bold cyan](parallel: {args.max_workers or orchestrator.max_workers} workers)[/]" if args.parallel else " [bold magenta](sequential)[/]")))
+
+
+            start_time_all = time.time() # Timer for all processing
 
             if args.parallel:
-                # Use parallel processing
-                all_results = orchestrator.process_all_repositories_parallel(
+                # Use parallel processing (no progress bar)
+                orchestrator.logger.info("Starting parallel processing...")
+                processed_ids = orchestrator.process_all_repositories_parallel(
                     force=args.force,
                     categories=categories,
                     checks=checks,
                     output_path=args.output,
                     max_workers=args.max_workers
                 )
+                num_processed = len(processed_ids) # Count processed IDs returned
             else:
-                # Use sequential processing
+                # Use sequential processing (with progress bar)
+                orchestrator.logger.info("Starting sequential processing...")
                 all_results = orchestrator.process_all_repositories(
                     force=args.force,
                     categories=categories,
                     checks=checks,
                     output_path=args.output
+                    # batch_size and check_memory_usage can be added here if needed
                 )
+                num_processed = len(all_results) # Count results list
+
+            end_time_all = time.time()
+            total_duration_all = end_time_all - start_time_all
+            formatted_duration_all = format_duration(total_duration_all)
 
             # Print summary
-            if all_results:
-                console.print(Panel(f"[bold green]Processed {len(all_results)} repositories[/]"))
-                console.print(f"[bold]Complete results saved to {args.output}[/]")
-            else:
-                console.print("[bold yellow]No repositories were processed.[/]")
+            console.print(Panel(f"[bold green]Finished processing {num_processed} repositories in {formatted_duration_all}[/]"))
+            console.print(f"[bold]Complete results saved to {args.output}[/]")
+            if args.parallel:
+                 console.print(f"[dim]Worker logs saved in 'logs/worker-*.log'[/]")
+
         else:
-            # Process single repository
+            # Process single repository (keeps existing status/panel behavior)
             repo_id_display = f" with ID [bold]{args.repo_id}[/]" if args.repo_id else ""
             force_display = " [bold yellow](forcing reprocessing)[/]" if args.force else ""
 
-            # Only keep one instance of the panel showing processing status
-            # Remove the first panel here and keep the one in process_repository_from_jsonl
-
             # Log repository processing with consistent format
-            orchestrator.logger.info(f"⚙️ Processing repository{' with ID ' + args.repo_id if args.repo_id else ''}. Force={args.force}")
+            orchestrator.logger.info(f"⚙️ Processing single repository{' with ID ' + args.repo_id if args.repo_id else ''}. Force={args.force}")
 
             results = orchestrator.process_repository_from_jsonl(
                 args.repo_id,
