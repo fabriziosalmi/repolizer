@@ -216,7 +216,7 @@ def check_dependency_licenses(repo_path: Optional[str] = None, repo_data: Option
             for file in files:
                 # Check if we've reached the file limit
                 if files_checked >= MAX_FILES_TO_CHECK:
-                    logger.warning(f"Reached maximum file check limit ({MAX_FILES_TO_CHECK}). Limiting dependency file search.")
+                    logger.debug(f"Reached maximum file check limit ({MAX_FILES_TO_CHECK}). Limiting dependency file search.")
                     analysis_terminated_early = True
                     result["early_termination"] = {
                         "reason": "max_files_reached",
@@ -228,7 +228,7 @@ def check_dependency_licenses(repo_path: Optional[str] = None, repo_data: Option
                     file_path = os.path.join(root, file)
                     
                     # Process dependency file with timeout protection
-                    logger.info(f"Found dependency file: {file_path}")
+                    logger.debug(f"Found dependency file: {file_path}")
                     dependency_files_found.append(os.path.relpath(file_path, repo_path))
                     
                     # Process dependencies based on file type
@@ -452,7 +452,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         Check results with score on 0-100 scale
     """
     repo_name = repository.get('name', 'unknown')
-    logger.info(f"Starting dependency licenses check for repository: {repo_name}")
+    logger.debug(f"Starting dependency licenses check for repository: {repo_name}")
     
     try:
         # Check if we have a cached result

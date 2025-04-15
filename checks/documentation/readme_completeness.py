@@ -44,7 +44,7 @@ def check_readme_exists(repo_path: str = None, repo_data: Dict = None) -> Dict[s
                     with open(potential_path, 'r', encoding='utf-8', errors='ignore') as f:
                         readme_content = f.read()
                         readme_file = variation
-                        logger.info(f"Found README file: {variation}")
+                        logger.debug(f"Found README file: {variation}")
                         break
                 except Exception as e:
                     logger.error(f"Error reading README file {potential_path}: {e}")

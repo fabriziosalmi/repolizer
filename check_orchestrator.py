@@ -154,7 +154,7 @@ class CheckOrchestrator:
             self.logger.addHandler(console_handler)
 
             self.logger.info("✅ Logging system initialized (library mode)")
-            self.logger.debug(f"Detailed logs being written to {log_file}")
+            self.logger.debug(f"✅ Detailed logs being written to {log_file}")
 
     def _load_checks(self) -> Dict[str, List[Dict]]:
         """Dynamically load checks from checks folder"""
@@ -196,7 +196,7 @@ class CheckOrchestrator:
                             "module": module_name
                         }
                         checks[category].append(check_info)
-                        self.logger.info(f"✅ Successfully loaded check: {category}/{check_info['name']}")
+                        self.logger.debug(f"✅ Successfully loaded check: {category}/{check_info['name']}")
                     except ModuleNotFoundError:
                         self.logger.error(f"Failed to import check module {module_name}: Module not found.")
                     except Exception as e:
@@ -304,10 +304,10 @@ class CheckOrchestrator:
             check_repository['github_token'] = self.github_token
 
         if local_eval:
-            self.logger.info(f"⚙️ Running local evaluation for {repo_name}")
+            self.logger.debug(f"⚙️ Running local evaluation for {repo_name}")
             results.extend(self._run_local_checks(check_repository, categories, checks))
 
-        self.logger.info(f"⚙️ Running API checks for {repo_name}")
+        self.logger.debug(f"⚙️ Running API checks for {repo_name}")
         results.extend(self._run_api_checks(check_repository, categories, checks))
 
         # Check if this is being called from a test
@@ -683,7 +683,7 @@ class CheckOrchestrator:
             repository['full_name'] = repo_name
 
         # Run checks
-        self.console.print(Panel(f"[bold blue]Processing repository:[/] [bold green]{repo_name}[/]")) # Use self.console
+        self.logger.info(f"⚙️ Processing repository: {repo_name}")
 
         results = None
         # Use a more generic status message that doesn't repeat the repo name
@@ -1691,15 +1691,6 @@ if __name__ == "__main__":
         # Configure rate limiter
         orchestrator.rate_limiter = RateLimiter(max_calls=args.rate_limit, time_period=60)
 
-        # Override GitHub token if provided in command line
-        if args.github_token:
-            orchestrator.github_token = args.github_token
-            console.print("[bold blue]Using GitHub token from command line[/]")
-        elif orchestrator.github_token:
-            console.print("[bold blue]Using GitHub token from config.json[/]")
-        else:
-            console.print("[yellow]No GitHub token provided - API rate limits may apply[/]")
-
         # Parse category and check filters if provided
         categories = None
         if args.categories:
@@ -1717,13 +1708,13 @@ if __name__ == "__main__":
 
         # Inform about output format
         if args.output.lower().endswith('.json'):
-            console.print(f"[bold blue]Results will be saved in JSON format to:[/] {args.output}")
+            logging.info(f"💾 Results will be saved in JSON format to {args.output}")
         else:
-            console.print(f"[bold blue]Results will be saved in JSONL format to:[/] {args.output}")
+            logging.info(f"💾 Results will be saved in JSONL format to {args.output}")
 
         if args.process_all:
             # Use Panel for the initial message, but rely on logging/prints during processing
-            console.print(Panel(f"[bold blue]Processing all repositories[/]" +
+            logging.info(Panel(f"[bold blue]Processing all repositories[/]" +
                                 (" [bold yellow](forcing reprocessing)[/]" if args.force else "") +
                                 (f" [bold cyan](parallel: {args.max_workers or orchestrator.max_workers} workers)[/]" if args.parallel else " [bold magenta](sequential)[/]")))
 

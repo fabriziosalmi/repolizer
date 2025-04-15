@@ -386,7 +386,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_lazy_loading(local_path, repository)
         
-        logger.info(f"Lazy loading check completed with score: {result.get('lazy_loading_score', 0)}")
+        logger.info(f"✅ Lazy loading check completed with score: {result.get('lazy_loading_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

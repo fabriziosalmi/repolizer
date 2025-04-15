@@ -162,7 +162,7 @@ def check_license_compliance(repo_path: Optional[str] = None, repo_data: Optiona
         # Skip local analysis, using API data later
     else:
         try:
-            logger.info(f"Analyzing repository at {repo_path} for license compliance")
+            logger.debug(f"Analyzing repository at {repo_path} for license compliance")
             
             # Check license files to find main license file with timeout protection
             for lic_file in license_files:

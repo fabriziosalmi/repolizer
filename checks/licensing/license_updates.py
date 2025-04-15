@@ -122,7 +122,7 @@ def check_license_updates(repo_path: Optional[str] = None, repo_data: Optional[D
         # Skip local analysis, using API data later
     else:
         try:
-            logger.info(f"Analyzing repository at {repo_path} for license updates")
+            logger.debug(f"Analyzing repository at {repo_path} for license updates")
             
             # Check license files for year information with timeout protection
             for lic_file in license_files:

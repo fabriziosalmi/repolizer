@@ -32,7 +32,7 @@ def check_code_of_conduct(repo_path: str = None, repo_data: Dict = None) -> Dict
         if isinstance(coc_data, dict):
             result["has_code_of_conduct"] = True
             result["coc_type"] = coc_data.get("name") or coc_data.get("key")
-            logger.info(f"Found Code of Conduct from API data: {result['coc_type']}")
+            logger.debug(f"Found Code of Conduct from API data: {result['coc_type']}")
     
     # If no API data or no CoC found, check local repository
     if repo_path and os.path.isdir(repo_path) and not result["has_code_of_conduct"]:
@@ -58,7 +58,7 @@ def check_code_of_conduct(repo_path: str = None, repo_data: Dict = None) -> Dict
                 try:
                     with open(coc_path, 'r', encoding='utf-8', errors='ignore') as f:
                         coc_content = f.read()
-                    logger.info(f"Found Code of Conduct file: {coc_file}")
+                    logger.debug(f"Found Code of Conduct file: {coc_file}")
                     break
                 except Exception as e:
                     logger.error(f"Error reading Code of Conduct file {coc_path}: {e}")
@@ -91,7 +91,7 @@ def check_code_of_conduct(repo_path: str = None, repo_data: Dict = None) -> Dict
                                 result["has_code_of_conduct"] = True
                                 result["code_of_conduct_path"] = f"{gen_file} (section)"
                                 coc_content = content  # Use the content for further analysis
-                                logger.info(f"Found Code of Conduct section in {gen_file}")
+                                logger.debug(f"Found Code of Conduct section in {gen_file}")
                                 break
                         
                         if result["has_code_of_conduct"]:

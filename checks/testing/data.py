@@ -414,9 +414,9 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         
         # Log whether we have a local path or not
         if local_path:
-            logger.info(f"Running test data quality check with local path: {local_path}")
+            logger.debug(f"Running test data quality check with local path: {local_path}")
         else:
-            logger.info("Local path not available, will attempt API-based analysis")
+            logger.debug("Local path not available, will attempt API-based analysis")
         
         # Call the check function with both local_path and repository data
         result = check_test_data_quality(local_path, repository)

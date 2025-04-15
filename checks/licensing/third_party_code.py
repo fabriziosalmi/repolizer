@@ -131,7 +131,7 @@ def check_third_party_code(repo_path: Optional[str] = None, repo_data: Optional[
     dirs_checked = 0
     
     try:
-        logger.info(f"Analyzing repository at {repo_path} for third-party code")
+        logger.debug(f"Analyzing repository at {repo_path} for third-party code")
         
         # Check for documentation files with timeout protection
         for doc_file in documentation_files:

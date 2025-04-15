@@ -148,7 +148,7 @@ def check_spdx_identifiers(repo_path: Optional[str] = None, repo_data: Optional[
         logger.warning("No local repository path provided or path is not a directory")
     else:
         try:
-            logger.info(f"Analyzing repository at {repo_path} for SPDX identifiers")
+            logger.info(f" {repo_path} for SPDX identifiers")
             
             # Check specific files for SPDX identifiers
             for file_name in files_to_check:

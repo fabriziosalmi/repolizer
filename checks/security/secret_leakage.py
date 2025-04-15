@@ -421,7 +421,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_secret_leakage(local_path, repository)
         
-        logger.info(f"Secret leakage check completed with score: {result.get('secret_leakage_score', 0)}")
+        logger.info(f"✅ Secret leakage check completed with score: {result.get('secret_leakage_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

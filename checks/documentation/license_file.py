@@ -38,7 +38,7 @@ def check_license_file(repo_path: str = None, repo_data: Dict = None) -> Dict[st
             result["has_license_file"] = True
             result["license_type"] = license_data.get("name") or license_data.get("key")
             result["license_identified"] = True
-            logger.info(f"Found license from API data: {result['license_type']}")
+            logger.debug(f"Found license from API data: {result['license_type']}")
     
     # If no API data or no license found, check local repository
     if repo_path and os.path.isdir(repo_path) and not result["has_license_file"]:
@@ -231,7 +231,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_license_file(local_path, repository)
         
-        logger.info(f"License file check completed with score: {result.get('license_score', 0)}")
+        logger.info(f"✅ License file check completed with score: {result.get('license_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

@@ -474,7 +474,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         score = result.get("session_security_score", 0)
         final_score = normalize_score(score)
         
-        logger.info(f"Session management check completed with score: {final_score}")
+        logger.info(f"✅ Session management check completed with score: {final_score}")
         
         # Return the result with enhanced metadata
         return {

@@ -158,7 +158,7 @@ def check_dependency_vulnerabilities(repo_path: str = None, repo_data: Dict = No
                                             
                                         # Parse YAML file
                                         lock_data = yaml.load(content, Loader=SafeLoader)
-                                        logger.info(f"Successfully parsed YAML file: {file_path}")
+                                        logger.debug(f"Successfully parsed YAML file: {file_path}")
                                         
                                         # Extract dependencies from pnpm-lock.yaml
                                         if file_name == "pnpm-lock.yaml" and isinstance(lock_data, dict):

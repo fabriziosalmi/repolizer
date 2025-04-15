@@ -319,7 +319,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_cpu_usage(local_path, repository)
         
-        logger.info(f"CPU usage check completed with score: {result.get('cpu_usage_score', 0)}")
+        logger.info(f"✅ CPU usage check completed with score: {result.get('cpu_usage_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

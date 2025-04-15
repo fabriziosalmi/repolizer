@@ -101,7 +101,7 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
         # Skip local analysis, use API data later
     else:
         try:
-            logger.info(f"Analyzing repository at {repo_path} for attribution information")
+            logger.debug(f"Analyzing repository at {repo_path} for attribution information")
             
             # Track analysis start time for global timeout
             start_time = datetime.now()
@@ -189,7 +189,7 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
             # If we've found attribution in the primary files, we can skip the more expensive checks
             # This helps avoid hanging on the more expensive secondary checks
             if result["has_attribution"] and len(attribution_types_found) >= 2:
-                logger.info("Found solid attribution evidence in primary files. Skipping additional checks.")
+                logger.debug("Found solid attribution evidence in primary files. Skipping additional checks.")
             # Only continue with additional checks if we haven't found attribution yet and haven't terminated early
             elif not result["has_attribution"] and not analysis_terminated_early:
                 # Reduced list of additional files to check

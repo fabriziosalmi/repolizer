@@ -49,7 +49,7 @@ def check_contributing_guidelines(repo_path: str = None, repo_data: Dict = None)
                 with open(potential_path, 'r', encoding='utf-8', errors='ignore') as f:
                     contributing_content = f.read()
                     contributing_file = variation
-                    logger.info(f"Found CONTRIBUTING file: {variation}")
+                    logger.debug(f"Found CONTRIBUTING file: {variation}")
                     break
             except Exception as e:
                 logger.error(f"Error reading CONTRIBUTING file {potential_path}: {e}")
@@ -64,7 +64,7 @@ def check_contributing_guidelines(repo_path: str = None, repo_data: Dict = None)
     for variation in code_of_conduct_variations:
         if os.path.exists(os.path.join(repo_path, variation)):
             has_code_of_conduct = True
-            logger.info(f"Found Code of Conduct: {variation}")
+            logger.debug(f"Found Code of Conduct: {variation}")
             break
     
     # Check for PR template
@@ -77,7 +77,7 @@ def check_contributing_guidelines(repo_path: str = None, repo_data: Dict = None)
     for variation in pr_template_variations:
         if os.path.exists(os.path.join(repo_path, variation)):
             has_pr_template = True
-            logger.info(f"Found PR template: {variation}")
+            logger.debug(f"Found PR template: {variation}")
             break
     
     # Check for Issue template
@@ -98,7 +98,7 @@ def check_contributing_guidelines(repo_path: str = None, repo_data: Dict = None)
     if os.path.exists(os.path.join(repo_path, ".github/ISSUE_TEMPLATE")) and \
        os.path.isdir(os.path.join(repo_path, ".github/ISSUE_TEMPLATE")):
         has_issue_template = True
-        logger.info("Found GitHub issue templates directory")
+        logger.debug("Found GitHub issue templates directory")
     
     # Populate result with findings
     result["has_contributing"] = contributing_content is not None

@@ -196,7 +196,7 @@ def check_patent_clauses(repo_path: Optional[str] = None, repo_data: Optional[Di
         # Skip local analysis, using API data later
     else:
         try:
-            logger.info(f"Analyzing repository at {repo_path} for patent clauses")
+            logger.debug(f"Analyzing repository at {repo_path} for patent clauses")
             
             # First check specific patent files with timeout protection
             for pat_file in patent_files:

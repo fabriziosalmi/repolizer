@@ -555,7 +555,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         
         # Calculate execution time
         execution_time = time.time() - start_time
-        logger.info(f"✅ Artifact management check completed in {execution_time:.2f}s with score: {result.get('artifact_management_score', 0)}")
+        logger.debug(f"✅ Artifact management check completed in {execution_time:.2f}s with score: {result.get('artifact_management_score', 0)}")
         
         # Return the result with the score and metadata
         return {

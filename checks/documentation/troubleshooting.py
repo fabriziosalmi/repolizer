@@ -315,7 +315,7 @@ def check_troubleshooting_docs(repo_path: str = None, repo_data: Dict = None) ->
             good_patterns = [
                 r'#+\s+.*?(error|issue|problem)[\s\S]{10,200}```[\s\S]+?```',
                 r'#+\s+.*?FAQ[\s\S]{10,200}```[\s\S]+?```',
-                r'**.*?(error|issue|problem)[\s\S]{10,300}```[\s\S]+?```'
+                r'\*\*.*?(error|issue|problem)[\s\S]{10,300}```[\s\S]+?```' # Escaped the leading **
             ]
             
             for pattern in good_patterns:

@@ -351,7 +351,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         # Run the check
         result = check_changelog(local_path, repository)
         
-        logger.info(f"Changelog check completed with score: {result.get('changelog_score', 0)}")
+        logger.info(f"✅ Changelog check completed with score: {result.get('changelog_score', 0)}")
         
         # Return the result with the score and enhanced metadata
         score = result.get("changelog_score", 0)
