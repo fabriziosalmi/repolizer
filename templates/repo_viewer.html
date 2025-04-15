@@ -46,8 +46,8 @@
             transition: all 0.3s ease;
         }
         .score-bar {
-            height: 8px;
-            border-radius: 4px;
+            height: 20px;
+            border-radius: 9999px;
             position: relative;
             overflow: hidden;
             background-color: #e5e7eb;
@@ -57,7 +57,7 @@
             top: 0;
             left: 0;
             height: 100%;
-            border-radius: 4px;
+            border-radius: 9999px;
             transition: width 0.5s ease;
         }
         /* Score color gradients */
@@ -788,41 +788,59 @@
       const overallScore = repo.overall_score || 0;
       const scoreClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
 
-      // Generate category scores HTML - icons with colored backgrounds based on score and showing numeric value
-      let categoryScoresHtml = '';
+      // Generate vertical bar chart HTML for category scores
+      let categoryBarChartHtml = `
+        <div class="category-bar-chart flex justify-between items-end h-24 mt-2 mb-3 px-1" style="margin-top: 1.5rem;">
+      `;
       
-      // Create an array of categories with their scores for sorting
-      const categoriesWithScores = Object.keys(categoryNames).map(category => {
-        return {
-          category: category,
-          score: repo.category_scores?.[category] || 0,
-          icon: categoryIcons[category] || 'fa-question-circle',
-          name: categoryNames[category]
-        };
-      });
-
-      // Sort categories by score in descending order (highest first)
-      categoriesWithScores.sort((a, b) => b.score - a.score);
-
-      // Generate HTML for sorted categories
-      for (const item of categoriesWithScores) {
-        // Determine background color class based on score
-        let bgColorClass;
-        if (item.score >= 70) {
-          bgColorClass = 'bg-green-500'; // Green for scores 70-100
-        } else if (item.score >= 40) {
-          bgColorClass = 'bg-yellow-500'; // Yellow for scores 40-69
+      // Use a fixed category order instead of sorting by score
+      // Define the categories in the order we want them to appear
+      const fixedCategoryOrder = [
+        'documentation',
+        'security',
+        'code_quality',
+        'performance',
+        'accessibility',
+        'testing',
+        'maintainability',
+        'ci_cd',
+        'licensing',
+        'community'
+      ];
+      
+      // Add bars for each category in the fixed order
+      for (const category of fixedCategoryOrder) {
+        // Get the score and metadata for this category
+        const score = repo.category_scores?.[category] || 0;
+        const icon = categoryIcons[category] || 'fa-question-circle';
+        const name = categoryNames[category] || category;
+        
+        // Determine color class based on score
+        let colorClass;
+        if (score >= 70) {
+          colorClass = 'bg-green-500'; // Green for scores 70-100
+        } else if (score >= 40) {
+          colorClass = 'bg-yellow-500'; // Yellow for scores 40-69
         } else {
-          bgColorClass = 'bg-red-500'; // Red for scores 0-39
+          colorClass = 'bg-red-500'; // Red for scores 0-39
         }
         
-        categoryScoresHtml += `
-            <span class="category-badge ${bgColorClass} p-2 rounded-full flex items-center" title="${item.name}: ${item.score}">
-                <i class="fas ${item.icon} text-white mr-1"></i>
-                <span class="text-white text-xs font-bold">${Math.round(item.score)}</span>
-            </span>
+        // Calculate height based on score (0-100%)
+        const heightPercentage = Math.max(5, score); // Minimum 5% height for visibility
+        
+        // Modified structure to put icons at the bottom
+        categoryBarChartHtml += `
+          <div class="flex flex-col items-center" title="${name}: ${score}">
+            <div class="relative w-5 h-20">
+              <div class="${colorClass} absolute bottom-0 w-full rounded-t" style="height: ${heightPercentage}%;"></div>
+            </div>
+            <span class="text-xs mt-1 text-gray-600">${Math.round(score)}</span>
+            <i class="fas ${icon} text-gray-700 mt-1"></i>
+          </div>
         `;
       }
+      
+      categoryBarChartHtml += `</div>`;
 
       card.innerHTML = `
         <div class="p-5 flex-grow">
@@ -845,19 +863,19 @@
             </div>
           </div>
 
+          <p class="text-gray-700 mb-2">${description}</p>
+          
+          <!-- Category Score Bar Chart -->
+          ${categoryBarChartHtml}
+
           <div class="mb-4">
             <div class="flex justify-between items-center mb-1">
-              <span class="text-sm font-medium text-gray-700">Overall Health Score:</span>
+              <span class="text-sm font-medium text-gray-700">Repolizer score:</span>
               <span class="text-sm font-medium ${scoreClass.replace('score-', 'text-')}">${overallScore.toFixed(1)}</span>
             </div>
             <div class="score-bar">
               <div class="score-bar-fill ${scoreClass}" style="width: ${overallScore}%"></div>
             </div>
-          </div>
-
-          <p class="text-gray-700 mb-4">${description}</p>
-          <div class="flex flex-wrap gap-2 mb-4">
-            ${categoryScoresHtml}
           </div>
 
           <div class="mt-4 text-center">
