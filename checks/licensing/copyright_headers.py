@@ -34,7 +34,7 @@ try:
         time_limit, is_dir_with_timeout, safe_walk, safe_read_file, 
         get_file_size_with_timeout, is_file_with_timeout
     )
-    logger.info("Using filesystem_utils for timeout protection")
+    logger.debug("Using filesystem_utils for timeout protection")
     has_filesystem_utils = True
 except ImportError:
     logger.info("filesystem_utils module not available, using internal fallbacks")
@@ -80,10 +80,10 @@ except ImportError:
                 result = os.path.isdir(path)
                 elapsed = time.time() - start_time
                 if elapsed > timeout / 2:
-                    logger.warning(f"isdir check on {path} was slow but completed in {elapsed:.2f}s")
+                    logger.debug(f"isdir check on {path} was slow but completed in {elapsed:.2f}s")
                 return result
             except Exception as e:
-                logger.warning(f"Error checking if {path} is a directory: {e}")
+                logger.debug(f"Error checking if {path} is a directory: {e}")
                 return False
                 
         # Use signals for Unix main thread
@@ -315,7 +315,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
     elif not is_dir_with_timeout(repo_path, timeout=DIR_SCAN_TIMEOUT): # Use constant
         logger.warning(f"Repository path {repo_path} doesn't exist, isn't accessible, or check timed out. Attempting to use API data.")
     else:
-        logger.info(f"Analyzing local repository at {repo_path} for copyright headers")
+        logger.debug(f"Analyzing local repository at {repo_path} for copyright headers")
 
         # --- Analysis State ---
         # Type hints added for clarity
@@ -340,7 +340,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
         last_progress_time = start_time  # Track when we last logged progress
 
         try:
-            logger.info("Starting repository walk and analysis with timeout protection...")
+            logger.debug("Starting repository walk and analysis with timeout protection...")
             
             # Use safe_walk instead of os.walk for timeout protection
             for root, dirs, files in safe_walk(repo_path, timeout=DIR_SCAN_TIMEOUT, 
@@ -349,7 +349,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                 # Check if we should log progress based on time (every 5 seconds)
                 current_time = datetime.now()
                 if (current_time - last_progress_time).total_seconds() >= 5:
-                    logger.info(f"Walking directory: {root}")
+                    logger.debug(f"Walking directory: {root}")
                     last_progress_time = current_time
                     
                 # Check for global timeout more frequently
@@ -427,7 +427,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
 
                     # More frequent progress logging
                     if files_checked % PROGRESS_LOG_INTERVAL == 0 or (current_time - last_progress_time).total_seconds() >= 5:
-                        logger.info(f"Processed {files_checked} files...")
+                        logger.debug(f"Processed {files_checked} files...")
                         last_progress_time = current_time
 
                     try:
@@ -597,7 +597,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
 
         # Exceptions to break out of the os.walk loop - handled more gracefully now
         except (StopIteration, GlobalTimeoutException) as e:
-            logger.info(f"File analysis loop terminated early: {type(e).__name__}")
+            logger.debug(f"File analysis loop terminated early: {type(e).__name__}")
             analysis_terminated_early = True # Ensure flag is set
             # Ensure early_termination reason is set if missing (e.g., exception from walk mock)
             if isinstance(e, GlobalTimeoutException) and result.get("early_termination") is None:
@@ -621,7 +621,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
             # Allow fallback to API data or return partial results
 
         # --- Post-Analysis Processing ---
-        logger.info(f"Finished repository walk. Analyzed {files_checked} files.")
+        logger.debug(f"Finished repository walk. Analyzed {files_checked} files.")
         if files_checked > 0:
             result["files_checked"] = files_checked
             result["files_with_headers"] = files_with_headers

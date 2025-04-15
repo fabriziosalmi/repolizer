@@ -59,7 +59,7 @@ def setup_utils_logging():
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     console_formatter = logging.Formatter( # Used only if RichHandler is not available
-        '%(levelname)s: %(message)s'
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
     # Add formatters to handlers
@@ -248,7 +248,7 @@ class GitHubApiHandler:
                     continue
                 
                 # Non-retryable error
-                self.logger.error(f"GitHub API request failed with status {response.status_code}: {response.text}")
+                self.logger.error(f"⚠️ GitHub API request failed with status {response.status_code}: {response.text}")
                 # For certain status codes, provide more specific error information
                 if response.status_code == 401:
                     self.logger.error("Authentication failed. Check your GitHub token.")
@@ -271,10 +271,10 @@ class GitHubApiHandler:
             
             except Exception as e:
                 # Other unexpected errors - log and don't retry
-                self.logger.error(f"Unexpected error in GitHub API request: {e}")
+                self.logger.error(f"⚠️ Unexpected error in GitHub API request: {e}")
                 raise
         
-        self.logger.error(f"GitHub API request failed after {self.MAX_RETRIES+1} attempts: {url}")
+        self.logger.error(f"⚠️ GitHub API request failed after {self.MAX_RETRIES+1} attempts: {url}")
         return None
     
     def get(self, url: str, resource: str = 'core', **kwargs) -> Optional[Dict]:
@@ -319,7 +319,7 @@ class GitHubApiHandler:
             response = self.request('GET', url, resource, params=params, **kwargs)
             
             if not response or response.status_code >= 400:
-                self.logger.error(f"Failed to get page {page} of {url}")
+                self.logger.error(f"⚠️ Failed to get page {page} of {url}")
                 break
             
             # Parse response
@@ -369,7 +369,7 @@ class GitHubApiHandler:
                                 }
                     self.last_updated = time.time()
                 except Exception as e:
-                    self.logger.error(f"Failed to refresh rate limit data: {e}")
+                    self.logger.error(f"⚠️ Failed to refresh rate limit data: {e}")
             
             return self.rate_limits.get(resource, {}).get('remaining', 0)
 
@@ -514,7 +514,7 @@ def ensure_dependencies() -> Dict[str, any]:
                         dependencies[module_name] = module
                     logger.info(f"{package} module installed successfully.")
                 except Exception as e:
-                    logger.error(f"Failed to install {package}: {e}")
+                    logger.error(f"⚠️ Failed to install {package}: {e}")
                     # Don't raise here, let the main script handle missing deps if critical
                     if '.' in module_name:
                         component_name = module_name.split('.')[-1].capitalize()
@@ -546,7 +546,7 @@ def ensure_dependencies() -> Dict[str, any]:
         if 'RichHandler' not in dependencies: dependencies['RichHandler'] = RichHandler
 
     except ImportError as e:
-        logger.error(f"Error importing from rich: {e}")
+        logger.error(f"⚠️ Error importing from rich: {e}")
 
     return dependencies
 
@@ -561,7 +561,7 @@ def create_temp_directory(prefix: str = "repolizer_") -> str:
         Path to the created temporary directory
     """
     temp_dir = tempfile.mkdtemp(prefix=prefix)
-    logger.info(f"Created temporary directory: {temp_dir}")
+    logger.debug(f"Created temporary directory: {temp_dir}")
     return temp_dir
 
 def cleanup_directory(directory: str) -> bool:
@@ -582,7 +582,7 @@ def cleanup_directory(directory: str) -> bool:
         logger.info(f"Removed directory: {directory}")
         return True
     except Exception as e:
-        logger.error(f"Failed to remove directory {directory}: {e}")
+        logger.error(f"⚠️ Failed to remove directory {directory}: {e}")
         return False
 
 def clone_repository(clone_url: str, repo_dir: str, depth: int = 1) -> bool:
@@ -607,13 +607,13 @@ def clone_repository(clone_url: str, repo_dir: str, depth: int = 1) -> bool:
         
         # Clone repository
         git.Repo.clone_from(clone_url, repo_dir, depth=depth)
-        logger.info(f"Repository cloned successfully to {repo_dir}")
+        logger.info(f"⚙️ Repository cloned successfully to {repo_dir}")
         return True
     except ImportError:
-        logger.error("Git module not available. Make sure gitpython is installed.")
+        logger.error("⚠️ Git module not available. Make sure gitpython is installed.")
         return False
     except Exception as e:
-        logger.error(f"Failed to clone repository to {repo_dir}: {e}")
+        logger.error(f"⚠️ Failed to clone repository to {repo_dir}: {e}")
         return False
 
 def load_jsonl_file(file_path: str) -> List[Dict]:
@@ -631,7 +631,7 @@ def load_jsonl_file(file_path: str) -> List[Dict]:
     data = []
     
     if not os.path.exists(file_path):
-        logger.error(f"File not found: {file_path}")
+        logger.error(f"⚠️ File not found: {file_path}")
         return data
     
     try:
@@ -639,7 +639,7 @@ def load_jsonl_file(file_path: str) -> List[Dict]:
             data = list(reader)
         logger.info(f"Loaded {len(data)} items from {file_path}")
     except Exception as e:
-        logger.error(f"Error loading data from {file_path}: {e}")
+        logger.error(f"⚠️ Error loading data from {file_path}: {e}")
     
     return data
 
@@ -667,7 +667,7 @@ def save_to_jsonl(data: Dict, file_path: str, append: bool = True) -> bool:
         logger.info(f"Data {'appended to' if mode == 'a' else 'saved to'} {file_path}")
         return True
     except Exception as e:
-        logger.error(f"Error saving data to {file_path}: {e}")
+        logger.error(f"⚠️ Error saving data to {file_path}: {e}")
         return False
 
 def extract_processed_repo_ids(results_path: str) -> Set[str]:
@@ -707,9 +707,9 @@ def extract_processed_repo_ids(results_path: str) -> Set[str]:
                             if "full_name" in result["repository"]:
                                 processed_ids.add(result["repository"]["full_name"])
                 except json.JSONDecodeError as je:
-                    logger.error(f"Error parsing JSON file: {je}")
+                    logger.error(f"⚠️ Error parsing JSON file: {je}")
         except Exception as e:
-            logger.error(f"Error loading processed repository IDs from JSON: {e}")
+            logger.error(f"⚠️ Error loading processed repository IDs from JSON: {e}")
     else:
         # Read JSONL with more robust error handling
         try:
@@ -727,7 +727,7 @@ def extract_processed_repo_ids(results_path: str) -> Set[str]:
                                     processed_ids.add(result["repository"]["full_name"])
                     except json.JSONDecodeError as je:
                         # Log the error but continue processing
-                        logger.error(f"Error parsing JSON at line {i+1}: {je}")
+                        logger.error(f"⚠️ Error parsing JSON at line {i+1}: {je}")
                         # Try to extract repository ID using regex in case the JSON is only partially corrupt
                         import re
                         id_match = re.search(r'"id":\s*("[^"]+"|[\d]+)', line)
@@ -742,11 +742,11 @@ def extract_processed_repo_ids(results_path: str) -> Set[str]:
                             except (ValueError, TypeError) as e:
                                 logger.debug(f"Could not convert extracted ID: {e}")
                     except Exception as e:
-                        logger.error(f"Error processing results file at line {i+1}: {e}")
+                        logger.error(f"⚠️ Error processing results file at line {i+1}: {e}")
         except Exception as e:
-            logger.error(f"Error loading processed repository IDs: {e}")
+            logger.error(f"⚠️ Error loading processed repository IDs: {e}")
     
-    logger.info(f"Found {len(processed_ids)} already processed repositories")
+    logger.debug(f"Found {len(processed_ids)} already processed repositories")
     return processed_ids
 
 def get_check_category(check_module: str) -> str:
@@ -930,13 +930,13 @@ def safe_cleanup_directory(directory: str, timeout=30) -> bool:
                     os.remove(path)
                 return True
             except Exception as e:
-                logger.error(f"Error cleaning up {path}: {e}")
+                logger.error(f"⚠️ Error cleaning up {path}: {e}")
                 return False
                 
         # Execute with timeout protection
         return safe_fs_operation(do_cleanup, directory, timeout=timeout, default=False)
     except Exception as e:
-        logger.error(f"Error during cleanup of {directory}: {e}")
+        logger.error(f"⚠️ Error during cleanup of {directory}: {e}")
         return False
 
 def monitor_resource_usage(tag="", threshold_mb=500):
@@ -982,8 +982,7 @@ has_filesystem_utils = False
 
 # Try to import the filesystem utilities if available
 try:
-    # ... existing code ...
-    logger.info("Using filesystem_utils for timeout protection")
+    logger.debug("Using filesystem_utils for timeout protection")
     has_filesystem_utils = True # Set to True only if import succeeds
 except ImportError:
     logger.info("filesystem_utils module not available, using internal fallbacks")
@@ -1011,7 +1010,7 @@ if not has_filesystem_utils:
                  logger.warning(f"Could not set signal alarm: {e}. Timeout protection may be limited.")
                  can_use_signal = False # Disable signal restoration if setup failed
             except Exception as e:
-                 logger.error(f"Unexpected error setting signal alarm: {e}", exc_info=True)
+                 logger.error(f"⚠️ Unexpected error setting signal alarm: {e}", exc_info=True)
                  can_use_signal = False
         else:
             # If signals can't be used, this context manager does nothing for timeout.
@@ -1027,7 +1026,7 @@ if not has_filesystem_utils:
                     if original_handler is not None:
                         signal.signal(signal.SIGALRM, original_handler) # Restore the original handler
                 except Exception as e:
-                     logger.error(f"Error restoring signal handler: {e}", exc_info=True)
+                     logger.error(f"⚠️ Error restoring signal handler: {e}", exc_info=True)
 
     # ... other fallback functions ...
 
@@ -1091,7 +1090,7 @@ def get_results_file_info(filename: str = 'results.jsonl') -> Dict[str, Any]:
     try:
         mtime = os.path.getmtime(file_path_to_use)
     except OSError as e:
-        logger.error(f"Error getting modification time for {file_path_to_use}: {e}")
+        logger.error(f"⚠️ Error getting modification time for {file_path_to_use}: {e}")
         mtime = None # Ensure mtime is None on error
 
     return {'path': file_path_to_use, 'mtime': mtime}

@@ -456,7 +456,7 @@ def check_documentation_coverage(repo_path: str = None, repo_data: Dict = None) 
             for file_path in files:
                 # Check overall file limit
                 if total_file_count >= max_total_files:
-                    logger.info(f"Reached maximum file count limit ({max_total_files}).")
+                    logger.debug(f"Reached maximum file count limit ({max_total_files}).")
                     break
                 
                 # Determine language for this file
@@ -489,7 +489,7 @@ def check_documentation_coverage(repo_path: str = None, repo_data: Dict = None) 
     file_scan_time = time.time() - file_discovery_start
     result["performance_info"]["file_scan_time"] = round(file_scan_time, 2)
 
-    logger.info(f"Found {len(files_to_analyze)} files to analyze for documentation coverage")
+    logger.debug(f"Found {len(files_to_analyze)} files to analyze for documentation coverage")
     
     # Analysis start time
     analysis_start_time = time.time()

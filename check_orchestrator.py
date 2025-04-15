@@ -104,7 +104,7 @@ class CheckOrchestrator:
                     config = json.load(f)
                     token = config.get('github_token')
                     if token:
-                        self.logger.info("GitHub token loaded from config.json")
+                        self.logger.info("✅ GitHub token loaded from config.json")
                         return token
         except Exception as e:
             self.logger.warning(f"Could not load GitHub token from config.json: {e}")
@@ -132,13 +132,9 @@ class CheckOrchestrator:
             # Create Rich console handler
             console_handler = RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=False) # Use RichHandler
 
-            # Create formatters (only needed for file handler now)
             file_formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
-            # console_formatter = logging.Formatter( # No longer needed for RichHandler
-            #     '%(levelname)s: %(message)s'
-            # )
 
             # Add formatters to handlers
             file_handler.setFormatter(file_formatter)
@@ -148,7 +144,7 @@ class CheckOrchestrator:
             self.logger.addHandler(file_handler)
             self.logger.addHandler(console_handler)
 
-            self.logger.info("Logging system initialized")
+            self.logger.info("✅ Logging system initialized")
             self.logger.debug(f"Detailed logs being written to {log_file}")
 
     def _load_checks(self) -> Dict[str, List[Dict]]:
@@ -178,8 +174,7 @@ class CheckOrchestrator:
                         self.logger.debug(f"Skipping __init__.py file: {check_file.name}")
                         continue
                     if check_file.name.startswith("test_"):
-                        # Log skipped test files at INFO level
-                        self.logger.info(f"Skipping test file: {check_file.name}")
+                        self.logger.debug(f"Skipping test file: {check_file.name}")
                         continue
 
                     module_name = f"checks.{category}.{check_file.stem}"
@@ -192,7 +187,7 @@ class CheckOrchestrator:
                             "module": module_name
                         }
                         checks[category].append(check_info)
-                        self.logger.info(f"Successfully loaded check: {category}/{check_info['name']}")
+                        self.logger.info(f"✅ Successfully loaded check: {category}/{check_info['name']}")
                     except ModuleNotFoundError:
                         self.logger.error(f"Failed to import check module {module_name}: Module not found.")
                     except Exception as e:
@@ -200,7 +195,7 @@ class CheckOrchestrator:
 
         # Log summary of loaded checks
         total_loaded = sum(len(c) for c in checks.values())
-        self.logger.info(f"Finished loading checks. Total checks loaded: {total_loaded}")
+        self.logger.info(f"✅ Finished loading checks. Total checks loaded: {total_loaded}")
         for category, check_list in checks.items():
              self.logger.debug(f"  Category '{category}': {len(check_list)} checks")
 
@@ -260,7 +255,7 @@ class CheckOrchestrator:
             # Remove temp directory if it exists and is empty
             if os.path.exists(self.temp_dir) and not os.listdir(self.temp_dir):
                 os.rmdir(self.temp_dir)
-                self.logger.info(f"Removed temporary directory: {self.temp_dir}")
+                self.logger.info(f"✅ Removed temporary directory: {self.temp_dir}")
         except Exception as e:
             # Can't use self.logger here as it might be destroyed already
             print(f"Error during cleanup: {e}")
@@ -280,7 +275,7 @@ class CheckOrchestrator:
         # Clone the repository if local evaluation is needed
         local_repo_path = None
         if local_eval:
-            self.logger.info(f"Cloning repository for local evaluation: {repo_name}")
+            self.logger.info(f"💾 Cloning repository for local evaluation: {repo_name}")
             local_repo_path = self._clone_repository(repository)
 
             if not local_repo_path:
@@ -293,10 +288,10 @@ class CheckOrchestrator:
             check_repository['github_token'] = self.github_token
 
         if local_eval:
-            self.logger.info(f"Running local evaluation for {repo_name}")
+            self.logger.info(f"⚙️ Running local evaluation for {repo_name}")
             results.extend(self._run_local_checks(check_repository, categories, checks))
 
-        self.logger.info(f"Running API checks for {repo_name}")
+        self.logger.info(f"⚙️ Running API checks for {repo_name}")
         results.extend(self._run_api_checks(check_repository, categories, checks))
 
         # Check if this is being called from a test
@@ -394,15 +389,15 @@ class CheckOrchestrator:
                     local_checks.append((category, check))
 
         if not local_checks:
-            self.logger.info(f"No local checks to run for {repo_name}")
+            self.logger.warning(f"No local checks to run for {repo_name}")
             return results
 
-        self.logger.info(f"Running {len(local_checks)} local checks sequentially for {repo_name}")
+        self.logger.debug(f"Running {len(local_checks)} local checks sequentially for {repo_name}")
 
         # Run checks sequentially
         for i, (category, check) in enumerate(local_checks):
             check_name = check['name']
-            self.logger.info(f"Running local check {i+1}/{len(local_checks)}: {category}/{check_name}")
+            self.logger.info(f"📊 Running local check {i+1}/{len(local_checks)}: {category}/{check_name}")
             try:
                 # Run the check with timeout protection
                 result = self._execute_check(repository, category, check)
@@ -424,7 +419,7 @@ class CheckOrchestrator:
                 }
                 results.append(failure_result)
 
-        self.logger.info(f"Completed {len(results)} local checks for {repo_name}")
+        self.logger.info(f"✅ Completed {len(results)} local checks for {repo_name}")
         return results
 
     def _check_requires_local_access(self, check: Dict) -> bool:
@@ -459,15 +454,15 @@ class CheckOrchestrator:
                     api_checks.append((category, check))
 
         if not api_checks:
-            self.logger.info(f"No API checks to run for {repo_name}")
+            self.logger.warning(f"No API checks to run for {repo_name}")
             return results
 
-        self.logger.info(f"Running {len(api_checks)} API checks sequentially for {repo_name}")
+        self.logger.debug(f"Running {len(api_checks)} API checks sequentially for {repo_name}")
 
         # Run checks sequentially
         for i, (category, check) in enumerate(api_checks):
             check_name = check['name']
-            self.logger.info(f"Running API check {i+1}/{len(api_checks)}: {category}/{check_name}")
+            self.logger.info(f"📊 Running API check {i+1}/{len(api_checks)}: {category}/{check_name}")
             try:
                 # Run the check with timeout protection
                 result = self._execute_check(repository, category, check)
@@ -489,7 +484,7 @@ class CheckOrchestrator:
                 }
                 results.append(failure_result)
 
-        self.logger.info(f"Completed {len(results)} API checks for {repo_name}")
+        self.logger.info(f"✅ Completed {len(results)} API checks for {repo_name}")
         return results
 
     def _execute_check(self, repository: Dict, category: str, check: Dict) -> Dict:
@@ -505,9 +500,9 @@ class CheckOrchestrator:
 
         # Log whether this check uses local clone or API
         if is_api_check:
-            self.logger.info(f"Running API-based check: {category}/{check_name} for {repo_name}")
+            self.logger.info(f"📊 Running API-based check: {category}/{check_name} for {repo_name}")
         else:
-            self.logger.info(f"Running local clone-based check: {category}/{check_name} for {repo_name}")
+            self.logger.info(f"📊 Running local clone-based check: {category}/{check_name} for {repo_name}")
 
         # Define a function to run the check with rate limiting
         def run_with_rate_limit():
@@ -654,7 +649,7 @@ class CheckOrchestrator:
 
         # Check if this repository has already been processed (by ID or full name)
         if not force and (repo_id in self.processed_repos or repo_name in self.processed_repos):
-            self.logger.info(f"Repository {repo_name} (ID: {repo_id}) has already been processed. Skipping.")
+            self.logger.warning(f"Repository {repo_name} (ID: {repo_id}) has already been processed. Skipping.")
 
             # Return existing results
             with console.status(f"Loading existing results for {repo_name}...", spinner="dots"):
@@ -674,7 +669,7 @@ class CheckOrchestrator:
         console.print(Panel(f"[bold blue]Processing repository:[/] [bold green]{repo_name}[/]"))
 
         results = None
-        with console.status(f"[bold blue]Cloning and analyzing repository...[/]", spinner="dots"):
+        with console.status(f"[bold blue]Repolizing...[/]", spinner="dots"):
             # If in resilient mode, use timeout for entire repository processing
             if self.resilient_mode:
                 try:
@@ -834,7 +829,7 @@ class CheckOrchestrator:
                 if repo_id:
                     # Skip if already processed (by ID or full name) and not forcing
                     if not force and (repo_id in self.processed_repos or repo_name in self.processed_repos):
-                        self.logger.info(f"Repository {repo_name} (ID: {repo_id}) already processed. Skipping.")
+                        self.logger.warning(f"Repository {repo_name} (ID: {repo_id}) already processed. Skipping.")
 
                         # Add existing results to the list
                         existing_results = self._get_existing_results(repo_id, repo_name)
@@ -881,18 +876,18 @@ class CheckOrchestrator:
                     future = None
 
                     try:
-                        self.logger.info(f"Starting repository processing with 60s timeout: {repo_name}")
+                        self.logger.info(f"⚙️ Starting repository processing with 60s timeout: {repo_name}")
                         executor = ThreadPoolExecutor(max_workers=1)
                         future = executor.submit(self.run_checks, repository, categories=categories, checks=checks)
                         try:
                             repo_result = future.result(timeout=60)
-                            self.logger.info(f"Repository {repo_name} processed successfully within timeout")
+                            self.logger.info(f"✅ Repository {repo_name} processed successfully within timeout")
                         except FuturesTimeoutError:
-                            self.logger.warning(f"Repository {repo_name} processing timed out after 60s. Skipping to next repository.")
+                            self.logger.warning(f"⚠️ Repository {repo_name} processing timed out after 60s. Skipping to next repository.")
                             if future and not future.done():
                                 # Force cancel future
                                 future_cancelled = future.cancel()
-                                self.logger.info(f"Future cancellation result: {future_cancelled}")
+                                self.logger.info(f"ℹ️ Future cancellation result: {future_cancelled}")
 
                             # Force cleanup with extreme measures
                             self._emergency_cleanup_repository(repo_id, repo_name)
@@ -935,7 +930,7 @@ class CheckOrchestrator:
 
                     # Clean up to free disk space
                     if repo_id in self.cloned_repos:
-                        self.logger.info(f"Cleaning up after processing {repo_name}")
+                        self.logger.debug(f"ℹ️ Cleaning up after processing {repo_name}")
                         repo_path = self.cloned_repos[repo_id]
                         try:
                             if os.path.exists(repo_path):
@@ -948,12 +943,12 @@ class CheckOrchestrator:
 
                 batch_count += 1
                 if batch_count >= batch_size or i == len(repositories) - 1:
-                    self.logger.info(f"Completed batch of {batch_count} repositories. Performing cleanup...")
+                    self.logger.debug(f"ℹ️ Completed batch of {batch_count} repositories. Performing cleanup...")
                     import gc
                     gc.collect()
                     if check_memory_usage:
                         memory_info = monitor_resource_usage("After batch", threshold_mb=500)
-                        self.logger.info(f"Memory after batch: {memory_info['memory_mb']} MB, Threads: {memory_info['num_threads']}")
+                        self.logger.debug(f"ℹ️ Memory after batch: {memory_info['memory_mb']} MB, Threads: {memory_info['num_threads']}")
                     batch_count = 0
                     batch_results = []
 
@@ -984,9 +979,9 @@ class CheckOrchestrator:
                     stderr=subprocess.PIPE,
                     stdout=subprocess.PIPE
                 )
-                self.logger.info("Attempted to terminate git processes")
+                self.logger.debug("ℹ️ Attempted to terminate git processes")
             except Exception as e:
-                self.logger.debug(f"Error terminating git processes: {e}")
+                self.logger.debug(f"⚠️ Error terminating git processes: {e}")
 
             # Force garbage collection multiple times
             import gc
@@ -1153,10 +1148,10 @@ class CheckOrchestrator:
                 with open(output_path, 'w', encoding='utf-8') as f:
                     json.dump(existing_data, f, indent=2)
 
-                self.logger.info(f"Results saved to {output_path}")
+                self.logger.info(f"💾 Results saved to {output_path}")
                 return True
             except Exception as e:
-                self.logger.error(f"Error saving data to {output_path}: {e}")
+                self.logger.error(f"⚠️ Error saving data to {output_path}: {e}")
                 return False
         else:
             # Save to JSONL file using utility function
@@ -1170,7 +1165,7 @@ class CheckOrchestrator:
         :param repo_id: Repository ID
         :param repo_name: Repository name for logging
         """
-        self.logger.info(f"Forcefully cleaning up resources for repository {repo_name}")
+        self.logger.debug(f"Forcefully cleaning up resources for repository {repo_name}")
 
         # Clean up cloned repository if it exists
         if repo_id in self.cloned_repos:
@@ -1183,7 +1178,7 @@ class CheckOrchestrator:
 
                 # Remove from the dictionary of cloned repos
                 del self.cloned_repos[repo_id]
-                self.logger.info(f"Removed cloned repository for {repo_name}")
+                self.logger.debug(f"Removed cloned repository for {repo_name}")
             except Exception as e:
                 self.logger.error(f"Error cleaning up repository {repo_name}: {e}")
 
@@ -1238,7 +1233,7 @@ class CheckOrchestrator:
 
         # Initialize multiprocessing resources using the spawn context
         num_workers = max_workers or self.max_workers
-        self.logger.info(f"Using 'spawn' context with {num_workers} worker processes for parallel processing")
+        self.logger.debug(f"Using 'spawn' context with {num_workers} worker processes for parallel processing")
 
         # Use a Manager queue for robust inter-process communication
         with ctx.Manager() as manager:
@@ -1270,7 +1265,7 @@ class CheckOrchestrator:
                     if not (repo_id in self.processed_repos or repo_name in self.processed_repos):
                         unprocessed_repos.append(repo)
                     else:
-                        self.logger.info(f"Skipping already processed repository: {repo_name}")
+                        self.logger.warning(f"Skipping already processed repository: {repo_name}")
 
                 repositories = unprocessed_repos
 
@@ -1521,7 +1516,7 @@ if __name__ == "__main__":
     setattr(root_logger, "root_handlers_configured", True)
 
     # Log startup information
-    logging.info(f"Starting Repolizer (version {CheckOrchestrator.VERSION})")
+    logging.info(f"✨ Starting Repolizer (version {CheckOrchestrator.VERSION})")
     logging.debug(f"Detailed logs being written to {log_file}")
 
     # Create console - now we're sure Console is properly imported
@@ -1677,7 +1672,7 @@ if __name__ == "__main__":
             # Remove the first panel here and keep the one in process_repository_from_jsonl
 
             # Log repository processing with consistent format
-            orchestrator.logger.info(f"Processing repository{' with ID ' + args.repo_id if args.repo_id else ''}. Force={args.force}")
+            orchestrator.logger.info(f"⚙️ Processing repository{' with ID ' + args.repo_id if args.repo_id else ''}. Force={args.force}")
 
             results = orchestrator.process_repository_from_jsonl(
                 args.repo_id,

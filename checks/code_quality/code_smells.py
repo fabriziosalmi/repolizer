@@ -198,7 +198,7 @@ def check_code_smells(repo_path: str = None, repo_data: Dict = None, timeout_sec
                     try:
                         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
                         if file_size_mb > 1:
-                            logger.info(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
+                            logger.debug(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
                             continue
                     except Exception as e:
                         logger.error(f"Error checking file size for {file_path}: {e}")
@@ -209,7 +209,7 @@ def check_code_smells(repo_path: str = None, repo_data: Dict = None, timeout_sec
                     
                     # Stop collecting files if we already have plenty
                     if len(files_to_analyze) >= 500:
-                        logger.info(f"Limiting analysis to 500 files to ensure completion")
+                        logger.debug(f"Limiting analysis to 500 files to ensure completion")
                         break
         except Exception as e:
             logger.error(f"Error walking repository: {e}")
@@ -223,7 +223,7 @@ def check_code_smells(repo_path: str = None, repo_data: Dict = None, timeout_sec
         # Limit the number of files to analyze if there are too many
         max_files_to_analyze = 200
         if len(files_to_analyze) > max_files_to_analyze:
-            logger.info(f"Limiting analysis to {max_files_to_analyze} files out of {len(files_to_analyze)}")
+            logger.debug(f"Limiting analysis to {max_files_to_analyze} files out of {len(files_to_analyze)}")
             
             # Take a stratified sample by extension/language
             files_by_language = {}
@@ -252,7 +252,7 @@ def check_code_smells(repo_path: str = None, repo_data: Dict = None, timeout_sec
         # Calculate time per file
         remaining_time = max(1, hard_timeout - time.time())
         time_per_file = max(0.5, min(3, remaining_time / len(files_to_analyze)))
-        logger.info(f"Allocating {time_per_file:.2f} seconds per file analysis for {len(files_to_analyze)} files")
+        logger.debug(f"Allocating {time_per_file:.2f} seconds per file analysis for {len(files_to_analyze)} files")
         
         # Use a thread pool to analyze files in parallel with timeout protection
         with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
@@ -411,7 +411,7 @@ def analyze_file(file_path: str, language: str, language_patterns: Dict, thresho
         # Safety check for file size before reading
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
         if file_size_mb > 1:  # Skip files larger than 1MB
-            logger.info(f"Skipping large file during analysis: {file_path} ({file_size_mb:.2f} MB)")
+            logger.debug(f"Skipping large file during analysis: {file_path} ({file_size_mb:.2f} MB)")
             return []
         
         # Read with a limit on content size
@@ -436,7 +436,7 @@ def analyze_file(file_path: str, language: str, language_patterns: Dict, thresho
     # Limit lines to avoid excessive processing
     max_lines = 5000
     if len(lines) > max_lines:
-        logger.info(f"Limiting analysis to {max_lines} lines for {file_path}")
+        logger.debug(f"Limiting analysis to {max_lines} lines for {file_path}")
         lines = lines[:max_lines]
     
     # Periodic timeout check

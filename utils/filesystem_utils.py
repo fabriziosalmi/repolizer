@@ -153,10 +153,10 @@ def safe_read_file(path: str, max_size: int = None, timeout: int = 5,
         if max_size is not None:
             size = get_file_size_with_timeout(path, timeout=timeout//2)  # Use half the timeout for size check
             if size is None:
-                logger.warning(f"Could not determine size of {path}")
+                logger.debug(f"Could not determine size of {path}")
                 return None
             if size > max_size:
-                logger.warning(f"File {path} size ({size}) exceeds maximum ({max_size})")
+                logger.debug(f"File {path} size ({size}) exceeds maximum ({max_size})")
                 return None
         
         # For Windows or non-main threads where signal can't be used
@@ -217,10 +217,10 @@ def get_file_size_with_timeout(path: str, timeout: int = 5) -> Optional[int]:
             size = os.path.getsize(path)
             elapsed = time.time() - start_time
             if elapsed > timeout / 2:
-                logger.warning(f"getsize on {path} was slow but completed in {elapsed:.2f}s")
+                logger.debug(f"getsize on {path} was slow but completed in {elapsed:.2f}s")
             return size
         except Exception as e:
-            logger.warning(f"Error getting size of file {path}: {e}")
+            logger.debug(f"Error getting size of file {path}: {e}")
             return None
     
     # Use signals for Unix main thread

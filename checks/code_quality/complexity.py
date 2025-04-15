@@ -155,7 +155,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                     # Limit file size to prevent hanging on very large files
                     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
                     if file_size_mb > 5:  # Skip files larger than 5MB
-                        logger.info(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
+                        logger.debug(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
                         continue
                         
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -165,7 +165,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                         # Limit content size for very large files
                         if len(content) > 1000000:  # ~1MB of text
                             content = content[:1000000]
-                            logger.info(f"Truncated large file content: {file_path}")
+                            logger.debug(f"Truncated large file content: {file_path}")
                         
                         files_checked += 1
                         result["language_stats"][file_language]["files"] += 1
@@ -185,7 +185,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                         
                         # Limit number of functions to analyze per file
                         if len(function_matches) > 100:
-                            logger.info(f"Limiting analysis to 100 functions in {file_path}")
+                            logger.debug(f"Limiting analysis to 100 functions in {file_path}")
                             function_matches = function_matches[:100]
                         
                         for match in function_matches:
@@ -216,7 +216,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                             # Limit function body size for analysis
                             if len(function_body) > 50000:  # ~50KB
                                 function_body = function_body[:50000]
-                                logger.info(f"Truncated large function body in {file_path}")
+                                logger.debug(f"Truncated large function body in {file_path}")
                             
                             # Calculate function complexity with timeout protection
                             complexity = 1  # Base complexity
