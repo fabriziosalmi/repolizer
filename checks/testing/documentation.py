@@ -7,7 +7,6 @@ import os
 import re
 import logging
 from typing import Dict, Any, List
-import concurrent.futures
 import time
 import signal
 import platform
@@ -16,23 +15,20 @@ import threading
 # Setup logging
 logger = logging.getLogger(__name__)
 
-timeout_occurred = False
 start_time = 0
 timeout_seconds = 0
 
 IS_WINDOWS = platform.system() == 'Windows'
-
-def timeout_handler(signum, frame):
-    global timeout_occurred
-    timeout_occurred = True
+HAS_SIGALRM = hasattr(signal, "SIGALRM")
+IS_MAIN_THREAD = threading.current_thread() is threading.main_thread()
 
 def check_timeout():
-    global start_time, timeout_seconds, timeout_occurred
-    if time.time() - start_time >= timeout_seconds:
+    global start_time, timeout_seconds
+    if timeout_seconds and (time.time() - start_time >= timeout_seconds):
         raise TimeoutError("Timeout exceeded")
 
 def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
-    global start_time, timeout_occurred, timeout_seconds
+    global start_time, timeout_seconds
 
     result = {
         "test_docs_present": False,
@@ -47,10 +43,18 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
         "well_documented_tests": [],
         "poorly_documented_tests": []
     }
-    
-    if not IS_WINDOWS:
-        signal.signal(signal.SIGALRM, timeout_handler)
+
+    # Ensure timeout_seconds is set
+    if not timeout_seconds:
+        timeout_seconds = 35
+
+    # Set start time for manual timeout checks
+    start_time = time.time()
+
+    sigalrm_set = False
+    if HAS_SIGALRM and not IS_WINDOWS and IS_MAIN_THREAD:
         signal.alarm(timeout_seconds)
+        sigalrm_set = True
 
     try:
         # Prioritize local repository analysis
@@ -93,6 +97,7 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
                     continue
                 
                 for file in files:
+                    check_timeout()
                     file_path = os.path.join(root, file)
                     rel_path = os.path.relpath(file_path, repo_path)
                     
@@ -157,9 +162,17 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
                             docstring_functions = re.findall(r'def\s+test_\w+.*?:.*?""".*?"""', content, re.DOTALL)
                             
                             if test_functions:
-                                docstring_ratio = len(docstring_functions) / len(test_functions)
+                                try:
+                                    docstring_ratio = len(docstring_functions) / len(test_functions) if len(test_functions) > 0 else 0.0
+                                except Exception:
+                                    docstring_ratio = 0.0
                                 doc_quality += docstring_ratio * 4.0  # Up to 4 points for complete function docstrings
-                                result["docstring_ratio"] = (result["docstring_ratio"] * test_files_with_docs + docstring_ratio) / (test_files_with_docs + 1)
+                                # Weighted average for docstring_ratio
+                                prev_count = test_files_with_docs
+                                result["docstring_ratio"] = (
+                                    (result["docstring_ratio"] * prev_count + docstring_ratio) / (prev_count + 1)
+                                    if (prev_count + 1) > 0 else 0.0
+                                )
                                 
                                 if docstring_ratio > 0:
                                     has_docs = True
@@ -174,10 +187,16 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
                             
                             # Check for test description comments
                             test_functions = re.findall(r'(test|it)\s*\(\s*[\'"]', content)
-                            commented_tests = re.findall(r'\/\/.*\n\s*(test|it)\s*\(\s*[\'"]', content) or re.findall(r'\/\*.*?\*\/\s*(test|it)\s*\(\s*[\'"]', content, re.DOTALL)
+                            commented_tests = (
+                                re.findall(r'\/\/.*\n\s*(test|it)\s*\(\s*[\'"]', content)
+                                or re.findall(r'\/\*.*?\*\/\s*(test|it)\s*\(\s*[\'"]', content, re.DOTALL)
+                            )
                             
                             if test_functions:
-                                comment_ratio = len(commented_tests) / len(test_functions)
+                                try:
+                                    comment_ratio = len(commented_tests) / len(test_functions) if len(test_functions) > 0 else 0.0
+                                except Exception:
+                                    comment_ratio = 0.0
                                 doc_quality += comment_ratio * 4.0
                                 if comment_ratio > 0:
                                     has_docs = True
@@ -195,7 +214,10 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
                             javadoc_methods = re.findall(r'\/\*\*.*?\*\/\s*@Test', content, re.DOTALL)
                             
                             if test_methods:
-                                javadoc_ratio = len(javadoc_methods) / len(test_methods)
+                                try:
+                                    javadoc_ratio = len(javadoc_methods) / len(test_methods) if len(test_methods) > 0 else 0.0
+                                except Exception:
+                                    javadoc_ratio = 0.0
                                 doc_quality += javadoc_ratio * 4.0
                                 if javadoc_ratio > 0:
                                     has_docs = True
@@ -211,9 +233,8 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
                             # Check for test descriptions (RSpec style)
                             test_descriptions = re.findall(r'(it|specify|context|describe)\s+[\'"]([^\'"]+)[\'"]', content)
                             if test_descriptions:
-                                # RSpec-style tests are self-documenting through their descriptions
                                 has_docs = True
-                                description_quality = min(4.0, len(test_descriptions) * 0.5)  # Up to 4 points
+                                description_quality = min(4.0, len(test_descriptions) * 0.5)
                                 doc_quality += description_quality
                         
                         # Common checks for all file types
@@ -255,14 +276,14 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
             
             # Calculate documentation coverage percentage
             if result["total_test_files"] > 0:
-                result["doc_coverage"] = (test_files_with_docs / result["total_test_files"]) * 100
+                result["doc_coverage"] = (test_files_with_docs / result["total_test_files"]) * 100 if result["total_test_files"] > 0 else 0.0
             
             # Calculate average documentation quality score
             if doc_quality_scores:
                 result["doc_quality_score"] = sum(doc_quality_scores) / len(doc_quality_scores)
             
             # Update result
-            result["test_docs_present"] = test_files_with_docs > 0 or doc_files
+            result["test_docs_present"] = bool(test_files_with_docs > 0 or doc_files)
             result["test_files_with_docs"] = test_files_with_docs
             result["missing_docs"] = missing_docs[:10]  # Limit to 10 examples
             result["well_documented_tests"] = well_documented[:5]  # Top 5 well-documented
@@ -271,6 +292,7 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
         # Fallback to API data if local path is not available
         elif repo_data:
             logger.info("Local repository not available, using API data for analysis")
+            check_timeout()
             
             # Try to extract documentation information from API data
             files = repo_data.get("files", [])
@@ -278,6 +300,7 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
             doc_files = []
             
             for file_data in files:
+                check_timeout()
                 filename = file_data.get("path", "")
                 
                 # Detect test files
@@ -315,7 +338,7 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
             # Calculate basic metrics
             result["total_test_files"] = len(test_files)
             if result["total_test_files"] > 0:
-                result["doc_coverage"] = (result["test_files_with_docs"] / result["total_test_files"]) * 100
+                result["doc_coverage"] = (result["test_files_with_docs"] / result["total_test_files"]) * 100 if result["total_test_files"] > 0 else 0.0
         else:
             logger.warning("No local repository path or API data provided for analysis")
             return result
@@ -351,21 +374,21 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
         result["timed_out"] = True
         logger.warning("check_test_documentation timed out")
     finally:
-        if not IS_WINDOWS:
+        if sigalrm_set:
             signal.alarm(0)
 
     return result
 
 def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
-    global start_time, timeout_occurred, timeout_seconds
+    global start_time, timeout_seconds
     local_path = repository.get('local_path')
     timeout_seconds = 35
     start_time = time.time()
-    timeout_occurred = False
 
-    if not IS_WINDOWS:
-        signal.signal(signal.SIGALRM, timeout_handler)
+    sigalrm_set = False
+    if HAS_SIGALRM and not IS_WINDOWS and IS_MAIN_THREAD:
         signal.alarm(timeout_seconds)
+        sigalrm_set = True
 
     try:
         result = check_test_documentation(local_path, repository)
@@ -404,7 +427,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             "score": 0,
             "result": {
                 "error": str(e),
-                "timed_out": True,
+                "timed_out": False,
                 "processing_time": timeout_seconds,
                 "test_docs_present": False,
                 "doc_coverage": 0.0,
@@ -422,5 +445,5 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             "errors": str(e)
         }
     finally:
-        if not IS_WINDOWS:
+        if sigalrm_set:
             signal.alarm(0)

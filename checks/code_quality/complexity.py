@@ -9,16 +9,14 @@ import logging
 import time
 import signal
 import platform
-from typing import Dict, Any, List, Tuple
-from collections import defaultdict
-
-# Setup logging
-logger = logging.getLogger(__name__)
+from typing import Dict, Any
+# ...existing code...
 
 timeout_occurred = False
 start_time = 0
 timeout_seconds = 0
 IS_WINDOWS = platform.system() == 'Windows'
+HAS_SIGALRM = hasattr(signal, "SIGALRM")
 
 def timeout_handler(signum, frame):
     global timeout_occurred
@@ -26,7 +24,7 @@ def timeout_handler(signum, frame):
 
 def check_timeout():
     global start_time, timeout_seconds, timeout_occurred
-    if time.time() - start_time >= timeout_seconds:
+    if timeout_seconds and (time.time() - start_time >= timeout_seconds):
         raise TimeoutError("Timeout exceeded")
 
 def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict[str, Any]:
@@ -44,10 +42,16 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
         "files_checked": 0,
         "language_stats": {}
     }
-    
-    if not IS_WINDOWS:
+
+    # Ensure timeout_seconds is set
+    if not timeout_seconds:
+        timeout_seconds = 35
+
+    sigalrm_set = False
+    if HAS_SIGALRM and not IS_WINDOWS:
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(timeout_seconds)
+        sigalrm_set = True
 
     try:
         check_timeout()
@@ -124,7 +128,8 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
         for root, _, files in os.walk(repo_path):
             check_timeout()
             # Skip node_modules, .git and other common directories
-            if any(skip_dir in root for skip_dir in ['/node_modules/', '/.git/', '/dist/', '/build/', '/__pycache__/']):
+            skip_dirs = ["node_modules", ".git", "dist", "build", "__pycache__"]
+            if any(skip_dir in root.split(os.sep) for skip_dir in skip_dirs):
                 continue
                 
             for file in files:
@@ -168,7 +173,11 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                         # Extract functions/methods
                         language_config = language_patterns[file_language]
                         check_timeout()  # Add timeout check before regex operation
-                        function_matches = list(re.finditer(language_config["function_pattern"], content, re.MULTILINE))
+                        try:
+                            function_matches = list(re.finditer(language_config["function_pattern"], content, re.MULTILINE))
+                        except Exception as e:
+                            logger.error(f"Regex error in {file_path}: {e}")
+                            continue
                         check_timeout()  # Add timeout check after regex operation
                         
                         functions_found = 0
@@ -194,7 +203,11 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                             search_limit = min(len(content) - start_pos, 100000)  # Limit to ~100KB search
                             search_content = content[start_pos:start_pos + search_limit]
                             
-                            next_match = re.search(language_config["function_pattern"], search_content, re.MULTILINE)
+                            try:
+                                next_match = re.search(language_config["function_pattern"], search_content, re.MULTILINE)
+                            except Exception as e:
+                                logger.error(f"Regex error in function body search in {file_path}: {e}")
+                                next_match = None
                             end_pos = start_pos + next_match.start() if next_match else min(len(content), start_pos + search_limit)
                             
                             function_body = content[start_pos:end_pos]
@@ -209,7 +222,10 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                             complexity = 1  # Base complexity
                             for pattern in language_config["complexity_patterns"]:
                                 check_timeout()  # Add timeout check inside complexity calculation
-                                complexity += len(re.findall(pattern, function_body))
+                                try:
+                                    complexity += len(re.findall(pattern, function_body))
+                                except Exception as e:
+                                    logger.error(f"Regex error in complexity pattern in {file_path}: {e}")
                             
                             # Update complexity distribution
                             if complexity <= 5:
@@ -251,6 +267,8 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
         # Calculate average complexity
         if total_functions > 0:
             result["average_complexity"] = round(total_complexity / total_functions, 2)
+        else:
+            result["average_complexity"] = 0
         
         # Calculate language-specific averages
         for lang in language_patterns:
@@ -258,6 +276,8 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
             if language_functions > 0:
                 language_complexity = result["language_stats"][lang]["total_complexity"]
                 result["language_stats"][lang]["average_complexity"] = round(language_complexity / language_functions, 2)
+            else:
+                result["language_stats"][lang]["average_complexity"] = 0
         
         # Sort complex functions by complexity (descending)
         result["complex_functions"] = sorted(result["complex_functions"], key=lambda x: x["complexity"], reverse=True)
@@ -298,7 +318,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
         logger.warning("check_code_complexity timed out")
         result["timed_out"] = True
     finally:
-        if not IS_WINDOWS:
+        if sigalrm_set:
             signal.alarm(0)
     
     return result
@@ -310,9 +330,11 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
     start_time = time.time()
     timeout_occurred = False
 
-    if not IS_WINDOWS:
+    sigalrm_set = False
+    if HAS_SIGALRM and not IS_WINDOWS:
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(timeout_seconds)
+        sigalrm_set = True
 
     try:
         result = check_code_complexity(local_path, repository)
@@ -340,5 +362,5 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             "errors": str(e)
         }
     finally:
-        if not IS_WINDOWS:
+        if sigalrm_set:
             signal.alarm(0)
