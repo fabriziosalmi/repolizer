@@ -16,8 +16,22 @@ from datetime import datetime, timezone # Import datetime and timezone for sorti
 import requests # Add requests import
 from app_utils import enqueue_output, run_analyzer, get_results_file_info # Import moved functions
 from collections import defaultdict
+from flask_caching import Cache # Import Cache
 
 app = Flask(__name__)
+
+# --- Caching Setup ---
+# Configure cache (using simple in-memory cache for demonstration)
+# For production, consider 'FileSystemCache', 'RedisCache', 'MemcachedCache'
+# See https://flask-caching.readthedocs.io/en/latest/
+cache_config = {
+    "CACHE_TYPE": "SimpleCache",  # In-memory cache
+    "CACHE_DEFAULT_TIMEOUT": 300  # Default timeout 5 minutes (in seconds)
+}
+app.config.from_mapping(cache_config)
+cache = Cache(app)
+# --- End Caching Setup ---
+
 
 # --- Authentication Setup ---
 # IMPORTANT: Change this secret key in a real application!
@@ -493,6 +507,7 @@ def stop_scraper():
         }), 500
 
 @app.route('/')
+@cache.cached() # Cache the main page
 def index():
     # Publicly accessible
     return render_template('repo_viewer.html')
@@ -503,6 +518,7 @@ def scraper():
     return render_template('repo_scraper.html')
 
 @app.route('/repositories.jsonl')
+# @cache.cached() # Removed: Cannot pickle file stream response
 def serve_repos_file():
     # Serve the repositories.jsonl file directly
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
@@ -520,6 +536,7 @@ def serve_repos_file():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
 
 @app.route('/results.jsonl')
+# @cache.cached() # Removed: Cannot pickle file stream response
 def serve_results_file():
     # Serve the results.jsonl file directly - this is for analyzed repos
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
@@ -538,6 +555,7 @@ def serve_results_file():
 
 # Add endpoint to serve any result file
 @app.route('/results/<filename>')
+# @cache.cached() # Removed: Cannot pickle file stream response
 def serve_result_file(filename):
     # Security check - only allow specific file extensions
     allowed_extensions = ['.jsonl', '.json']
@@ -553,6 +571,7 @@ def serve_result_file(filename):
 
 @app.route('/repo/<path:repo_id>') # Use <path:repo_id> to allow slashes
 # Removed protection - Publicly accessible
+# @cache.cached() # Caching this is complex due to finding the *latest* entry. Add with caution.
 def repo_detail(repo_id):
     print(f"--- Starting repo_detail for ID/Name: {repo_id} ---") # DEBUG
     # Load results.jsonl or sample_results.jsonl
@@ -664,6 +683,7 @@ def repo_detail(repo_id):
 
 @app.route('/repo/<path:repo_id>/history')
 # Removed protection - Publicly accessible
+# @cache.cached() # Caching this is complex due to reading all history. Add with caution.
 def repo_history(repo_id):
     """Render the analysis history page for a specific repository"""
     print(f"--- Starting repo_history for ID/Name: {repo_id} ---") # DEBUG
@@ -998,12 +1018,14 @@ def stop_analyzer():
         }), 500
 
 @app.route('/stats')
+@cache.cached() # Cache the stats page rendering
 def repo_stats():
     """Render the repository statistics page"""
     # Publicly accessible
     return render_template('repo_stats.html')
 
 @app.route('/api/statistics')
+@cache.cached() # Cache the statistics API response
 def get_statistics():
     """
     API endpoint to get repository statistics.
@@ -1209,6 +1231,7 @@ def serve_manifest():
 
 # Add route to serve static files
 @app.route('/static/<path:path>')
+# @cache.cached() # Removed: Cannot pickle file stream response
 def serve_static(path):
     # Ensure the static directory exists
     static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
@@ -1250,12 +1273,19 @@ if __name__ == '__main__':
         current_dir_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repo_viewer.html')
         if os.path.exists(current_dir_file):
             # Move the file to the templates directory
-            import shutil
-            shutil.move(current_dir_file, template_file)
-            print(f"Moved repo_viewer.html to templates directory")
+            try:
+                import shutil
+                shutil.move(current_dir_file, template_file)
+                print(f"Moved repo_viewer.html to templates directory: {template_file}")
+            except Exception as e:
+                print(f"Error moving repo_viewer.html: {e}")
         else:
-            print("Warning: repo_viewer.html not found in current directory or templates directory")
-    
+            # This is the corrected else block corresponding to the inner if
+            print(f"Warning: repo_viewer.html not found in current directory: {current_dir_file}")
+            print(f"         and not found in templates directory: {template_file}")
+    # else: # This corresponds to the outer if not os.path.exists(template_file)
+    #     print(f"Found repo_viewer.html in templates directory: {template_file}") # Optional: Add confirmation
+
     # Run the Flask app
     print("Starting web server at http://0.0.0.0:8000/") # Updated print statement
     print("Login required for Scraper and Analyzer pages/APIs.") # Updated message
