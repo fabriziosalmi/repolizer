@@ -1049,16 +1049,20 @@ class CheckOrchestrator:
 
         if os.path.exists(results_path):
             try:
-                with jsonlines.open(results_path) as reader:
-                    for result in reader:
-                        if "repository" in result:
-                            # Match by ID
-                            if repo_id and result["repository"].get("id") == repo_id:
-                                return result
+                with open(results_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        try:
+                            result = json.loads(line)
+                            if "repository" in result:
+                                # Match by ID
+                                if repo_id and result["repository"].get("id") == repo_id:
+                                    return result
 
-                            # Match by full_name (username/reponame)
-                            if repo_name and result["repository"].get("full_name") == repo_name:
-                                return result
+                                # Match by full_name (username/reponame)
+                                if repo_name and result["repository"].get("full_name") == repo_name:
+                                    return result
+                        except json.JSONDecodeError:
+                            self.logger.warning(f"Skipping invalid JSON line in {results_path}")
             except Exception as e:
                 self.logger.error(f"Error loading existing results: {e}")
 

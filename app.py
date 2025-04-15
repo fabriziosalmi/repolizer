@@ -14,7 +14,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone # Import datetime and timezone for sorting
 import requests # Add requests import
-from app_utils import enqueue_output, run_analyzer # Import moved functions
+from app_utils import enqueue_output, run_analyzer, get_results_file_info # Import moved functions
+from collections import defaultdict
 
 app = Flask(__name__)
 
@@ -1001,6 +1002,205 @@ def repo_stats():
     """Render the repository statistics page"""
     # Publicly accessible
     return render_template('repo_stats.html')
+
+@app.route('/api/statistics')
+def get_statistics():
+    """
+    API endpoint to get repository statistics.
+    Returns:
+        JSON response with statistics data.
+    """
+    # Load results data
+    results_file_info = get_results_file_info()
+    results_path = results_file_info['path']
+    if not results_path:
+        return jsonify({"error": "No results file found"}), 404
+
+    # Initialize statistics data structures
+    results = []
+    total_overall_scores = 0
+    category_scores = defaultdict(lambda: {'total': 0, 'count': 0, 'repo_count': set()})
+    issue_counts = defaultdict(int)
+    
+    # Process JSONL file line by line to avoid memory issues
+    try:
+        repo_count = 0
+        with open(results_path, 'r', encoding='utf-8') as f:
+            for line_idx, line in enumerate(f):
+                line = line.strip()
+                if not line:  # Skip empty lines
+                    continue
+                    
+                try:
+                    # Parse each line as a separate JSON object
+                    result = json.loads(line)
+                    
+                    # Skip lines that don't have repository data
+                    if not result.get('repository'):
+                        continue
+                        
+                    repo_count += 1
+                    
+                    # Get basic repository info for summarizing
+                    repo_id = result.get('repository', {}).get('id')
+                    if not repo_id:
+                        continue
+                        
+                    # Accumulate overall score
+                    overall_score = result.get('overall_score', 0)
+                    total_overall_scores += overall_score
+                    
+                    # Process each category
+                    for category in ['documentation', 'security', 'maintainability', 'code_quality', 
+                                     'testing', 'licensing', 'community', 'performance', 
+                                     'accessibility', 'ci_cd']:
+                        category_data = result.get(category, {})
+                        
+                        # Skip if category isn't present
+                        if not category_data:
+                            continue
+                            
+                        # Calculate the average score for this category
+                        category_checks = [
+                            check for check in category_data.values() 
+                            if isinstance(check, dict) and 'score' in check
+                        ]
+                        
+                        if category_checks:
+                            category_total = sum(check['score'] for check in category_checks)
+                            category_avg = category_total / len(category_checks)
+                            
+                            # Update the category statistics
+                            category_scores[category]['total'] += category_avg
+                            category_scores[category]['count'] += 1
+                            category_scores[category]['repo_count'].add(repo_id)
+                            
+                            # Record issues (checks with score < 50)
+                            for check_name, check_data in category_data.items():
+                                if isinstance(check_data, dict) and check_data.get('score', 100) < 50:
+                                    issue_key = f"{category}: {check_name}"
+                                    issue_counts[issue_key] += 1
+                    
+                    # Limit to maximum 100 repositories for memory efficiency
+                    if repo_count >= 100:
+                        break
+                        
+                except json.JSONDecodeError as e:
+                    # Log the error but continue processing
+                    print(f"JSON error in line {line_idx+1}: {e}")
+                    continue
+                except Exception as e:
+                    # Log other errors but continue
+                    print(f"Error processing repository at line {line_idx+1}: {e}")
+                    continue
+                
+        # Calculate statistics from processed data
+        total_repositories = repo_count
+        
+        if total_repositories == 0:
+            return jsonify({
+                "total_repositories": 0,
+                "average_overall_score": 0,
+                "category_average_scores": {},
+                "category_repo_counts": {},
+                "checks_by_category": [],
+                "common_issues": ["No repositories found"]
+            })
+
+        average_overall_score = total_overall_scores / total_repositories if total_repositories else 0
+
+        # Calculate final category averages
+        category_average_scores = {
+            category: data['total'] / data['count'] if data['count'] else 0
+            for category, data in category_scores.items()
+        }
+
+        category_repo_counts = {
+            category: len(data['repo_count'])
+            for category, data in category_scores.items()
+        }
+
+        # Get the most common issues
+        common_issues = [
+            issue for issue, count in sorted(
+                issue_counts.items(), 
+                key=lambda x: x[1], 
+                reverse=True
+            )[:10]
+        ]
+
+        # Extract checks by category - no need to process all repos again
+        checks_by_category = []
+        for category in ['documentation', 'security', 'maintainability', 'code_quality', 
+                        'testing', 'licensing', 'community', 'performance', 
+                        'accessibility', 'ci_cd']:
+            if category in category_scores:
+                # Just add known check names from our sample data
+                standard_checks = get_standard_checks_for_category(category)
+                
+                if standard_checks:  # Only add categories that have checks
+                    checks_by_category.append({
+                        'category': category,
+                        'checks': standard_checks
+                    })
+
+        # Prepare the statistics data
+        stats_data = {
+            'total_repositories': total_repositories,
+            'average_overall_score': average_overall_score,
+            'category_average_scores': category_average_scores,
+            'category_repo_counts': category_repo_counts,
+            'checks_by_category': checks_by_category,
+            'common_issues': common_issues
+        }
+
+        return jsonify(stats_data)
+
+    except Exception as e:
+        print(f"Error loading results: {e}")
+        return jsonify({"error": f"Error loading results: {e}"}), 500
+
+def get_standard_checks_for_category(category):
+    """
+    Returns standard check names for a given category.
+    This avoids having to parse the entire file to find all check names.
+    """
+    standard_checks = {
+        'documentation': ['Readme Completeness', 'Documentation Check', 'Contributing Guidelines', 
+                         'Code Comments', 'Example Usage', 'Troubleshooting', 'Changelog', 
+                         'Code Of Conduct', 'License File'],
+        'security': ['Secret Leakage', 'Logging', 'Encryption', 'Cors', 'Input Validation',
+                    'Session Management', 'Http Headers', 'Authorization', 'Authentication',
+                    'Dependency Vulnerabilities'],
+        'maintainability': ['Configuration', 'Logging', 'Error Messages', 'Code Review',
+                           'Code Organization', 'Onboarding', 'Technical Documentation',
+                           'Modularity', 'Documentation Quality', 'Dependency Management'],
+        'code_quality': ['Dependency Freshness', 'Code Style', 'Complexity', 
+                        'Documentation Coverage', 'Technical Debt', 'Type Safety',
+                        'Linting', 'Code Smells', 'Code Duplication'],
+        'testing': ['Documentation', 'Reliability', 'Speed', 'Coverage', 'Unittests',
+                   'E2E', 'Integration', 'Mocking', 'Data', 'Snapshot'],
+        'performance': ['Database Queries', 'Response Time', 'Render Performance',
+                       'Concurrency', 'Cpu Usage', 'Memory Usage', 'Asset Optimization',
+                       'Caching', 'Lazy Loading', 'Bundle Size'],
+        'accessibility': ['Zoom Compatibility', 'Text Alternatives', 'Color Contrast',
+                         'Wcag Compliance', 'Screen Reader', 'Keyboard Navigation',
+                         'Aria Attributes', 'Focus Management', 'Motion Reduction',
+                         'Semantic Html'],
+        'community': ['Community Events', 'Community Check', 'Adoption Metrics',
+                     'Issue Response Time', 'Community Size', 'Pull Request Handling',
+                     'Contribution Guide', 'Documentation Translations', 
+                     'Code Of Conduct', 'Support Channels', 'Discussion Activity'],
+        'licensing': ['License Compliance', 'Third Party Code', 'Copyright Headers',
+                     'License Updates', 'Spdx Identifiers', 'Attribution',
+                     'License Compatibility', 'License File', 'Dependency Licenses',
+                     'Patent Clauses'],
+        'ci_cd': ['Secret Management', 'Pipeline Speed', 'Deployment Frequency',
+                 'Monitoring Integration', 'Build Status', 'Infrastructure As Code',
+                 'Environment Parity', 'Artifact Management']
+    }
+    
+    return standard_checks.get(category, [])
 
 # Add route to serve manifest.json
 @app.route('/manifest.json')

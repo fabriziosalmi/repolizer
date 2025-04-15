@@ -1059,4 +1059,41 @@ class TimeoutException(Exception):
     """Custom exception for timeouts."""
     pass
 
+def get_results_file_info(filename: str = 'results.jsonl') -> Dict[str, Any]:
+    """
+    Gets the full path and modification time of the results file.
+    Checks for sample file as fallback.
+
+    Args:
+        filename: The base name of the results file (e.g., 'results.jsonl').
+
+    Returns:
+        A dictionary containing 'path' (str) and 'mtime' (float or None).
+        Returns None for path/mtime if neither file exists.
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    primary_path = os.path.join(base_dir, filename)
+    sample_filename = f"sample_{filename}"
+    sample_path = os.path.join(base_dir, sample_filename)
+
+    file_path_to_use = None
+    mtime = None
+
+    if os.path.exists(primary_path):
+        file_path_to_use = primary_path
+    elif os.path.exists(sample_path):
+        file_path_to_use = sample_path
+        logger.info(f"Using sample file: {sample_filename}")
+    else:
+        logger.warning(f"Neither {filename} nor {sample_filename} found.")
+        return {'path': None, 'mtime': None}
+
+    try:
+        mtime = os.path.getmtime(file_path_to_use)
+    except OSError as e:
+        logger.error(f"Error getting modification time for {file_path_to_use}: {e}")
+        mtime = None # Ensure mtime is None on error
+
+    return {'path': file_path_to_use, 'mtime': mtime}
+
 # ... rest of the file ...

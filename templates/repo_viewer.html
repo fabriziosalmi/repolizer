@@ -79,6 +79,34 @@
             margin-right: 0.25rem;
             margin-bottom: 0.25rem;
         }
+        /* Add loading indicator style */
+        #loading-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 0;
+            font-size: 1.2rem;
+            color: #4b5563; /* gray-600 */
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6; /* blue-500 */
+            animation: spin 1s ease infinite;
+            margin-right: 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Style for no results */
+        #no-results {
+            text-align: center;
+            padding: 4rem 0;
+            color: #6b7280; /* gray-500 */
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -187,15 +215,16 @@
             </div>
         </div>
 
-        <div id="loading" class="flex justify-center items-center py-12">
-            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div id="loading-indicator">
+            <div class="spinner"></div>
+            <span>Loading repositories...</span>
         </div>
 
-        <div id="repos-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div id="repo-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Repository cards will be dynamically inserted here -->
         </div>
 
-        <div id="no-results" class="hidden text-center py-12">
+        <div id="no-results" class="hidden">
             <i class="fas fa-search text-gray-400 text-5xl mb-4"></i>
             <p class="text-xl text-gray-600">No repositories found matching your search criteria.</p>
         </div>
@@ -208,494 +237,692 @@
     </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            let allRepos = [];
-            let filteredRepos = [];
-            let currentLanguage = 'all';
-            let currentCategory = 'all';
-            let minScoreFilter = 0;
-            const reposContainer = document.getElementById('repos-container');
-            const loadingIndicator = document.getElementById('loading');
-            const noResults = document.getElementById('no-results');
-            const repoCount = document.getElementById('repo-count');
-            const searchInput = document.getElementById('search-input');
-            const sortSelect = document.getElementById('sort-select');
-            // Removed references to old filter buttons and slider
-            // const languageFilters = document.querySelectorAll('.language-filter');
-            // const categoryFilters = document.querySelectorAll('.category-filter');
-            // const scoreFilter = document.getElementById('score-filter');
-            // const scoreValue = document.getElementById('score-value');
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Global variables
+    let allRepos = [];
+    let filteredRepos = [];
+    let currentLanguage = 'all';
+    let currentCategory = 'all';
+    let minScoreFilter = 0;
+    let currentPage = 1;
+    const reposPerPage = 100;
+    
+    // Get elements from the DOM
+    const reposContainer = document.getElementById('repo-grid');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const noResults = document.getElementById('no-results');
+    const repoCount = document.getElementById('repo-count');
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const languageFilterSelect = document.getElementById('language-filter-select');
+    const categoryFilterSelect = document.getElementById('category-filter-select');
+    const scoreFilterSelect = document.getElementById('score-filter-select');
+    
+    // Create pagination container at the bottom of the page
+    const paginationContainer = document.createElement('div');
+    paginationContainer.id = 'pagination-container';
+    paginationContainer.className = 'flex justify-center my-6';
+    reposContainer.parentNode.insertBefore(paginationContainer, reposContainer.nextSibling);
 
-            // Get references to new select elements
-            const languageFilterSelect = document.getElementById('language-filter-select');
-            const categoryFilterSelect = document.getElementById('category-filter-select');
-            const scoreFilterSelect = document.getElementById('score-filter-select');
+    // Check if all required DOM elements exist
+    if (!reposContainer || !loadingIndicator || !noResults || !repoCount) {
+      console.error('Required DOM elements not found.');
+      return;
+    }
 
-            // Set up category names for display
-            const categoryNames = {
-                'documentation': 'Documentation',
-                'security': 'Security',
-                'code_quality': 'Code Quality',
-                'performance': 'Performance',
-                'accessibility': 'Accessibility', 
-                'ci_cd': 'CI/CD',
-                'maintainability': 'Maintainability',
-                'testing': 'Testing',
-                'licensing': 'Licensing',
-                'community': 'Community'
-            };
+    // Category icons and names
+    const categoryIcons = {
+      'documentation': 'fa-file-lines',
+      'security': 'fa-shield-alt',
+      'code_quality': 'fa-code',
+      'performance': 'fa-tachometer-alt',
+      'accessibility': 'fa-universal-access',
+      'ci_cd': 'fa-sync',
+      'maintainability': 'fa-wrench',
+      'testing': 'fa-vial',
+      'licensing': 'fa-balance-scale',
+      'community': 'fa-users'
+    };
 
-            // Set up category icons for display
-            const categoryIcons = {
-                'documentation': 'fa-file-lines',
-                'security': 'fa-shield-alt',
-                'code_quality': 'fa-code',
-                'performance': 'fa-tachometer-alt',
-                'accessibility': 'fa-universal-access',
-                'ci_cd': 'fa-sync',
-                'maintainability': 'fa-wrench',
-                'testing': 'fa-vial',
-                'licensing': 'fa-balance-scale',
-                'community': 'fa-users'
-            };
+    const categoryNames = {
+      'documentation': 'Documentation',
+      'security': 'Security',
+      'code_quality': 'Code Quality',
+      'performance': 'Performance',
+      'accessibility': 'Accessibility',
+      'ci_cd': 'CI/CD',
+      'maintainability': 'Maintainability',
+      'testing': 'Testing',
+      'licensing': 'Licensing',
+      'community': 'Community'
+    };
 
-            // Removed event listener for score range slider input
-            // scoreFilter.addEventListener('input', () => { ... });
+    // Get result path from parameters or use default
+    const urlParams = new URLSearchParams(window.location.search);
+    const resultPath = urlParams.get('path') || 'results.jsonl';
+    const pageParam = urlParams.get('page');
+    if (pageParam) {
+      currentPage = parseInt(pageParam, 10) || 1;
+    }
+    
+    console.log(`Loading repositories from: ${resultPath}, page ${currentPage}`);
 
-            // Get result file path from URL parameter if specified
-            const urlParams = new URLSearchParams(window.location.search);
-            const resultPath = urlParams.get('path') || 'results.jsonl';
+    // Load repositories from the results file
+    try {
+      // Show loading indicator
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'flex';
+        loadingIndicator.classList.remove('hidden');
+      }
+      
+      if (noResults) {
+        noResults.classList.add('hidden');
+      }
+      
+      // First try the specified results file
+      const response = await fetch(resultPath);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
+      }
+
+      const text = await response.text();
+
+      if (!text || text.trim() === '') {
+        throw new Error(`No data in ${resultPath}`);
+      }
+
+      console.log(`Loaded file with ${text.length} characters`);
+
+      // Determine if the file is JSON or JSONL format
+      const isJson = resultPath.toLowerCase().endsWith('.json') || 
+                     (text.trim().startsWith('[') && text.trim().endsWith(']'));
+
+      console.log(`Detected file format: ${isJson ? 'JSON' : 'JSONL'}`);
+
+      // Process based on the file format
+      if (isJson) {
+        // Handle JSON format (array of objects)
+        try {
+          const jsonData = JSON.parse(text);
+          
+          // Check if it's an array or a single object
+          if (Array.isArray(jsonData)) {
+            allRepos = jsonData.filter(repo => repo && repo.repository);
+          } else if (jsonData && jsonData.repository) {
+            allRepos = [jsonData];
+          }
+        } catch (e) {
+          console.error('Error parsing JSON:', e);
+          throw new Error('Invalid JSON format');
+        }
+      } else {
+        // Handle JSONL format (one JSON object per line)
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        console.log(`Processing ${lines.length} lines of JSONL`);
+        
+        const processedRepoIds = new Set(); // Track processed repos to avoid duplicates
+        allRepos = [];
+        
+        for (const line of lines) {
+          try {
+            const parsedRepo = JSON.parse(line);
+            if (parsedRepo && parsedRepo.repository) {
+              // Only include each repository once (take latest analysis)
+              const repoId = parsedRepo.repository.id;
+              if (!processedRepoIds.has(repoId)) {
+                processedRepoIds.add(repoId);
+                allRepos.push(parsedRepo);
+              }
+            }
+          } catch (e) {
+            console.warn('Error parsing line:', line.substring(0, 100) + '...', e);
+            // Continue to next line instead of failing completely
+          }
+        }
+      }
+
+      console.log(`Loaded ${allRepos.length} repositories successfully.`);
+
+      // If no results found or empty, try repositories.jsonl as fallback
+      if (allRepos.length === 0) {
+        console.log("No repositories found in the results file. Trying repositories.jsonl as fallback.");
+        const fallbackResponse = await fetch('repositories.jsonl');
+
+        if (fallbackResponse.ok) {
+          const fallbackText = await fallbackResponse.text();
+
+          if (fallbackText.trim()) {
+            const fallbackLines = fallbackText.split('\n').filter(line => line.trim() !== '');
             
-            console.log(`Loading repositories from: ${resultPath}`);
-
-            // Load repositories from the results file
-            try {
-                // First try the specified results file
-                const response = await fetch(resultPath);
-                
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch ${resultPath}: ${response.statusText}`);
+            for (const line of fallbackLines) {
+              try {
+                // Convert repo data to match results.jsonl format
+                const rawRepo = JSON.parse(line);
+                if (rawRepo) {
+                  allRepos.push({
+                    repository: rawRepo,
+                    overall_score: 0,
+                    timestamp: new Date().toISOString()
+                  });
                 }
-                
-                const text = await response.text();
-                
-                if (!text.trim()) {
-                    throw new Error(`No data in ${resultPath}`);
-                }
-                
-                // Determine if the file is JSON or JSONL format based on content or extension
-                const isJson = resultPath.toLowerCase().endsWith('.json') || 
-                              (text.trim().startsWith('[') && text.trim().endsWith(']'));
-                
-                console.log(`Detected file format: ${isJson ? 'JSON' : 'JSONL'}`);
-                
-                // Process based on the file format
-                if (isJson) {
-                    // Handle JSON format (array of objects)
-                    try {
-                        const jsonData = JSON.parse(text);
-                        
-                        // Check if it's an array or a single object
-                        if (Array.isArray(jsonData)) {
-                            allRepos = jsonData.filter(repo => repo && repo.repository);
-                        } else if (jsonData && jsonData.repository) {
-                            allRepos = [jsonData];
-                        }
-                    } catch (e) {
-                        console.error('Error parsing JSON:', e);
-                        throw new Error('Invalid JSON format');
-                    }
-                } else {
-                    // Handle JSONL format (one JSON object per line)
-                    const processedRepoIds = new Set(); // Track processed repos to avoid duplicates
-                    
-                    allRepos = text.split('\n')
-                        .filter(line => line.trim() !== '')
-                        .map(line => {
-                            try {
-                                return JSON.parse(line);
-                            } catch (e) {
-                                console.error('Error parsing line:', line, e);
-                                return null;
-                            }
-                        })
-                        .filter(repo => repo !== null && repo.repository)  // Ensure repo object has repository data
-                        .filter(repo => {
-                            // Only include each repository once (take latest analysis)
-                            const repoId = repo.repository.id;
-                            if (processedRepoIds.has(repoId)) {
-                                return false;
-                            }
-                            processedRepoIds.add(repoId);
-                            return true;
-                        });
-                }
-                
-                // If no results found or empty, try repositories.jsonl as fallback
-                if (allRepos.length === 0) {
-                    console.log("No repositories found in the results file. Trying repositories.jsonl as fallback.");
-                    const fallbackResponse = await fetch('repositories.jsonl');
-                    
-                    if (fallbackResponse.ok) {
-                        const fallbackText = await fallbackResponse.text();
-                        
-                        if (fallbackText.trim()) {
-                            allRepos = fallbackText.split('\n')
-                                .filter(line => line.trim() !== '')
-                                .map(line => {
-                                    try {
-                                        // Convert repo data to match results.jsonl format
-                                        const rawRepo = JSON.parse(line);
-                                        return {
-                                            repository: rawRepo,
-                                            overall_score: 0,
-                                            timestamp: new Date().toISOString()
-                                        };
-                                    } catch (e) {
-                                        console.error('Error parsing fallback line:', line, e);
-                                        return null;
-                                    }
-                                })
-                                .filter(repo => repo !== null);
-                        }
-                    } else {
-                        console.log("No fallback repository data found either.");
-                    }
-                }
-                
-                console.log(`Loaded ${allRepos.length} repositories successfully.`);
-                
-                // Process each repo to calculate category averages
-                allRepos.forEach(repo => {
-                    // Add category averages
-                    repo.category_scores = {};
-                    
-                    // For each category, calculate average score
-                    Object.keys(categoryNames).forEach(category => {
-                        if (repo[category]) {
-                            const checks = Object.values(repo[category]);
-                            if (checks.length > 0) {
-                                const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
-                                repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
-                            } else {
-                                repo.category_scores[category] = 0;
-                            }
-                        } else {
-                            repo.category_scores[category] = 0;
-                        }
-                    });
-                });
-                
-                filteredRepos = [...allRepos];
-                repoCount.textContent = filteredRepos.length;
-                
-                // Initial sort by overall score
-                sortRepos('overall_score_desc');
-                
-                // Hide loading indicator
-                loadingIndicator.classList.add('hidden');
-                
-            } catch (error) {
-                console.error('Error loading repositories:', error);
-                loadingIndicator.classList.add('hidden');
-                noResults.classList.remove('hidden');
-                noResults.querySelector('p').textContent = `Error loading repository data. Please make sure your results.jsonl file is accessible.`;
+              } catch (e) {
+                console.warn('Error parsing fallback line:', e);
+                // Continue to next line
+              }
             }
+          }
+        } else {
+          console.log("No fallback repository data found either.");
+        }
+      }
 
-            // Event listener for search input
-            searchInput.addEventListener('input', () => {
-                filterRepos();
-            });
+      // Process each repo to calculate category averages
+      allRepos.forEach(repo => {
+        // Add category averages
+        repo.category_scores = {};
 
-            // Event listener for sort select
-            sortSelect.addEventListener('change', () => {
-                sortRepos(sortSelect.value);
-            });
-
-            // Event listener for language filter select
-            languageFilterSelect.addEventListener('change', () => {
-                currentLanguage = languageFilterSelect.value;
-                filterRepos();
-            });
-
-            // Event listener for category filter select
-            categoryFilterSelect.addEventListener('change', () => {
-                currentCategory = categoryFilterSelect.value;
-                filterRepos();
-            });
-
-            // Event listener for score filter select
-            scoreFilterSelect.addEventListener('change', () => {
-                minScoreFilter = parseInt(scoreFilterSelect.value);
-                filterRepos();
-            });
-
-            // Function to filter repositories - add better logging for debugging
-            function filterRepos() {
-                const searchTerm = searchInput.value.toLowerCase();
-                
-                console.log(`Filtering repos with: Search="${searchTerm}", Language=${currentLanguage}, Category=${currentCategory}, MinScore=${minScoreFilter}`);
-                console.log(`Total repos before filtering: ${allRepos.length}`);
-
-                filteredRepos = allRepos.filter(repo => {
-                    // Filter by search term (repo name or description)
-                    const nameMatch = repo.repository?.name?.toLowerCase().includes(searchTerm) ||
-                                     (repo.repository?.description && repo.repository.description.toLowerCase().includes(searchTerm));
-
-                    // Filter by language
-                    const languageMatch = currentLanguage === 'all' || repo.repository?.language === currentLanguage;
-
-                    // Filter by overall score
-                    const scoreMatch = (repo.overall_score || 0) >= minScoreFilter;
-
-                    // Filter by category if selected
-                    let categoryMatch = true;
-                    if (currentCategory !== 'all') {
-                        // Check if the selected category exists and has a score > 0
-                        categoryMatch = (repo.category_scores?.[currentCategory] || 0) > 0;
-                    }
-
-                    const matches = nameMatch && languageMatch && scoreMatch && categoryMatch;
-                    return matches;
-                });
-
-                console.log(`Total repos after filtering: ${filteredRepos.length}`);
-                
-                // Update count and display repositories
-                repoCount.textContent = filteredRepos.length;
-                sortRepos(sortSelect.value); // Re-sort after filtering
+        // For each category, calculate average score
+        Object.keys(categoryNames).forEach(category => {
+          if (repo[category]) {
+            const checks = Object.values(repo[category]).filter(check => 
+              typeof check === 'object' && check !== null && 'score' in check
+            );
+            
+            if (checks.length > 0) {
+              const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
+              repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
+            } else {
+              repo.category_scores[category] = 0;
             }
-
-            // Function to sort repositories
-            function sortRepos(sortBy) {
-                switch(sortBy) {
-                    case 'overall_score_desc':
-                        filteredRepos.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
-                        break;
-                    case 'overall_score_asc':
-                        filteredRepos.sort((a, b) => (a.overall_score || 0) - (b.overall_score || 0));
-                        break;
-                    case 'stars':
-                        filteredRepos.sort((a, b) => (b.repository?.stargazers_count || 0) - (a.repository?.stargazers_count || 0));
-                        break;
-                    case 'forks':
-                        filteredRepos.sort((a, b) => (b.repository?.forks_count || 0) - (a.repository?.forks_count || 0));
-                        break;
-                    case 'updated':
-                        filteredRepos.sort((a, b) => {
-                            const dateA = a.repository?.updated_at ? new Date(a.repository.updated_at) : new Date(0);
-                            const dateB = b.repository?.updated_at ? new Date(b.repository.updated_at) : new Date(0);
-                            return dateB - dateA;
-                        });
-                        break;
-                    case 'name':
-                        filteredRepos.sort((a, b) => {
-                            const nameA = a.repository?.name?.toLowerCase() || '';
-                            const nameB = b.repository?.name?.toLowerCase() || '';
-                            return nameA.localeCompare(nameB);
-                        });
-                        break;
-                }
-                
-                displayRepos();
-            }
-
-            // Function to display repositories
-            function displayRepos() {
-                // Clear the container
-                reposContainer.innerHTML = '';
-                
-                if (filteredRepos.length === 0) {
-                    noResults.classList.remove('hidden');
-                    return;
-                }
-                
-                noResults.classList.add('hidden');
-                
-                // Display the filtered repositories
-                filteredRepos.forEach(repo => {
-                    const card = createRepoCard(repo);
-                    reposContainer.appendChild(card);
-                });
-            }
-
-            // Function to create a repository card
-            function createRepoCard(repo) {
-                const card = document.createElement('div');
-                card.className = 'repo-card bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col';
-                
-                const repoData = repo.repository || {};
-                
-                // Format numbers
-                const stars = formatNumber(repoData.stargazers_count || 0);
-                const forks = formatNumber(repoData.forks_count || 0);
-                
-                // Format date (convert to relative time)
-                const updatedAt = repoData.updated_at ? formatDate(repoData.updated_at) : 'unknown';
-                
-                // Truncate description
-                const description = repoData.description 
-                    ? truncateText(repoData.description, 120) 
-                    : 'No description available';
-                
-                // Create language badge with color
-                const languageColor = getLanguageColor(repoData.language);
-                const languageBadge = repoData.language ? 
-                    `<span class="inline-flex items-center">
-                        <span class="w-3 h-3 rounded-full mr-1" style="background-color: ${languageColor}"></span>
-                        ${repoData.language}
-                    </span>` : '';
-                
-                // Create overall score badge
-                const overallScore = repo.overall_score || 0;
-                const scoreClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
-                
-                // Create category score badges
-                let categoryScoresHtml = '';
-                if (repo.category_scores) {
-                    // Sort categories by score (highest first)
-                    const sortedCategories = Object.entries(repo.category_scores)
-                        .sort((a, b) => b[1] - a[1]);
-                        
-                    categoryScoresHtml = sortedCategories.map(([category, score]) => {
-                        const catScoreClass = score >= 70 ? 'bg-green-100 text-green-800' : 
-                                             (score >= 40 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
-                        return `<span class="category-badge ${catScoreClass}" title="${categoryNames[category]}">
-                                    <i class="fas ${categoryIcons[category]} mr-1"></i>${score}
-                                </span>`;
-                    }).join('');
-                }
-                
-                card.innerHTML = `
-                    <div class="p-5 flex-grow">
-                        <div class="flex justify-between items-start mb-3">
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-800">
-                                    <a href="${repoData.html_url || '#'}" target="_blank" class="hover:text-blue-600">
-                                        ${repoData.name || 'Unnamed Repository'}
-                                    </a>
-                                </h3>
-                                <p class="text-sm text-gray-600">${repoData.full_name || ''}</p>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="flex items-center text-sm mr-3">
-                                    <i class="fas fa-star text-yellow-400 mr-1"></i> ${stars}
-                                </span>
-                                <span class="flex items-center text-sm">
-                                    <i class="fas fa-code-branch text-gray-600 mr-1"></i> ${forks}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-sm font-medium text-gray-700">Overall Health Score:</span>
-                                <span class="text-sm font-medium ${scoreClass.replace('score-', 'text-')}">${overallScore.toFixed(1)}</span>
-                            </div>
-                            <div class="score-bar">
-                                <div class="score-bar-fill ${scoreClass}" style="width: ${overallScore}%"></div>
-                            </div>
-                        </div>
-                        
-                        <p class="text-gray-700 mb-4">${description}</p>
-                        <div class="flex flex-wrap gap-2 mb-4">
-                            ${categoryScoresHtml}
-                        </div>
-                        
-                        <div class="mt-4 text-center">
-                            <a href="/repo/${repo.repository.id || ''}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                <i class="fas fa-chart-bar mr-1"></i> View Detailed Report
-                            </a>
-                        </div>
-                    </div>
-                    <div class="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm text-gray-600">
-                        <div>${languageBadge}</div>
-                        <div>Updated ${updatedAt}</div>
-                    </div>
-                `;
-                
-                return card;
-            }
-
-            // Helper function to format numbers (e.g., 1000 -> 1k)
-            function formatNumber(num) {
-                if (num >= 1000000) {
-                    return (num / 1000000).toFixed(1) + 'M';
-                }
-                if (num >= 1000) {
-                    return (num / 1000).toFixed(1) + 'k';
-                }
-                return num;
-            }
-
-            // Helper function to format dates to relative time
-            function formatDate(dateString) {
-                const date = new Date(dateString);
-                const now = new Date();
-                const diffInSeconds = Math.floor((now - date) / 1000);
-                
-                if (dateString.includes('2025')) {
-                    // Handle future dates (from the sample data)
-                    return 'recently';
-                }
-                
-                if (diffInSeconds < 60) {
-                    return 'just now';
-                }
-                
-                const diffInMinutes = Math.floor(diffInSeconds / 60);
-                if (diffInMinutes < 60) {
-                    return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
-                }
-                
-                const diffInHours = Math.floor(diffInMinutes / 60);
-                if (diffInHours < 24) {
-                    return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-                }
-                
-                const diffInDays = Math.floor(diffInHours / 24);
-                if (diffInDays < 30) {
-                    return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-                }
-                
-                const diffInMonths = Math.floor(diffInDays / 30);
-                if (diffInMonths < 12) {
-                    return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
-                }
-                
-                const diffInYears = Math.floor(diffInMonths / 12);
-                return `${diffInYears} year${diffInYears > 1 ? 's' : ''} ago`;
-            }
-
-            // Helper function to truncate text
-            function truncateText(text, maxLength) {
-                if (text.length <= maxLength) return text;
-                return text.substring(0, maxLength) + '...';
-            }
-
-            // Helper function to get language color
-            function getLanguageColor(language) {
-                const colors = {
-                    'Python': '#3572A5',
-                    'JavaScript': '#f7df1e',
-                    'Java': '#b07219',
-                    'Go': '#00ADD8',
-                    'TypeScript': '#2b7489',
-                    'C++': '#f34b7d',
-                    'Ruby': '#701516',
-                    'PHP': '#4F5D95',
-                    'C#': '#178600',
-                    'Swift': '#ffac45',
-                    'Kotlin': '#F18E33',
-                    'Rust': '#dea584',
-                    'Scala': '#c22d40',
-                    'HTML': '#e34c26',
-                    'CSS': '#563d7c'
-                };
-                
-                return colors[language] || '#8F8F8F';
-            }
+          } else {
+            repo.category_scores[category] = 0;
+          }
         });
-    </script>
+      });
+
+      filteredRepos = [...allRepos];
+      
+      if (repoCount) {
+        repoCount.textContent = filteredRepos.length;
+      }
+
+      // Initial sort by overall score
+      sortRepos('overall_score_desc');
+
+      // Hide loading indicator
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+        loadingIndicator.classList.add('hidden');
+      }
+
+      // Check if there are results to display
+      if (filteredRepos.length === 0) {
+        if (noResults) {
+          noResults.classList.remove('hidden');
+        }
+      } else {
+        updatePagination();
+      }
+
+    } catch (error) {
+      console.error('Error loading repositories:', error);
+      
+      // Ensure the loading indicator is hidden
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+        loadingIndicator.classList.add('hidden');
+      }
+      
+      if (noResults) {
+        noResults.classList.remove('hidden');
+        
+        const errorMsg = noResults.querySelector('p');
+        if (errorMsg) {
+          errorMsg.textContent = `Error loading repository data: ${error.message}`;
+        }
+      }
+    }
+
+    // Event listener for search input
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        filterRepos();
+      });
+    }
+
+    // Event listener for sort select
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => {
+        sortRepos(sortSelect.value);
+      });
+    }
+
+    // Event listener for language filter select
+    if (languageFilterSelect) {
+      languageFilterSelect.addEventListener('change', () => {
+        currentLanguage = languageFilterSelect.value;
+        filterRepos();
+      });
+    }
+
+    // Event listener for category filter select
+    if (categoryFilterSelect) {
+      categoryFilterSelect.addEventListener('change', () => {
+        currentCategory = categoryFilterSelect.value;
+        filterRepos();
+      });
+    }
+
+    // Event listener for score filter select
+    if (scoreFilterSelect) {
+      scoreFilterSelect.addEventListener('change', () => {
+        minScoreFilter = parseInt(scoreFilterSelect.value);
+        filterRepos();
+      });
+    }
+
+    // Function to filter repositories
+    function filterRepos() {
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+      console.log(`Filtering repos with: Search="${searchTerm}", Language=${currentLanguage}, Category=${currentCategory}, MinScore=${minScoreFilter}`);
+      console.log(`Total repos before filtering: ${allRepos.length}`);
+
+      filteredRepos = allRepos.filter(repo => {
+        // Filter by search term (repo name or description)
+        const nameMatch = repo.repository?.name?.toLowerCase().includes(searchTerm) ||
+          (repo.repository?.description && repo.repository.description.toLowerCase().includes(searchTerm));
+
+        // Filter by language
+        const languageMatch = currentLanguage === 'all' || repo.repository?.language === currentLanguage;
+
+        // Filter by overall score
+        const scoreMatch = (repo.overall_score || 0) >= minScoreFilter;
+
+        // Filter by category if selected
+        let categoryMatch = true;
+        if (currentCategory !== 'all') {
+          // Check if the selected category exists and has a score > 0
+          categoryMatch = (repo.category_scores?.[currentCategory] || 0) > 0;
+        }
+
+        return nameMatch && languageMatch && scoreMatch && categoryMatch;
+      });
+
+      console.log(`Total repos after filtering: ${filteredRepos.length}`);
+
+      // Reset to first page when filters change
+      currentPage = 1;
+      updatePagination();
+      
+      // Update count and display repositories
+      if (repoCount) {
+        repoCount.textContent = filteredRepos.length;
+      }
+      
+      displayRepos();
+    }
+
+    // Function to sort repositories
+    function sortRepos(sortBy) {
+      switch (sortBy) {
+        case 'overall_score_desc':
+          filteredRepos.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+          break;
+        case 'overall_score_asc':
+          filteredRepos.sort((a, b) => (a.overall_score || 0) - (b.overall_score || 0));
+          break;
+        case 'stars':
+          filteredRepos.sort((a, b) => (b.repository?.stargazers_count || 0) - (a.repository?.stargazers_count || 0));
+          break;
+        case 'forks':
+          filteredRepos.sort((a, b) => (b.repository?.forks_count || 0) - (a.repository?.forks_count || 0));
+          break;
+        case 'updated':
+          filteredRepos.sort((a, b) => {
+            const dateA = a.repository?.updated_at ? new Date(a.repository.updated_at) : new Date(0);
+            const dateB = b.repository?.updated_at ? new Date(b.repository.updated_at) : new Date(0);
+            return dateB - dateA;
+          });
+          break;
+        case 'name':
+          filteredRepos.sort((a, b) => {
+            const nameA = a.repository?.name?.toLowerCase() || '';
+            const nameB = b.repository?.name?.toLowerCase() || '';
+            return nameA.localeCompare(nameB);
+          });
+          break;
+      }
+
+      displayRepos();
+    }
+
+    // Function to display repositories with pagination
+    function displayRepos() {
+      if (!reposContainer) return;
+      
+      // Clear the container
+      reposContainer.innerHTML = '';
+
+      if (filteredRepos.length === 0) {
+        if (noResults) {
+          noResults.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (noResults) {
+        noResults.classList.add('hidden');
+      }
+
+      // Calculate pagination
+      const startIndex = (currentPage - 1) * reposPerPage;
+      const endIndex = Math.min(startIndex + reposPerPage, filteredRepos.length);
+      const currentPageRepos = filteredRepos.slice(startIndex, endIndex);
+
+      // Display the current page repositories
+      currentPageRepos.forEach(repo => {
+        if (!repo.repository) {
+          console.warn('Repository object is missing required data:', repo);
+          return;
+        }
+        
+        const card = createRepoCard(repo);
+        reposContainer.appendChild(card);
+      });
+      
+      // Update pagination controls
+      updatePagination();
+    }
+
+    // Function to update pagination controls
+    function updatePagination() {
+      const totalPages = Math.ceil(filteredRepos.length / reposPerPage);
+      
+      // Clear previous pagination
+      paginationContainer.innerHTML = '';
+      
+      if (totalPages <= 1) {
+        return; // No pagination needed
+      }
+      
+      // Create pagination controls
+      const pagination = document.createElement('div');
+      pagination.className = 'flex items-center space-x-1';
+      
+      // Previous button
+      const prevButton = document.createElement('button');
+      prevButton.className = 'px-4 py-2 border rounded-md ' + 
+        (currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50');
+      prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+      prevButton.disabled = currentPage === 1;
+      prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          displayRepos();
+        }
+      });
+      pagination.appendChild(prevButton);
+      
+      // Page numbers
+      const maxVisiblePages = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      // Adjust if we're at the end
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+      
+      // First page button if not visible
+      if (startPage > 1) {
+        const firstButton = document.createElement('button');
+        firstButton.className = 'px-4 py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
+        firstButton.textContent = '1';
+        firstButton.addEventListener('click', () => {
+          currentPage = 1;
+          displayRepos();
+        });
+        pagination.appendChild(firstButton);
+        
+        // Ellipsis if needed
+        if (startPage > 2) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-4 py-2';
+          ellipsis.textContent = '...';
+          pagination.appendChild(ellipsis);
+        }
+      }
+      
+      // Page buttons
+      for (let i = startPage; i <= endPage; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.className = 'px-4 py-2 border rounded-md ' + 
+          (i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50');
+        pageButton.textContent = i.toString();
+        pageButton.addEventListener('click', () => {
+          currentPage = i;
+          displayRepos();
+        });
+        pagination.appendChild(pageButton);
+      }
+      
+      // Last page button if not visible
+      if (endPage < totalPages) {
+        // Ellipsis if needed
+        if (endPage < totalPages - 1) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-4 py-2';
+          ellipsis.textContent = '...';
+          pagination.appendChild(ellipsis);
+        }
+        
+        const lastButton = document.createElement('button');
+        lastButton.className = 'px-4 py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
+        lastButton.textContent = totalPages.toString();
+        lastButton.addEventListener('click', () => {
+          currentPage = totalPages;
+          displayRepos();
+        });
+        pagination.appendChild(lastButton);
+      }
+      
+      // Next button
+      const nextButton = document.createElement('button');
+      nextButton.className = 'px-4 py-2 border rounded-md ' + 
+        (currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50');
+      nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          displayRepos();
+        }
+      });
+      pagination.appendChild(nextButton);
+      
+      // Page info
+      const pageInfo = document.createElement('div');
+      pageInfo.className = 'ml-4 text-sm text-gray-600';
+      pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredRepos.length} repositories)`;
+      
+      // Append to container
+      paginationContainer.appendChild(pagination);
+      paginationContainer.appendChild(pageInfo);
+      
+      // Update URL with current page
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', currentPage);
+      window.history.replaceState({}, '', url);
+    }
+
+    // Function to create a repository card
+    function createRepoCard(repo) {
+      const card = document.createElement('div');
+      card.className = 'repo-card bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col';
+
+      const repoData = repo.repository || {};
+
+      // Format numbers
+      const stars = formatNumber(repoData.stargazers_count || 0);
+      const forks = formatNumber(repoData.forks_count || 0);
+
+      // Format date (convert to relative time)
+      const updatedAt = repoData.updated_at ? formatDate(repoData.updated_at) : 'unknown';
+
+      // Truncate description
+      const description = repoData.description
+        ? truncateText(repoData.description, 120)
+        : 'No description available';
+
+      // Create language badge with color
+      const languageColor = getLanguageColor(repoData.language);
+      const languageBadge = repoData.language ?
+        `<span class="inline-flex items-center">
+            <span class="w-3 h-3 rounded-full mr-1" style="background-color: ${languageColor}"></span>
+            ${repoData.language}
+          </span>` : '';
+
+      // Calculate overall score and determine class
+      const overallScore = repo.overall_score || 0;
+      const scoreClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
+
+      // Generate category scores HTML - icons with colored backgrounds based on score and showing numeric value
+      let categoryScoresHtml = '';
+      
+      // Create an array of categories with their scores for sorting
+      const categoriesWithScores = Object.keys(categoryNames).map(category => {
+        return {
+          category: category,
+          score: repo.category_scores?.[category] || 0,
+          icon: categoryIcons[category] || 'fa-question-circle',
+          name: categoryNames[category]
+        };
+      });
+
+      // Sort categories by score in descending order (highest first)
+      categoriesWithScores.sort((a, b) => b.score - a.score);
+
+      // Generate HTML for sorted categories
+      for (const item of categoriesWithScores) {
+        // Determine background color class based on score
+        let bgColorClass;
+        if (item.score >= 70) {
+          bgColorClass = 'bg-green-500'; // Green for scores 70-100
+        } else if (item.score >= 40) {
+          bgColorClass = 'bg-yellow-500'; // Yellow for scores 40-69
+        } else {
+          bgColorClass = 'bg-red-500'; // Red for scores 0-39
+        }
+        
+        categoryScoresHtml += `
+            <span class="category-badge ${bgColorClass} p-2 rounded-full flex items-center" title="${item.name}: ${item.score}">
+                <i class="fas ${item.icon} text-white mr-1"></i>
+                <span class="text-white text-xs font-bold">${Math.round(item.score)}</span>
+            </span>
+        `;
+      }
+
+      card.innerHTML = `
+        <div class="p-5 flex-grow">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">
+                <a href="${repoData.html_url || '#'}" target="_blank" class="hover:text-blue-600">
+                  ${repoData.name || 'Unnamed Repository'}
+                </a>
+              </h3>
+              <p class="text-sm text-gray-600">${repoData.full_name || ''}</p>
+            </div>
+            <div class="flex items-center">
+              <span class="flex items-center text-sm mr-3">
+                <i class="fas fa-star text-yellow-400 mr-1"></i> ${stars}
+              </span>
+              <span class="flex items-center text-sm">
+                <i class="fas fa-code-branch text-gray-600 mr-1"></i> ${forks}
+              </span>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-sm font-medium text-gray-700">Overall Health Score:</span>
+              <span class="text-sm font-medium ${scoreClass.replace('score-', 'text-')}">${overallScore.toFixed(1)}</span>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar-fill ${scoreClass}" style="width: ${overallScore}%"></div>
+            </div>
+          </div>
+
+          <p class="text-gray-700 mb-4">${description}</p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            ${categoryScoresHtml}
+          </div>
+
+          <div class="mt-4 text-center">
+            <a href="/repo/${repoData.id || ''}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <i class="fas fa-chart-bar mr-1"></i> View Detailed Report
+            </a>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm text-gray-600">
+          <span class="flex items-center">
+            <i class="far fa-calendar-alt mr-1"></i> Last updated: ${updatedAt}
+          </span>
+          ${languageBadge}
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Function to format large numbers
+    function formatNumber(num) {
+      return num.toLocaleString();
+    }
+
+    // Function to truncate text
+    function truncateText(text, maxLength) {
+      if (!text) return '';
+      if (text.length > maxLength) {
+        return text.substring(0, maxLength) + '...';
+      }
+      return text;
+    }
+
+    // Function to format date
+    function formatDate(dateString) {
+      if (!dateString) return 'Unknown';
+      
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+      } catch (e) {
+        console.warn('Invalid date:', dateString);
+        return 'Invalid date';
+      }
+    }
+
+    // Function to get language color
+    function getLanguageColor(language) {
+      const colors = {
+        'JavaScript': '#f1e05a',
+        'Python': '#3572a5',
+        'HTML': '#e34c26',
+        'CSS': '#563d7c',
+        'Java': '#b07219',
+        'TypeScript': '#2b7489',
+        'Ruby': '#701516',
+        'Go': '#00ADD8',
+        'C#': '#178600',
+        'C++': '#f34b7d',
+        'PHP': '#4F5D95'
+      };
+
+      return colors[language] || '#8F8F8F';
+    }
+  });
+</script>
 </body>
 </html>

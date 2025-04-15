@@ -61,6 +61,28 @@
             border-left-color: #3b82f6;
             background-color: #f9fafb;
         }
+        /* Add loading indicator style */
+        #loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 0;
+            font-size: 1.2rem;
+            color: #4b5563; /* gray-600 */
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6; /* blue-500 */
+            animation: spin 1s ease infinite;
+            margin-right: 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -101,8 +123,9 @@
     </header>
 
     <main class="container mx-auto p-4">
-        <div id="loading" class="flex justify-center items-center py-12">
-            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div id="loading">
+             <div class="spinner"></div>
+             <span>Loading statistics...</span>
         </div>
 
         <div id="stats-container" class="hidden">
@@ -236,457 +259,209 @@
     </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const loadingIndicator = document.getElementById('loading');
-            const statsContainer = document.getElementById('stats-container');
-            const errorContainer = document.getElementById('error-container');
-            
-            // Category definitions (icons and display names)
-            const categoryNames = {
-                'documentation': 'Documentation',
-                'security': 'Security',
-                'code_quality': 'Code Quality',
-                'performance': 'Performance',
-                'accessibility': 'Accessibility', 
-                'ci_cd': 'CI/CD',
-                'maintainability': 'Maintainability',
-                'testing': 'Testing',
-                'licensing': 'Licensing',
-                'community': 'Community'
-            };
-            
-            const categoryIcons = {
-                'documentation': 'fa-file-lines',
-                'security': 'fa-shield-alt',
-                'code_quality': 'fa-code',
-                'performance': 'fa-tachometer-alt',
-                'accessibility': 'fa-universal-access',
-                'ci_cd': 'fa-sync',
-                'maintainability': 'fa-wrench',
-                'testing': 'fa-vial',
-                'licensing': 'fa-balance-scale',
-                'community': 'fa-users'
-            };
-            
-            // Colors for charts
-            const categoryColors = {
-                'documentation': '#3b82f6', // blue
-                'security': '#ef4444', // red
-                'code_quality': '#10b981', // green
-                'performance': '#f59e0b', // amber
-                'accessibility': '#8b5cf6', // purple
-                'ci_cd': '#ec4899', // pink
-                'maintainability': '#6366f1', // indigo
-                'testing': '#14b8a6', // teal
-                'licensing': '#f97316', // orange
-                'community': '#84cc16' // lime
-            };
-            
-            // Try to load repositories data
-            try {
-                const response = await fetch('results.jsonl');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const text = await response.text();
-                
-                // Parse JSONL (one JSON object per line)
-                const repositories = text.split('\n')
-                    .filter(line => line.trim() !== '')
-                    .map(line => {
-                        try {
-                            return JSON.parse(line);
-                        } catch (e) {
-                            console.error('Error parsing JSONL line:', e);
-                            return null;
-                        }
-                    })
-                    .filter(repo => repo !== null);
-                
-                // Hide loading and show stats
-                loadingIndicator.classList.add('hidden');
-                statsContainer.classList.remove('hidden');
-                
-                // Process stats
-                calculateAndDisplayStats(repositories);
-                
-            } catch (error) {
-                console.error('Error loading repository data:', error);
-                loadingIndicator.classList.add('hidden');
-                errorContainer.classList.remove('hidden');
-            }
-            
-            // Main function to process all statistics
-            function calculateAndDisplayStats(repositories) {
-                // ------------------------
-                // 1. Calculate basic stats
-                // ------------------------
-                
-                // Total repositories
-                const totalRepos = repositories.length;
-                document.getElementById('total-repos').textContent = totalRepos;
-                
-                // Average overall score
-                let totalScore = 0;
-                let validScoreCount = 0;
-                
-                repositories.forEach(repo => {
-                    if (repo.overall_score !== undefined && !isNaN(repo.overall_score)) {
-                        totalScore += repo.overall_score;
-                        validScoreCount++;
-                    }
-                });
-                
-                const avgScore = validScoreCount > 0 ? totalScore / validScoreCount : 0;
-                const avgScoreFormatted = avgScore.toFixed(1);
-                document.getElementById('avg-score').textContent = avgScoreFormatted;
-                
-                // Update average score bar
-                const avgScoreBar = document.getElementById('avg-score-bar');
-                avgScoreBar.style.width = `${avgScore}%`;
-                
-                // Change color based on score
-                avgScoreBar.className = avgScore >= 70 ? 'score-bar-fill score-high' : 
-                                      (avgScore >= 40 ? 'score-bar-fill score-medium' : 'score-bar-fill score-low');
-                
-                // Count unique languages
-                const languages = new Map();
-                repositories.forEach(repo => {
-                    const language = repo.repository?.language;
-                    if (language) {
-                        languages.set(language, (languages.get(language) || 0) + 1);
-                    }
-                });
-                document.getElementById('languages-count').textContent = languages.size;
-                
-                // ------------------------
-                // 2. Identify and count all checks
-                // ------------------------
-                const categorizedChecks = {};
-                let totalChecks = 0;
-                
-                // Initialize categories
-                Object.keys(categoryNames).forEach(category => {
-                    categorizedChecks[category] = new Set();
-                });
-                
-                // Find all unique checks across all repos
-                repositories.forEach(repo => {
-                    Object.keys(categoryNames).forEach(category => {
-                        if (repo[category] && typeof repo[category] === 'object') {
-                            // Count all unique check names in this category
-                            Object.keys(repo[category]).forEach(checkName => {
-                                categorizedChecks[category].add(checkName);
-                            });
-                        }
-                    });
-                });
-                
-                // Count total unique checks
-                Object.values(categorizedChecks).forEach(checks => {
-                    totalChecks += checks.size;
-                });
-                document.getElementById('checks-count').textContent = totalChecks;
-                
-                // ------------------------
-                // 3. Calculate category average scores
-                // ------------------------
-                const categoryScores = {};
-                
-                Object.keys(categoryNames).forEach(category => {
-                    let categoryTotal = 0;
-                    let categoryCount = 0;
-                    
-                    repositories.forEach(repo => {
-                        if (repo[category] && typeof repo[category] === 'object') {
-                            const checks = Object.values(repo[category]);
-                            if (checks.length > 0) {
-                                const checkScores = checks.map(check => check.score || 0);
-                                if (checkScores.length > 0) {
-                                    const sum = checkScores.reduce((total, score) => total + score, 0);
-                                    categoryTotal += sum / checkScores.length;
-                                    categoryCount++;
-                                }
-                            }
-                        }
-                    });
-                    
-                    categoryScores[category] = categoryCount > 0 ? categoryTotal / categoryCount : 0;
-                });
-                
-                // ------------------------
-                // 4. Create category score chart
-                // ------------------------
-                const categoryLabels = Object.keys(categoryScores).map(key => categoryNames[key]);
-                const categoryData = Object.values(categoryScores).map(score => parseFloat(score.toFixed(1)));
-                const categoryBackgroundColors = Object.keys(categoryScores).map(key => categoryColors[key]);
-                
-                new Chart(
-                    document.getElementById('category-scores-chart'),
-                    {
-                        type: 'bar',
-                        data: {
-                            labels: categoryLabels,
-                            datasets: [{
-                                label: 'Average Score',
-                                data: categoryData,
-                                backgroundColor: categoryBackgroundColors,
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 100,
-                                    title: {
-                                        display: true,
-                                        text: 'Score'
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                }
-                            }
-                        }
-                    }
-                );
-                
-                // ------------------------
-                // 5. Create language distribution chart
-                // ------------------------
-                // Sort languages by count (descending)
-                const sortedLanguages = [...languages.entries()]
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 10); // Show top 10 languages
-                
-                const languageLabels = sortedLanguages.map(item => item[0]);
-                const languageCounts = sortedLanguages.map(item => item[1]);
-                
-                // Generate random colors for languages
-                const languageColors = languageLabels.map((_, i) => {
-                    const hue = (i * 137) % 360; // Use golden angle for good distribution
-                    return `hsl(${hue}, 70%, 60%)`;
-                });
-                
-                new Chart(
-                    document.getElementById('language-distribution-chart'),
-                    {
-                        type: 'doughnut',
-                        data: {
-                            labels: languageLabels,
-                            datasets: [{
-                                data: languageCounts,
-                                backgroundColor: languageColors,
-                                hoverOffset: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'right'
-                                }
-                            }
-                        }
-                    }
-                );
-                
-                // ------------------------
-                // 6. Create score distribution chart
-                // ------------------------
-                // Group scores into buckets (0-10, 11-20, etc.)
-                const scoreBuckets = {
-                    '0-10': 0, '11-20': 0, '21-30': 0, '31-40': 0, '41-50': 0,
-                    '51-60': 0, '61-70': 0, '71-80': 0, '81-90': 0, '91-100': 0
-                };
-                
-                repositories.forEach(repo => {
-                    if (repo.overall_score !== undefined && !isNaN(repo.overall_score)) {
-                        const score = repo.overall_score;
-                        const bucketIndex = Math.min(Math.floor(score / 10), 9);
-                        const bucketKey = Object.keys(scoreBuckets)[bucketIndex];
-                        scoreBuckets[bucketKey]++;
-                    }
-                });
-                
-                const scoreDistLabels = Object.keys(scoreBuckets);
-                const scoreDistData = Object.values(scoreBuckets);
-                
-                // Color gradient from red to green
-                const scoreDistColors = scoreDistLabels.map((key, i) => {
-                    const r = Math.round(255 - (i * 25));
-                    const g = Math.round(i * 25);
-                    return `rgba(${r}, ${g}, 0, 0.7)`;
-                });
-                
-                new Chart(
-                    document.getElementById('score-distribution-chart'),
-                    {
-                        type: 'bar',
-                        data: {
-                            labels: scoreDistLabels,
-                            datasets: [{
-                                label: 'Repositories',
-                                data: scoreDistData,
-                                backgroundColor: scoreDistColors
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: 'Number of Repositories'
-                                    }
-                                },
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: 'Score Range'
-                                    }
-                                }
-                            }
-                        }
-                    }
-                );
-                
-                // ------------------------
-                // 7. Generate category detail cards
-                // ------------------------
-                const categoryDetailsContainer = document.getElementById('category-details');
-                
-                Object.keys(categoryNames).forEach(category => {
-                    const categoryScore = categoryScores[category] || 0;
-                    const scoreFormatted = categoryScore.toFixed(1);
-                    const scoreClass = categoryScore >= 70 ? 'score-high' : 
-                                     (categoryScore >= 40 ? 'score-medium' : 'score-low');
-                    
-                    // Count repositories that have this category analyzed
-                    let reposWithCategory = 0;
-                    repositories.forEach(repo => {
-                        if (repo[category] && Object.keys(repo[category]).length > 0) {
-                            reposWithCategory++;
-                        }
-                    });
-                    
-                    // Calculate percentage
-                    const percentage = totalRepos > 0 ? Math.round((reposWithCategory / totalRepos) * 100) : 0;
-                    
-                    const card = document.createElement('div');
-                    card.className = 'score-card bg-white border rounded-lg p-4 shadow-sm';
-                    card.innerHTML = `
-                        <div class="flex items-center mb-2">
-                            <div class="bg-${categoryColors[category].substring(1)}-100 p-2 rounded-full mr-3">
-                                <i class="fas ${categoryIcons[category]} text-${categoryColors[category].substring(1)}-500"></i>
-                            </div>
-                            <h4 class="font-semibold text-gray-700">${categoryNames[category]}</h4>
-                        </div>
-                        <div class="mb-2">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-sm text-gray-500">Average Score:</span>
-                                <span class="text-sm font-medium">${scoreFormatted}</span>
-                            </div>
-                            <div class="score-bar">
-                                <div class="score-bar-fill ${scoreClass}" style="width: ${categoryScore}%"></div>
-                            </div>
-                        </div>
-                        <div class="text-sm text-gray-500 mt-3">
-                            <div class="flex justify-between">
-                                <span>Analyzed in:</span>
-                                <span class="font-semibold">${reposWithCategory} repositories (${percentage}%)</span>
-                            </div>
-                            <div class="flex justify-between mt-1">
-                                <span>Available checks:</span>
-                                <span class="font-semibold">${categorizedChecks[category].size}</span>
-                            </div>
-                        </div>
-                    `;
-                    
-                    categoryDetailsContainer.appendChild(card);
-                });
-                
-                // ------------------------
-                // 8. Generate check details
-                // ------------------------
-                const checkDetailsContainer = document.getElementById('check-details');
-                
-                Object.keys(categoryNames).forEach(category => {
-                    // Skip categories with no checks
-                    if (categorizedChecks[category].size === 0) return;
-                    
-                    const categorySection = document.createElement('div');
-                    
-                    // Create category header
-                    const categoryHeader = document.createElement('div');
-                    categoryHeader.className = 'mb-2 flex items-center';
-                    categoryHeader.innerHTML = `
-                        <i class="fas ${categoryIcons[category]} text-${categoryColors[category].substring(1)}-500 mr-2"></i>
-                        <h4 class="text-lg font-semibold text-gray-700">${categoryNames[category]}</h4>
-                        <span class="ml-2 bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-1 rounded-full">
-                            ${categorizedChecks[category].size} checks
-                        </span>
-                    `;
-                    
-                    categorySection.appendChild(categoryHeader);
-                    
-                    // Create check list
-                    const checkList = document.createElement('div');
-                    checkList.className = 'ml-6 border-l border-gray-200 pl-4 space-y-2';
-                    
-                    // Sort checks alphabetically
-                    const sortedChecks = Array.from(categorizedChecks[category]).sort();
-                    
-                    // Create check items
-                    sortedChecks.forEach(checkName => {
-                        // Calculate average score for this check
-                        let checkTotal = 0;
-                        let checkCount = 0;
-                        
-                        repositories.forEach(repo => {
-                            if (repo[category]?.[checkName]?.score !== undefined) {
-                                checkTotal += repo[category][checkName].score;
-                                checkCount++;
-                            }
-                        });
-                        
-                        const checkAvg = checkCount > 0 ? checkTotal / checkCount : 0;
-                        const checkScoreFormatted = checkAvg.toFixed(1);
-                        const checkScoreClass = checkAvg >= 70 ? 'text-green-500' : 
-                                               (checkAvg >= 40 ? 'text-yellow-500' : 'text-red-500');
-                        
-                        // Format check name for better display
-                        const displayName = checkName
-                            .replace(/_/g, ' ')
-                            .replace(/([A-Z])/g, ' $1')
-                            .replace(/^./, str => str.toUpperCase());
-                        
-                        const checkItem = document.createElement('div');
-                        checkItem.className = 'check-item py-2 px-3 rounded';
-                        checkItem.innerHTML = `
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-700">${displayName}</span>
-                                <span class="font-semibold ${checkScoreClass}">${checkScoreFormatted}</span>
-                            </div>
-                        `;
-                        
-                        checkList.appendChild(checkItem);
-                    });
-                    
-                    categorySection.appendChild(checkList);
-                    checkDetailsContainer.appendChild(categorySection);
-                });
-            }
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Get DOM elements
+    const statsContainer = document.getElementById('stats-container');
+    const loadingIndicator = document.getElementById('loading');
+    const errorContainer = document.getElementById('error-container');
+
+    if (!statsContainer || !loadingIndicator || !errorContainer) {
+      console.error('Required DOM elements not found');
+      return;
+    }
+
+    // Show loading indicator
+    loadingIndicator.style.display = 'flex';
+    statsContainer.classList.add('hidden');
+    errorContainer.classList.add('hidden');
+
+    // Create the initial structure for the stats page
+    statsContainer.innerHTML = `
+      <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Repository Health Overview</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-blue-50 p-4 rounded-lg shadow-sm">
+            <h3 class="text-lg font-semibold text-blue-700 mb-2">Analyzed Repositories</h3>
+            <p class="text-3xl font-bold text-blue-800" id="total-repos">Loading...</p>
+          </div>
+          <div class="bg-green-50 p-4 rounded-lg shadow-sm">
+            <h3 class="text-lg font-semibold text-green-700 mb-2">Average Health Score</h3>
+            <p class="text-3xl font-bold text-green-800" id="average-score">Loading...</p>
+          </div>
+          <div class="bg-purple-50 p-4 rounded-lg shadow-sm">
+            <h3 class="text-lg font-semibold text-purple-700 mb-2">Most Common Issues</h3>
+            <p class="text-md text-purple-800" id="common-issues">Loading...</p>
+          </div>
+        </div>
+
+        <h3 class="text-xl font-bold text-gray-800 mb-3">Category Scores</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="category-details">
+          <div class="bg-gray-100 p-4 rounded-lg shadow-sm animate-pulse">
+            <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div class="h-8 bg-gray-200 rounded mb-1"></div>
+            <div class="h-2 bg-gray-200 rounded mb-2"></div>
+            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+          <div class="bg-gray-100 p-4 rounded-lg shadow-sm animate-pulse">
+            <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div class="h-8 bg-gray-200 rounded mb-1"></div>
+            <div class="h-2 bg-gray-200 rounded mb-2"></div>
+            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+          <div class="bg-gray-100 p-4 rounded-lg shadow-sm animate-pulse">
+            <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div class="h-8 bg-gray-200 rounded mb-1"></div>
+            <div class="h-2 bg-gray-200 rounded mb-2"></div>
+            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Now get references to newly created elements
+    const totalRepos = document.getElementById('total-repos');
+    const avgScore = document.getElementById('average-score');
+    const commonIssues = document.getElementById('common-issues');
+    const categoryDetailsContainer = document.getElementById('category-details');
+    const checkDetailsContainer = document.getElementById('check-details');
+
+    // Category icons and names
+    const categoryIcons = {
+      'documentation': 'fa-file-lines',
+      'security': 'fa-shield-alt',
+      'code_quality': 'fa-code',
+      'performance': 'fa-tachometer-alt',
+      'accessibility': 'fa-universal-access',
+      'ci_cd': 'fa-sync',
+      'maintainability': 'fa-wrench',
+      'testing': 'fa-vial',
+      'licensing': 'fa-balance-scale',
+      'community': 'fa-users'
+    };
+
+    const categoryNames = {
+      'documentation': 'Documentation',
+      'security': 'Security',
+      'code_quality': 'Code Quality',
+      'performance': 'Performance',
+      'accessibility': 'Accessibility',
+      'ci_cd': 'CI/CD',
+      'maintainability': 'Maintainability',
+      'testing': 'Testing',
+      'licensing': 'Licensing',
+      'community': 'Community'
+    };
+
+    try {
+      console.log("Fetching statistics data...");
+      
+      // Get statistics from the API with timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      const response = await fetch('/api/statistics', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const stats = await response.json();
+      console.log("Fetched statistics data:", stats);
+
+      // Check for API errors
+      if (stats.error) {
+        throw new Error(stats.error);
+      }
+
+      // Explicitly hide loading indicator and show stats container
+      loadingIndicator.style.display = 'none';
+      loadingIndicator.classList.add('hidden');
+      statsContainer.classList.remove('hidden');
+
+      // Process and display stats
+      if (!stats || typeof stats !== 'object') {
+        throw new Error('Invalid statistics data received');
+      }
+
+      // Update metrics
+      if (totalRepos) {
+        totalRepos.textContent = stats.total_repositories || 0;
+      }
+      
+      if (avgScore) {
+        const avgScoreValue = stats.average_overall_score || 0;
+        avgScore.textContent = avgScoreValue.toFixed(1);
+      }
+
+      // Set common issues
+      if (commonIssues) {
+        if (stats.common_issues && stats.common_issues.length > 0) {
+          commonIssues.innerHTML = stats.common_issues.slice(0, 3).map(issue => 
+            `<div class="mb-1">• ${issue}</div>`
+          ).join('');
+        } else {
+          commonIssues.textContent = 'No common issues found';
+        }
+      }
+
+      // Update category details
+      if (categoryDetailsContainer) {
+        categoryDetailsContainer.innerHTML = '';
+        
+        // Get category scores
+        const categoryScores = stats.category_average_scores || {};
+        
+        Object.entries(categoryScores).forEach(([category, avgScore]) => {
+          if (!categoryNames[category]) return;
+          
+          const score = avgScore || 0;
+          const scoreFormatted = score.toFixed(1);
+          const scoreClass = score >= 70 ? 'score-high' : (score >= 40 ? 'score-medium' : 'score-low');
+          const icon = categoryIcons[category] || 'fa-question-circle';
+          const displayName = categoryNames[category] || category;
+          const repoCount = stats.category_repo_counts?.[category] || 0;
+          const percentage = stats.total_repositories > 0 ? 
+            Math.round((repoCount / stats.total_repositories) * 100) : 0;
+
+          const card = document.createElement('div');
+          card.className = 'score-card bg-white border rounded-lg p-4 shadow-sm';
+          card.innerHTML = `
+            <div class="flex items-center mb-2">
+              <i class="fas ${icon} mr-2 text-lg ${scoreClass.replace('score-', 'text-').replace('high', 'green-500').replace('medium', 'yellow-500').replace('low', 'red-500')}"></i>
+              <h4 class="font-semibold text-gray-700">${displayName}</h4>
+            </div>
+            <p class="text-2xl font-bold mb-1 ${scoreClass.replace('score-', 'text-').replace('high', 'green-500').replace('medium', 'yellow-500').replace('low', 'red-500')}">${scoreFormatted}</p>
+            <div class="score-bar w-full bg-gray-200 rounded-full mb-2">
+              <div class="score-bar-fill ${scoreClass} rounded-full" style="width: ${score}%;"></div>
+            </div>
+            <p class="text-xs text-gray-500">${repoCount.toLocaleString()} / ${stats.total_repositories.toLocaleString()} Repos (${percentage}%)</p>
+          `;
+          categoryDetailsContainer.appendChild(card);
         });
-    </script>
+      }
+
+    } catch (error) {
+      console.error('Error loading statistics data:', error);
+      
+      // Make sure loading indicator is hidden and error is shown
+      loadingIndicator.style.display = 'none';
+      loadingIndicator.classList.add('hidden');
+      statsContainer.classList.add('hidden');
+      
+      if (errorContainer) {
+        errorContainer.classList.remove('hidden');
+        
+        const errorMessage = errorContainer.querySelector('p');
+        if (errorMessage) {
+          errorMessage.textContent = `Failed to load statistics data: ${error.message}`;
+        }
+      }
+    }
+  });
+</script>
 </body>
 </html>

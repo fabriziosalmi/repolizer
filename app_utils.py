@@ -6,6 +6,10 @@ import traceback
 import uuid
 from datetime import datetime, timezone
 from check_orchestrator import CheckOrchestrator # Assuming check_orchestrator.py is in the same directory or installable
+import os
+import glob
+import json
+from datetime import datetime
 
 # Helper function to read from process output and put in queue
 def enqueue_output(pipe, process_id, log_queue, is_error=False):
@@ -233,4 +237,55 @@ def run_analyzer(job_id, config, job_queue, analyzer_jobs):
         # Update job status using the passed dictionary
         if job_id in analyzer_jobs: # Check if job still exists
              analyzer_jobs[job_id]['status'] = 'error'
+
+def get_results_file_info():
+    """
+    Get information about the available results files.
+    
+    Returns:
+        dict: Information about the results file including path, size, and timestamp.
+    """
+    # Look for results.jsonl in the current directory
+    results_files = glob.glob('results*.jsonl')
+    
+    # If no results files, try looking in data directory
+    if not results_files:
+        results_files = glob.glob('data/results*.jsonl')
+    
+    if not results_files:
+        return {
+            'path': None,
+            'size': 0,
+            'timestamp': None,
+            'filename': None,
+            'count': 0
+        }
+    
+    # Sort by modification time (most recent first)
+    results_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    
+    # Get the most recent file
+    most_recent = results_files[0]
+    
+    # Get file stats
+    file_size = os.path.getsize(most_recent)
+    mod_time = os.path.getmtime(most_recent)
+    mod_time_str = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Count repositories in the file
+    repo_count = 0
+    try:
+        with open(most_recent, 'r', encoding='utf-8') as f:
+            for line in f:
+                repo_count += 1
+    except Exception as e:
+        print(f"Error counting repositories: {e}")
+    
+    return {
+        'path': most_recent,
+        'size': file_size,
+        'timestamp': mod_time_str,
+        'filename': os.path.basename(most_recent),
+        'count': repo_count
+    }
 
