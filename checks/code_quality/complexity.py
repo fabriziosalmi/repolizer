@@ -135,6 +135,8 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                 
                 # Determine language for this file
                 file_language = None
+                check_timeout()  # Add timeout check before language detection
+                
                 for lang, config in language_patterns.items():
                     if ext in config["extensions"]:
                         file_language = lang
@@ -145,19 +147,40 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                     continue
                     
                 try:
+                    # Limit file size to prevent hanging on very large files
+                    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                    if file_size_mb > 5:  # Skip files larger than 5MB
+                        logger.info(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
+                        continue
+                        
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         content = f.read()
+                        check_timeout()  # Add timeout check after file read
+                        
+                        # Limit content size for very large files
+                        if len(content) > 1000000:  # ~1MB of text
+                            content = content[:1000000]
+                            logger.info(f"Truncated large file content: {file_path}")
+                        
                         files_checked += 1
                         result["language_stats"][file_language]["files"] += 1
                         
                         # Extract functions/methods
                         language_config = language_patterns[file_language]
-                        function_matches = re.finditer(language_config["function_pattern"], content, re.MULTILINE)
+                        check_timeout()  # Add timeout check before regex operation
+                        function_matches = list(re.finditer(language_config["function_pattern"], content, re.MULTILINE))
+                        check_timeout()  # Add timeout check after regex operation
                         
                         functions_found = 0
                         language_complexity = 0
                         
+                        # Limit number of functions to analyze per file
+                        if len(function_matches) > 100:
+                            logger.info(f"Limiting analysis to 100 functions in {file_path}")
+                            function_matches = function_matches[:100]
+                        
                         for match in function_matches:
+                            check_timeout()  # Add timeout check for each function
                             functions_found += 1
                             
                             # Get the function name from the match groups (first non-None group)
@@ -165,14 +188,27 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                             
                             # Find the function body (basic approach: from match to next function or end of file)
                             start_pos = match.end()
-                            next_match = re.search(language_config["function_pattern"], content[start_pos:], re.MULTILINE)
-                            end_pos = start_pos + next_match.start() if next_match else len(content)
+                            check_timeout()  # Add timeout check before regex search
+                            
+                            # Limit the search range for next function to avoid regex hang
+                            search_limit = min(len(content) - start_pos, 100000)  # Limit to ~100KB search
+                            search_content = content[start_pos:start_pos + search_limit]
+                            
+                            next_match = re.search(language_config["function_pattern"], search_content, re.MULTILINE)
+                            end_pos = start_pos + next_match.start() if next_match else min(len(content), start_pos + search_limit)
                             
                             function_body = content[start_pos:end_pos]
+                            check_timeout()  # Add timeout check after function body extraction
                             
-                            # Calculate function complexity (simple approach: count complexity indicators)
+                            # Limit function body size for analysis
+                            if len(function_body) > 50000:  # ~50KB
+                                function_body = function_body[:50000]
+                                logger.info(f"Truncated large function body in {file_path}")
+                            
+                            # Calculate function complexity with timeout protection
                             complexity = 1  # Base complexity
                             for pattern in language_config["complexity_patterns"]:
+                                check_timeout()  # Add timeout check inside complexity calculation
                                 complexity += len(re.findall(pattern, function_body))
                             
                             # Update complexity distribution
@@ -207,6 +243,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                         
                 except Exception as e:
                     logger.error(f"Error analyzing file {file_path}: {e}")
+                    check_timeout()  # Add timeout check after exception
         
         result["files_checked"] = files_checked
         result["functions_analyzed"] = total_functions
