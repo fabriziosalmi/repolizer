@@ -345,7 +345,7 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     # Early return: If no files to analyze or too few, just return basic results
     # This helps avoid processing overhead for simple repos
     if len(eligible_files) == 0:
-        logger.info("No eligible files found for analysis. Returning early.")
+        logger.debug("No eligible files found for analysis. Returning early.")
         
         # Set statically typed languages if any
         for lang in language_counts["statically_typed"]:

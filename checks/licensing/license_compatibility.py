@@ -351,7 +351,7 @@ def check_license_compatibility(repo_path: Optional[str] = None, repo_data: Opti
     
     # Only use API data if we couldn't determine license from local analysis
     if result["main_license"] == "unknown" and repo_data and "license" in repo_data:
-        logger.info("Using API data for license compatibility check")
+        logger.debug("Using API data for license compatibility check")
         license_info = repo_data.get("license", {})
         if license_info and "spdx_id" in license_info:
             result["has_license"] = True

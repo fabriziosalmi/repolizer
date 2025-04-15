@@ -332,7 +332,7 @@ def check_spdx_identifiers(repo_path: Optional[str] = None, repo_data: Optional[
                         # Only check up to MAX_SOURCE_FILES source files
                         source_files_checked += 1
                         if source_files_checked > MAX_SOURCE_FILES:
-                            logger.info(f"Reached maximum source files to check ({MAX_SOURCE_FILES})")
+                            logger.debug(f"Reached maximum source files to check ({MAX_SOURCE_FILES})")
                             break
                         
                         # Read first 30 lines where license notices typically appear

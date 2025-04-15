@@ -270,7 +270,7 @@ def check_artifact_management(repo_path: str = None, repo_data: Dict = None) -> 
         
         # If we still need more information, do a broader search
         if not result["has_artifact_storage"] or not result["has_versioning"] or len(result["artifact_types"]) == 0:
-            logger.info("High priority scan insufficient. Performing broader repository scan for artifacts.")
+            logger.debug("High priority scan insufficient. Performing broader repository scan for artifacts.")
             
             # Secondary file patterns that might contain artifact info
             secondary_files = []

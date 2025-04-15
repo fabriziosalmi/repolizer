@@ -91,7 +91,7 @@ def check_contributing_guidelines(repo_path: str = None, repo_data: Dict = None)
     for variation in issue_template_variations:
         if os.path.exists(os.path.join(repo_path, variation)):
             has_issue_template = True
-            logger.info(f"Found Issue template: {variation}")
+            logger.debug(f"Found Issue template: {variation}")
             break
             
     # Check for GitHub issue templates directory

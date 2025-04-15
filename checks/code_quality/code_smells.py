@@ -214,10 +214,15 @@ def check_code_smells(repo_path: str = None, repo_data: Dict = None, timeout_sec
         except Exception as e:
             logger.error(f"Error walking repository: {e}")
         
-        # Check if we should continue or if we've already timed out
-        if STOP_ANALYSIS or time.time() > hard_timeout:
-            result["timed_out"] = True
+        # Check if we should continue or if we've already timed out or found no files
+        if STOP_ANALYSIS or time.time() > hard_timeout or not files_to_analyze:
+            if not files_to_analyze and not result["timed_out"]:
+                logger.info("No relevant files found to analyze for code smells.")
+            elif STOP_ANALYSIS or time.time() > hard_timeout:
+                 result["timed_out"] = True
             result["processing_time"] = round(time.time() - start_time, 2)
+            # Calculate score even if no files were analyzed (should be 100)
+            result["code_smells_score"] = 100 if result["smell_count"] == 0 else result.get("code_smells_score", 0)
             return result
 
         # Limit the number of files to analyze if there are too many
@@ -249,57 +254,64 @@ def check_code_smells(repo_path: str = None, repo_data: Dict = None, timeout_sec
             # Use the sampled files
             files_to_analyze = sampled_files[:max_files_to_analyze]
         
-        # Calculate time per file
-        remaining_time = max(1, hard_timeout - time.time())
-        time_per_file = max(0.5, min(3, remaining_time / len(files_to_analyze)))
-        logger.debug(f"Allocating {time_per_file:.2f} seconds per file analysis for {len(files_to_analyze)} files")
-        
+        # Calculate time per file only if there are files to analyze
+        time_per_file = 0.5 # Default minimum time
+        if files_to_analyze: # Check added here
+            remaining_time = max(1, hard_timeout - time.time())
+            # Ensure len(files_to_analyze) is not zero before division
+            time_per_file = max(0.5, min(3, remaining_time / len(files_to_analyze)))
+            logger.debug(f"Allocating {time_per_file:.2f} seconds per file analysis for {len(files_to_analyze)} files")
+        else:
+             logger.info("Skipping file analysis as no files were selected.") # Log if skipping analysis
+
         # Use a thread pool to analyze files in parallel with timeout protection
-        with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
-            futures = {
-                executor.submit(analyze_file_with_timeout, 
-                               file_path, language, language_patterns, thresholds, time_per_file): 
-                (file_path, language) 
-                for file_path, language in files_to_analyze
-            }
-            
-            # Process results as they complete
-            for future in as_completed(futures):
-                # Check if we should stop
-                if STOP_ANALYSIS or time.time() > hard_timeout:
-                    result["timed_out"] = True
-                    logger.warning(f"Analysis timed out after {time.time() - start_time:.2f} seconds")
+        # Only run if there are files to analyze
+        if files_to_analyze:
+            with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
+                futures = {
+                    executor.submit(analyze_file_with_timeout, 
+                                   file_path, language, language_patterns, thresholds, time_per_file): 
+                    (file_path, language) 
+                    for file_path, language in files_to_analyze
+                }
+                
+                # Process results as they complete
+                for future in as_completed(futures):
+                    # Check if we should stop
+                    if STOP_ANALYSIS or time.time() > hard_timeout:
+                        result["timed_out"] = True
+                        logger.warning(f"Analysis timed out after {time.time() - start_time:.2f} seconds")
+                        
+                        # Cancel any pending futures
+                        for f in futures:
+                            if not f.done():
+                                f.cancel()
+                        break
                     
-                    # Cancel any pending futures
-                    for f in futures:
-                        if not f.done():
-                            f.cancel()
-                    break
-                
-                file_path, language = futures[future]
-                
-                try:
-                    analysis_result = future.result(timeout=0.1)  # Just grab completed result
-                    if analysis_result:
-                        file_smells, file_timed_out = analysis_result
-                        
-                        if file_timed_out:
-                            logger.warning(f"Analysis of {file_path} timed out")
-                            continue
-                        
-                        # Update counts
-                        files_checked += 1
-                        result["smells_by_language"][language]["files"] += 1
-                        
-                        # Record all smells found for this file
-                        for smell in file_smells:
-                            record_smell(language, smell['category'], file_path, smell['line'], smell['description'])
-                except FutureTimeoutError:
-                    logger.warning(f"Retrieving result for {file_path} timed out")
-                    continue
-                except Exception as e:
-                    logger.error(f"Error processing file {file_path}: {e}")
-                    continue
+                    file_path, language = futures[future]
+                    
+                    try:
+                        analysis_result = future.result(timeout=0.1)  # Just grab completed result
+                        if analysis_result:
+                            file_smells, file_timed_out = analysis_result
+                            
+                            if file_timed_out:
+                                logger.warning(f"Analysis of {file_path} timed out")
+                                continue
+                            
+                            # Update counts
+                            files_checked += 1
+                            result["smells_by_language"][language]["files"] += 1
+                            
+                            # Record all smells found for this file
+                            for smell in file_smells:
+                                record_smell(language, smell['category'], file_path, smell['line'], smell['description'])
+                    except FutureTimeoutError:
+                        logger.warning(f"Retrieving result for {file_path} timed out")
+                        continue
+                    except Exception as e:
+                        logger.error(f"Error processing file {file_path}: {e}")
+                        continue
         
         # Update final smell count and files checked
         result["smell_count"] = smell_count
