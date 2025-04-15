@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_from_directory, jsonify, request, Response, stream_with_context, redirect, url_for, flash, make_response # Add make_response
+from flask import Flask, render_template, send_from_directory, jsonify, request, Response, stream_with_context, redirect, url_for, flash # Added redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user # Added Flask-Login imports
 from jinja2.ext import do # Import the DoExtension
 import os
@@ -16,35 +16,8 @@ from datetime import datetime, timezone # Import datetime and timezone for sorti
 import requests # Add requests import
 from app_utils import enqueue_output, run_analyzer, get_results_file_info # Import moved functions
 from collections import defaultdict
-from flask_caching import Cache # Import Cache
-import glob # Import glob for file searching in the new endpoint
 
 app = Flask(__name__)
-
-# --- Caching Setup ---
-# Configure cache (using FileSystemCache for potentially larger data)
-cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
-if not os.path.exists(cache_dir):
-    try:
-        os.makedirs(cache_dir)
-        print(f"Created cache directory: {cache_dir}")
-    except OSError as e:
-        print(f"Error creating cache directory {cache_dir}: {e}")
-        # Fallback to SimpleCache if directory creation fails
-        cache_dir = None # Indicate failure
-
-cache_config = {
-    # Use FileSystemCache if directory exists, otherwise SimpleCache
-    "CACHE_TYPE": "FileSystemCache" if cache_dir else "SimpleCache",
-    "CACHE_DIR": cache_dir if cache_dir else None, # Required for FileSystemCache
-    "CACHE_DEFAULT_TIMEOUT": 300,  # Default timeout 5 minutes
-    "CACHE_THRESHOLD": 500 # Max number of items SimpleCache will store
-}
-app.config.from_mapping(cache_config)
-cache = Cache(app)
-print(f"Using cache type: {app.config['CACHE_TYPE']}") # Log cache type
-# --- End Caching Setup ---
-
 
 # --- Authentication Setup ---
 # IMPORTANT: Change this secret key in a real application!
@@ -91,22 +64,6 @@ log_queue = queue.Queue()
 
 # Global state to track analyzer jobs
 analyzer_jobs = {}
-
-# --- Cache Clearing Endpoint ---
-@app.route('/api/cache/clear', methods=['POST'])
-@login_required # Protect this endpoint
-def clear_cache():
-    """Manually clears the application cache."""
-    try:
-        cache.clear()
-        flash('Application cache cleared successfully.', 'success')
-        print("Cache cleared manually via API.") # Log cache clearing
-        return jsonify({'status': 'success', 'message': 'Cache cleared'})
-    except Exception as e:
-        flash(f'Error clearing cache: {str(e)}', 'error')
-        print(f"Error clearing cache via API: {e}") # Log error
-        return jsonify({'status': 'error', 'message': f'Failed to clear cache: {str(e)}'}), 500
-# --- End Cache Clearing Endpoint ---
 
 # --- Login/Logout Routes ---
 @app.route('/login', methods=['GET', 'POST'])
@@ -536,7 +493,6 @@ def stop_scraper():
         }), 500
 
 @app.route('/')
-@cache.cached() # Cache the main page
 def index():
     # Publicly accessible
     return render_template('repo_viewer.html')
@@ -547,7 +503,6 @@ def scraper():
     return render_template('repo_scraper.html')
 
 @app.route('/repositories.jsonl')
-# @cache.cached() # Removed: Cannot pickle file stream response
 def serve_repos_file():
     # Serve the repositories.jsonl file directly
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
@@ -565,7 +520,6 @@ def serve_repos_file():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
 
 @app.route('/results.jsonl')
-# @cache.cached() # Removed: Cannot pickle file stream response
 def serve_results_file():
     # Serve the results.jsonl file directly - this is for analyzed repos
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
@@ -584,7 +538,6 @@ def serve_results_file():
 
 # Add endpoint to serve any result file
 @app.route('/results/<filename>')
-# @cache.cached() # Removed: Cannot pickle file stream response
 def serve_result_file(filename):
     # Security check - only allow specific file extensions
     allowed_extensions = ['.jsonl', '.json']
@@ -600,7 +553,6 @@ def serve_result_file(filename):
 
 @app.route('/repo/<path:repo_id>') # Use <path:repo_id> to allow slashes
 # Removed protection - Publicly accessible
-# @cache.cached() # Caching this is complex due to finding the *latest* entry. Add with caution.
 def repo_detail(repo_id):
     print(f"--- Starting repo_detail for ID/Name: {repo_id} ---") # DEBUG
     # Load results.jsonl or sample_results.jsonl
@@ -712,7 +664,6 @@ def repo_detail(repo_id):
 
 @app.route('/repo/<path:repo_id>/history')
 # Removed protection - Publicly accessible
-# @cache.cached() # Caching this is complex due to reading all history. Add with caution.
 def repo_history(repo_id):
     """Render the analysis history page for a specific repository"""
     print(f"--- Starting repo_history for ID/Name: {repo_id} ---") # DEBUG
@@ -1047,14 +998,12 @@ def stop_analyzer():
         }), 500
 
 @app.route('/stats')
-@cache.cached() # Cache the stats page rendering
 def repo_stats():
     """Render the repository statistics page"""
     # Publicly accessible
     return render_template('repo_stats.html')
 
 @app.route('/api/statistics')
-@cache.cached() # Cache the statistics API response
 def get_statistics():
     """
     API endpoint to get repository statistics.
@@ -1260,7 +1209,6 @@ def serve_manifest():
 
 # Add route to serve static files
 @app.route('/static/<path:path>')
-# @cache.cached() # Removed: Cannot pickle file stream response
 def serve_static(path):
     # Ensure the static directory exists
     static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
@@ -1275,216 +1223,6 @@ def inject_global_vars():
         'current_year': datetime.now().year,
         'current_user': current_user # Make current_user available to templates
     }
-
-# --- New API Endpoint for Processed Repository Data ---
-@app.route('/api/repositories')
-# @cache.cached() # Temporarily disable cache for debugging the output generation
-def get_processed_repositories():
-    """
-    Loads, parses, processes, and caches repository data from results*.jsonl
-    (or fallback repositories.jsonl/sample*.jsonl), supporting both JSONL
-    and single JSON array formats. Returns a JSON array.
-    -- DEBUG MODE: Returns indented JSON text --
-    """
-    print("--- Generating processed repository data (DEBUG MODE - Cache Disabled) ---") # DEBUG
-    all_repos_processed = []
-    processed_repo_ids = set() # Track processed repos to avoid duplicates
-    current_file_being_processed = "None"
-
-    def process_repo_object(repo_data):
-        """Helper function to validate and add a repo object."""
-        # Basic validation
-        if repo_data and isinstance(repo_data.get('repository'), dict) and repo_data['repository'].get('id'):
-            repo_id = repo_data['repository']['id']
-            if repo_id not in processed_repo_ids:
-                processed_repo_ids.add(repo_id)
-                all_repos_processed.append(repo_data)
-                return True
-        return False
-
-    def process_raw_repo_object(raw_repo_data):
-        """Helper function to validate and add a raw repo object (from fallback)."""
-        if raw_repo_data and raw_repo_data.get('id'):
-            repo_id = raw_repo_data['id']
-            if repo_id not in processed_repo_ids:
-                processed_repo_ids.add(repo_id)
-                # Ensure structure matches expected output
-                all_repos_processed.append({
-                    'repository': raw_repo_data,
-                    'overall_score': 0, # Default score
-                    'timestamp': datetime.now(timezone.utc).isoformat(), # Add timestamp
-                    # Add empty category keys if needed by frontend JS
-                    'documentation': {}, 'security': {}, 'maintainability': {},
-                    'code_quality': {}, 'testing': {}, 'licensing': {},
-                    'community': {}, 'performance': {}, 'accessibility': {}, 'ci_cd': {}
-                })
-                return True
-        return False
-
-    # 1. Try loading from the latest results file
-    results_file_info = get_results_file_info()
-    results_path = results_file_info.get('path')
-
-    if results_path and os.path.exists(results_path):
-        current_file_being_processed = results_path
-        print(f"Attempting to load data from results file: {results_path}") # DEBUG
-        try:
-            with open(results_path, 'r', encoding='utf-8') as f:
-                # --- Start of existing loading logic ---
-                processed_as_json = False
-                try:
-                    # Attempt to load as a single JSON array first
-                    data = json.load(f)
-                    if isinstance(data, list):
-                        print(f"  File {current_file_being_processed} detected as JSON array.") # DEBUG
-                        for repo_obj in data:
-                            process_repo_object(repo_obj)
-                        processed_as_json = True
-                    else:
-                        print(f"  Warning: File {current_file_being_processed} is valid JSON but not an array. Treating as empty.") # DEBUG
-                        processed_as_json = True # Mark as processed to skip JSONL attempt
-
-                except json.JSONDecodeError:
-                    # If loading as single JSON fails, assume JSONL
-                    print(f"  File {current_file_being_processed} not a single JSON array, attempting JSONL parse.") # DEBUG
-                    f.seek(0) # Rewind file to read line by line
-                    for line_num, line in enumerate(f):
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            # Attempt to parse line, skip if invalid
-                            parsed_repo = json.loads(line)
-                            process_repo_object(parsed_repo)
-                        except json.JSONDecodeError as e:
-                            print(f"CRITICAL: Invalid JSON on line {line_num+1} in {current_file_being_processed} (JSONL mode). Error: {e}. Line starts with: {line[:100]}...")
-                            continue # Skip this line in JSONL mode
-                        except Exception as line_e: # Catch other potential errors processing the line's data
-                            print(f"CRITICAL: Error processing data from line {line_num+1} in {current_file_being_processed} (JSONL mode). Error: {line_e}. Line starts with: {line[:100]}...")
-                            continue
-
-                except Exception as e: # Catch other file reading errors after potential JSON load
-                     print(f"Error processing file {current_file_being_processed} after initial load attempt: {e}")
-                     # Reset in case of error during processing
-                     all_repos_processed = []
-                     processed_repo_ids = set()
-                # --- End of existing loading logic ---
-
-        except Exception as e: # Catch errors opening the file
-            print(f"Error reading results file {results_path}: {e}")
-            all_repos_processed = []
-            processed_repo_ids = set()
-
-    # 2. Fallback if results processing yielded no data
-    if not all_repos_processed:
-        # --- Start of existing fallback logic ---
-        fallback_path = 'repositories.jsonl'
-        if not os.path.exists(fallback_path):
-             fallback_path = 'sample_repositories.jsonl' # Check for sample repo file
-        if not os.path.exists(fallback_path):
-             fallback_path = 'sample_results.jsonl'
-
-
-        if os.path.exists(fallback_path):
-            current_file_being_processed = fallback_path
-            print(f"Results empty or missing, attempting fallback: {fallback_path}") # DEBUG
-            try:
-                with open(fallback_path, 'r', encoding='utf-8') as f:
-                    processed_as_json = False
-                    try:
-                        # Attempt to load as a single JSON array first
-                        data = json.load(f)
-                        if isinstance(data, list):
-                            print(f"  File {current_file_being_processed} detected as JSON array.") # DEBUG
-                            # Determine if it's raw repo data or results data
-                            if data and isinstance(data[0], dict) and 'repository' in data[0]: # Heuristic: looks like results format
-                                for repo_obj in data:
-                                    process_repo_object(repo_obj) # Use results processor
-                            else: # Assume raw repo format
-                                for raw_repo_obj in data:
-                                    process_raw_repo_object(raw_repo_obj) # Use raw processor
-                            processed_as_json = True
-                        else:
-                            print(f"  Warning: File {current_file_being_processed} is valid JSON but not an array. Treating as empty.") # DEBUG
-                            processed_as_json = True
-
-                    except json.JSONDecodeError:
-                        # If loading as single JSON fails, assume JSONL
-                        print(f"  File {current_file_being_processed} not a single JSON array, attempting JSONL parse.") # DEBUG
-                        f.seek(0) # Rewind file
-                        # Determine format based on first line (heuristic)
-                        first_line = f.readline().strip()
-                        f.seek(0) # Rewind again
-                        is_results_format = False
-                        if first_line.startswith('{'):
-                            try:
-                                first_obj = json.loads(first_line)
-                                if 'repository' in first_obj:
-                                    is_results_format = True
-                            except json.JSONDecodeError:
-                                pass # Stick with default (raw)
-
-                        print(f"  Detected JSONL format as {'Results' if is_results_format else 'Raw Repositories'}") # DEBUG
-
-                        for line_num, line in enumerate(f):
-                            line = line.strip()
-                            if not line:
-                                continue
-                            try:
-                                parsed_obj = json.loads(line)
-                                if is_results_format:
-                                    process_repo_object(parsed_obj)
-                                else:
-                                    process_raw_repo_object(parsed_obj)
-                            except json.JSONDecodeError as e:
-                                print(f"CRITICAL: Invalid JSON on line {line_num+1} in {current_file_being_processed} (JSONL mode). Error: {e}. Line starts with: {line[:100]}...")
-                                continue # Skip this line
-                            except Exception as line_e: # Catch other potential errors processing the line's data
-                                print(f"CRITICAL: Error processing data from line {line_num+1} in {current_file_being_processed} (JSONL mode). Error: {line_e}. Line starts with: {line[:100]}...")
-                                continue
-
-                    except Exception as e: # Catch other file reading errors
-                         print(f"Error processing file {current_file_being_processed} after initial load attempt: {e}")
-                         all_repos_processed = []
-                         processed_repo_ids = set()
-
-            except Exception as e: # Catch errors opening the file
-                print(f"Error reading fallback file {fallback_path}: {e}")
-                all_repos_processed = []
-                processed_repo_ids = set()
-        else:
-             print(f"No results file or fallback file found.") # DEBUG
-        # --- End of existing fallback logic ---
-
-    print(f"--- Finished processing. Returning {len(all_repos_processed)} repositories. ---") # DEBUG
-
-    # --- DEBUGGING: Return raw, indented JSON string ---
-    try:
-        # Use ensure_ascii=False if non-ASCII chars might be involved
-        # Use default ensure_ascii=True first, as it might reveal encoding issues
-        json_string = json.dumps(all_repos_processed, indent=2, ensure_ascii=True)
-        response = make_response(json_string)
-        # Set content type to application/json for better browser rendering/tools
-        response.headers['Content-Type'] = 'application/json; charset=utf-8'
-        print(f"--- Successfully generated JSON string (length: {len(json_string)}). Sending for inspection. ---") # DEBUG
-        return response
-    except TypeError as e:
-        print(f"CRITICAL: Failed to serialize processed repository list to JSON string: {e}")
-        # Return an error response if serialization itself fails
-        error_response = make_response(jsonify({"error": "Failed to process repository data due to serialization error."}), 500)
-        return error_response
-    # --- END DEBUGGING SECTION ---
-
-    # --- Original Return Logic (Commented out for debugging) ---
-    # try:
-    #     json.dumps(all_repos_processed) # Pre-flight check
-    #     return jsonify(all_repos_processed)
-    # except TypeError as e:
-    #     print(f"CRITICAL: Failed to serialize processed repository list to JSON: {e}")
-    #     return jsonify({"error": "Failed to process repository data due to serialization error."}), 500
-    # --- End Original Return Logic ---
-
-# --- End New API Endpoint ---
 
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not
@@ -1512,19 +1250,12 @@ if __name__ == '__main__':
         current_dir_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repo_viewer.html')
         if os.path.exists(current_dir_file):
             # Move the file to the templates directory
-            try:
-                import shutil
-                shutil.move(current_dir_file, template_file)
-                print(f"Moved repo_viewer.html to templates directory: {template_file}")
-            except Exception as e:
-                print(f"Error moving repo_viewer.html: {e}")
+            import shutil
+            shutil.move(current_dir_file, template_file)
+            print(f"Moved repo_viewer.html to templates directory")
         else:
-            # This is the corrected else block corresponding to the inner if
-            print(f"Warning: repo_viewer.html not found in current directory: {current_dir_file}")
-            print(f"         and not found in templates directory: {template_file}")
-    # else: # This corresponds to the outer if not os.path.exists(template_file)
-    #     print(f"Found repo_viewer.html in templates directory: {template_file}") # Optional: Add confirmation
-
+            print("Warning: repo_viewer.html not found in current directory or templates directory")
+    
     # Run the Flask app
     print("Starting web server at http://0.0.0.0:8000/") # Updated print statement
     print("Login required for Scraper and Analyzer pages/APIs.") # Updated message

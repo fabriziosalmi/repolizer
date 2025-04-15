@@ -1096,4 +1096,3 @@ def get_results_file_info(filename: str = 'results.jsonl') -> Dict[str, Any]:
 
     return {'path': file_path_to_use, 'mtime': mtime}
 
-# ... rest of the file ...

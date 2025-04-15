@@ -288,4 +288,3 @@ def get_results_file_info():
         'filename': os.path.basename(most_recent),
         'count': repo_count
     }
-
