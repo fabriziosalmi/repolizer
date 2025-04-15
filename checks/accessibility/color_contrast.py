@@ -542,7 +542,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         
         # Log execution time
         execution_time = time.time() - start_time
-        logger.info(f"✅ Color contrast check completed in {execution_time:.2f}s with score: {result.get('color_contrast_score', 0)}")
+        logger.debug(f"✅ Color contrast check completed in {execution_time:.2f}s with score: {result.get('color_contrast_score', 0)}")
         
         # Return the result with the score and enhanced metadata
         return {

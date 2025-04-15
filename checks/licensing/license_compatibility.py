@@ -447,7 +447,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         if '_cache' in repository:
             repository['_cache'][cache_key] = final_result
         
-        logger.info(f"✅ Completed license compatibility check for {repo_name} with score: {final_result['score']}")
+        logger.debug(f"✅ Completed license compatibility check for {repo_name} with score: {final_result['score']}")
         return final_result
         
     except Exception as e:

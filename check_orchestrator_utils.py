@@ -616,13 +616,13 @@ def clone_repository(clone_url: str, repo_dir: str, depth: int = 1) -> bool:
         
         # Clone repository
         git.Repo.clone_from(clone_url, repo_dir, depth=depth)
-        logger.info(f"⚙️ Repository cloned successfully to {repo_dir}")
+        logger.debug(f"⚙️ Repository cloned successfully to {repo_dir}")
         return True
     except ImportError:
-        logger.error("⚠️ Git module not available. Make sure gitpython is installed.")
+        logger.error("Git module not available. Make sure gitpython is installed.")
         return False
     except Exception as e:
-        logger.error(f"⚠️ Failed to clone repository to {repo_dir}: {e}")
+        logger.error(f"Failed to clone repository to {repo_dir}: {e}")
         return False
 
 def load_jsonl_file(file_path: str) -> List[Dict]:
