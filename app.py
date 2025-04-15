@@ -1102,8 +1102,8 @@ def get_statistics():
                                     issue_key = f"{category}: {check_name}"
                                     issue_counts[issue_key] += 1
                     
-                    # Limit to maximum 100 repositories for memory efficiency
-                    if repo_count >= 100:
+                    # Limit to maximum 100000 repositories for memory efficiency
+                    if repo_count >= 100000:
                         break
                         
                 except json.JSONDecodeError as e:

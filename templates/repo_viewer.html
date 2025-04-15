@@ -181,28 +181,13 @@
                         <option value="TypeScript">TypeScript</option>
                     </select>
 
-                    <!-- Category Filter Dropdown -->
-                    <select id="category-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
-                        <option value="all">All Categories</option>
-                        <option value="documentation">Documentation</option>
-                        <option value="security">Security</option>
-                        <option value="code_quality">Code Quality</option>
-                        <option value="performance">Performance</option>
-                        <option value="accessibility">Accessibility</option>
-                        <option value="ci_cd">CI/CD</option>
-                        <option value="maintainability">Maintainability</option>
-                        <option value="testing">Testing</option>
-                        <option value="licensing">Licensing</option>
-                        <option value="community">Community</option>
-                    </select>
+                    <!-- Removed Category Filter Dropdown -->
 
-                    <!-- Min Score Filter Dropdown -->
+                    <!-- Min Score Filter Dropdown - Updated values -->
                     <select id="score-filter-select" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
                         <option value="0">Min Score: 0+</option>
-                        <option value="25">Min Score: 25+</option>
-                        <option value="50">Min Score: 50+</option>
-                        <option value="75">Min Score: 75+</option>
-                        <option value="90">Min Score: 90+</option>
+                        <option value="40">Min Score: 40+</option>
+                        <option value="70">Min Score: 70+</option>
                     </select>
                 </div>
             </div>
@@ -242,7 +227,6 @@
     let allRepos = [];
     let filteredRepos = [];
     let currentLanguage = 'all';
-    let currentCategory = 'all';
     let minScoreFilter = 0;
     let currentPage = 1;
     const reposPerPage = 30;
@@ -255,7 +239,6 @@
     const searchInput = document.getElementById('search-input');
     const sortSelect = document.getElementById('sort-select');
     const languageFilterSelect = document.getElementById('language-filter-select');
-    const categoryFilterSelect = document.getElementById('category-filter-select');
     const scoreFilterSelect = document.getElementById('score-filter-select');
     
     // Create pagination container at the bottom of the page
@@ -506,14 +489,6 @@
       });
     }
 
-    // Event listener for category filter select
-    if (categoryFilterSelect) {
-      categoryFilterSelect.addEventListener('change', () => {
-        currentCategory = categoryFilterSelect.value;
-        filterRepos();
-      });
-    }
-
     // Event listener for score filter select
     if (scoreFilterSelect) {
       scoreFilterSelect.addEventListener('change', () => {
@@ -526,7 +501,7 @@
     function filterRepos() {
       const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
-      console.log(`Filtering repos with: Search="${searchTerm}", Language=${currentLanguage}, Category=${currentCategory}, MinScore=${minScoreFilter}`);
+      console.log(`Filtering repos with: Search="${searchTerm}", Language=${currentLanguage}, MinScore=${minScoreFilter}`);
       console.log(`Total repos before filtering: ${allRepos.length}`);
 
       filteredRepos = allRepos.filter(repo => {
@@ -540,14 +515,7 @@
         // Filter by overall score
         const scoreMatch = (repo.overall_score || 0) >= minScoreFilter;
 
-        // Filter by category if selected
-        let categoryMatch = true;
-        if (currentCategory !== 'all') {
-          // Check if the selected category exists and has a score > 0
-          categoryMatch = (repo.category_scores?.[currentCategory] || 0) > 0;
-        }
-
-        return nameMatch && languageMatch && scoreMatch && categoryMatch;
+        return nameMatch && languageMatch && scoreMatch;
       });
 
       console.log(`Total repos after filtering: ${filteredRepos.length}`);
