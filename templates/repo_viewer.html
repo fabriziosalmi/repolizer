@@ -228,6 +228,7 @@
             <i class="fas fa-search text-gray-400 text-5xl mb-4"></i>
             <p class="text-xl text-gray-600">No repositories found matching your search criteria.</p>
         </div>
+        <!-- Pagination container will be added here by JS -->
     </main>
 
     <footer class="bg-gray-800 text-white mt-auto py-6">
@@ -246,7 +247,7 @@
     let minScoreFilter = 0;
     let currentPage = 1;
     const reposPerPage = 30;
-    
+
     // Get elements from the DOM
     const reposContainer = document.getElementById('repo-grid');
     const loadingIndicator = document.getElementById('loading-indicator');
@@ -257,12 +258,20 @@
     const languageFilterSelect = document.getElementById('language-filter-select');
     const categoryFilterSelect = document.getElementById('category-filter-select');
     const scoreFilterSelect = document.getElementById('score-filter-select');
-    
-    // Create pagination container at the bottom of the page
+
+    // Create pagination container dynamically
     const paginationContainer = document.createElement('div');
     paginationContainer.id = 'pagination-container';
-    paginationContainer.className = 'flex justify-center my-6';
-    reposContainer.parentNode.insertBefore(paginationContainer, reposContainer.nextSibling);
+    paginationContainer.className = 'flex flex-col sm:flex-row justify-center items-center my-6 space-y-2 sm:space-y-0 sm:space-x-4'; // Adjusted classes for responsiveness
+    // Insert pagination container after the grid, before the footer might be better.
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+        mainElement.appendChild(paginationContainer);
+    } else {
+        console.error("Could not find main element to append pagination.");
+        document.body.appendChild(paginationContainer); // Fallback append to body
+    }
+
 
     // Check if all required DOM elements exist
     if (!reposContainer || !loadingIndicator || !noResults || !repoCount) {
@@ -270,7 +279,7 @@
       return;
     }
 
-    // Category icons and names
+    // Category icons and names (unchanged)
     const categoryIcons = {
       'documentation': 'fa-file-lines',
       'security': 'fa-shield-alt',
@@ -297,138 +306,66 @@
       'community': 'Community'
     };
 
-    // Get result path from parameters or use default
+    // Get page from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
-    const resultPath = urlParams.get('path') || 'results.jsonl';
     const pageParam = urlParams.get('page');
     if (pageParam) {
       currentPage = parseInt(pageParam, 10) || 1;
     }
-    
-    console.log(`Loading repositories from: ${resultPath}, page ${currentPage}`);
 
-    // Load repositories from the results file
+    console.log(`Loading repositories from API, page ${currentPage}`);
+
+    // Load repositories from the new API endpoint
     try {
       // Show loading indicator
       if (loadingIndicator) {
         loadingIndicator.style.display = 'flex';
         loadingIndicator.classList.remove('hidden');
       }
-      
       if (noResults) {
         noResults.classList.add('hidden');
       }
-      
-      // First try the specified results file
-      const response = await fetch(resultPath);
+
+      // Fetch data from the API endpoint
+      const response = await fetch('/api/repositories'); // <-- Fetch from the new API endpoint
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
-      }
-
-      const text = await response.text();
-
-      if (!text || text.trim() === '') {
-        throw new Error(`No data in ${resultPath}`);
-      }
-
-      console.log(`Loaded file with ${text.length} characters`);
-
-      // Determine if the file is JSON or JSONL format
-      const isJson = resultPath.toLowerCase().endsWith('.json') || 
-                     (text.trim().startsWith('[') && text.trim().endsWith(']'));
-
-      console.log(`Detected file format: ${isJson ? 'JSON' : 'JSONL'}`);
-
-      // Process based on the file format
-      if (isJson) {
-        // Handle JSON format (array of objects)
+        // Try to get error message from response body
+        let errorDetail = `${response.status} ${response.statusText}`;
         try {
-          const jsonData = JSON.parse(text);
-          
-          // Check if it's an array or a single object
-          if (Array.isArray(jsonData)) {
-            allRepos = jsonData.filter(repo => repo && repo.repository);
-          } else if (jsonData && jsonData.repository) {
-            allRepos = [jsonData];
-          }
-        } catch (e) {
-          console.error('Error parsing JSON:', e);
-          throw new Error('Invalid JSON format');
-        }
-      } else {
-        // Handle JSONL format (one JSON object per line)
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        console.log(`Processing ${lines.length} lines of JSONL`);
-        
-        const processedRepoIds = new Set(); // Track processed repos to avoid duplicates
-        allRepos = [];
-        
-        for (const line of lines) {
-          try {
-            const parsedRepo = JSON.parse(line);
-            if (parsedRepo && parsedRepo.repository) {
-              // Only include each repository once (take latest analysis)
-              const repoId = parsedRepo.repository.id;
-              if (!processedRepoIds.has(repoId)) {
-                processedRepoIds.add(repoId);
-                allRepos.push(parsedRepo);
-              }
-            }
-          } catch (e) {
-            console.warn('Error parsing line:', line.substring(0, 100) + '...', e);
-            // Continue to next line instead of failing completely
-          }
-        }
+            const errorJson = await response.json();
+            errorDetail = errorJson.error || errorDetail;
+        } catch (e) { /* Ignore if response body is not JSON */ }
+        throw new Error(`Failed to fetch repositories: ${errorDetail}`);
       }
 
-      console.log(`Loaded ${allRepos.length} repositories successfully.`);
+      // Parse the JSON response (should be an array)
+      const jsonData = await response.json();
 
-      // If no results found or empty, try repositories.jsonl as fallback
-      if (allRepos.length === 0) {
-        console.log("No repositories found in the results file. Trying repositories.jsonl as fallback.");
-        const fallbackResponse = await fetch('repositories.jsonl');
-
-        if (fallbackResponse.ok) {
-          const fallbackText = await fallbackResponse.text();
-
-          if (fallbackText.trim()) {
-            const fallbackLines = fallbackText.split('\n').filter(line => line.trim() !== '');
-            
-            for (const line of fallbackLines) {
-              try {
-                // Convert repo data to match results.jsonl format
-                const rawRepo = JSON.parse(line);
-                if (rawRepo) {
-                  allRepos.push({
-                    repository: rawRepo,
-                    overall_score: 0,
-                    timestamp: new Date().toISOString()
-                  });
-                }
-              } catch (e) {
-                console.warn('Error parsing fallback line:', e);
-                // Continue to next line
-              }
-            }
-          }
-        } else {
-          console.log("No fallback repository data found either.");
-        }
+      if (!Array.isArray(jsonData)) {
+          throw new Error('Invalid data format received from API. Expected an array.');
       }
 
-      // Process each repo to calculate category averages
+      allRepos = jsonData; // <-- Assign directly, no need for line splitting/parsing
+
+      console.log(`Loaded ${allRepos.length} repositories successfully from API.`);
+
+      // Process each repo to calculate category averages (still needed)
       allRepos.forEach(repo => {
+        // Ensure repo.repository exists
+        if (!repo.repository) {
+            repo.repository = {}; // Add empty object if missing
+        }
         // Add category averages
         repo.category_scores = {};
 
         // For each category, calculate average score
         Object.keys(categoryNames).forEach(category => {
-          if (repo[category]) {
-            const checks = Object.values(repo[category]).filter(check => 
+          if (repo[category] && typeof repo[category] === 'object') { // Check if category data exists and is an object
+            const checks = Object.values(repo[category]).filter(check =>
               typeof check === 'object' && check !== null && 'score' in check
             );
-            
+
             if (checks.length > 0) {
               const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
               repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
@@ -436,13 +373,13 @@
               repo.category_scores[category] = 0;
             }
           } else {
-            repo.category_scores[category] = 0;
+            repo.category_scores[category] = 0; // Default to 0 if category data is missing or not an object
           }
         });
       });
 
       filteredRepos = [...allRepos];
-      
+
       if (repoCount) {
         repoCount.textContent = filteredRepos.length;
       }
@@ -460,23 +397,27 @@
       if (filteredRepos.length === 0) {
         if (noResults) {
           noResults.classList.remove('hidden');
+          // Update message if needed
+          const noResultsMsg = noResults.querySelector('p');
+          if (noResultsMsg) noResultsMsg.textContent = 'No repositories found.';
         }
       } else {
-        updatePagination();
+        // Display the first page
+        displayRepos(); // Call displayRepos which now handles pagination update internally
       }
 
     } catch (error) {
       console.error('Error loading repositories:', error);
-      
+
       // Ensure the loading indicator is hidden
       if (loadingIndicator) {
         loadingIndicator.style.display = 'none';
         loadingIndicator.classList.add('hidden');
       }
-      
+
       if (noResults) {
         noResults.classList.remove('hidden');
-        
+
         const errorMsg = noResults.querySelector('p');
         if (errorMsg) {
           errorMsg.textContent = `Error loading repository data: ${error.message}`;
@@ -484,37 +425,29 @@
       }
     }
 
-    // Event listener for search input
+    // Event listeners (unchanged)
     if (searchInput) {
       searchInput.addEventListener('input', () => {
         filterRepos();
       });
     }
-
-    // Event listener for sort select
     if (sortSelect) {
       sortSelect.addEventListener('change', () => {
         sortRepos(sortSelect.value);
       });
     }
-
-    // Event listener for language filter select
     if (languageFilterSelect) {
       languageFilterSelect.addEventListener('change', () => {
         currentLanguage = languageFilterSelect.value;
         filterRepos();
       });
     }
-
-    // Event listener for category filter select
     if (categoryFilterSelect) {
       categoryFilterSelect.addEventListener('change', () => {
         currentCategory = categoryFilterSelect.value;
         filterRepos();
       });
     }
-
-    // Event listener for score filter select
     if (scoreFilterSelect) {
       scoreFilterSelect.addEventListener('change', () => {
         minScoreFilter = parseInt(scoreFilterSelect.value);
@@ -522,7 +455,7 @@
       });
     }
 
-    // Function to filter repositories
+    // Function to filter repositories (unchanged logic, just uses filteredRepos)
     function filterRepos() {
       const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
@@ -554,17 +487,14 @@
 
       // Reset to first page when filters change
       currentPage = 1;
-      updatePagination();
-      
       // Update count and display repositories
       if (repoCount) {
         repoCount.textContent = filteredRepos.length;
       }
-      
-      displayRepos();
+      displayRepos(); // displayRepos now handles pagination update
     }
 
-    // Function to sort repositories
+    // Function to sort repositories (unchanged)
     function sortRepos(sortBy) {
       switch (sortBy) {
         case 'overall_score_desc':
@@ -594,14 +524,15 @@
           });
           break;
       }
-
-      displayRepos();
+      // Reset to first page after sorting
+      currentPage = 1;
+      displayRepos(); // displayRepos now handles pagination update
     }
 
-    // Function to display repositories with pagination
+    // Function to display repositories for the current page (unchanged)
     function displayRepos() {
       if (!reposContainer) return;
-      
+
       // Clear the container
       reposContainer.innerHTML = '';
 
@@ -609,6 +540,8 @@
         if (noResults) {
           noResults.classList.remove('hidden');
         }
+        // Clear pagination if no results
+        paginationContainer.innerHTML = '';
         return;
       }
 
@@ -627,33 +560,33 @@
           console.warn('Repository object is missing required data:', repo);
           return;
         }
-        
+
         const card = createRepoCard(repo);
         reposContainer.appendChild(card);
       });
-      
+
       // Update pagination controls
       updatePagination();
     }
 
-    // Function to update pagination controls
+    // Function to update pagination controls (unchanged)
     function updatePagination() {
       const totalPages = Math.ceil(filteredRepos.length / reposPerPage);
-      
+
       // Clear previous pagination
       paginationContainer.innerHTML = '';
-      
+
       if (totalPages <= 1) {
         return; // No pagination needed
       }
-      
-      // Create pagination controls
+
+      // Create pagination controls container
       const pagination = document.createElement('div');
       pagination.className = 'flex items-center space-x-1';
-      
+
       // Previous button
       const prevButton = document.createElement('button');
-      prevButton.className = 'px-4 py-2 border rounded-md ' + 
+      prevButton.className = 'px-3 py-1 sm:px-4 sm:py-2 border rounded-md ' +
         (currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50');
       prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
       prevButton.disabled = currentPage === 1;
@@ -661,76 +594,74 @@
         if (currentPage > 1) {
           currentPage--;
           displayRepos();
+          window.scrollTo(0, 0); // Scroll to top
         }
       });
       pagination.appendChild(prevButton);
-      
-      // Page numbers
+
+      // Page numbers logic (unchanged)
       const maxVisiblePages = 5;
       let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
       let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-      
-      // Adjust if we're at the end
+
       if (endPage - startPage + 1 < maxVisiblePages) {
         startPage = Math.max(1, endPage - maxVisiblePages + 1);
       }
-      
-      // First page button if not visible
+
       if (startPage > 1) {
         const firstButton = document.createElement('button');
-        firstButton.className = 'px-4 py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
+        firstButton.className = 'px-3 py-1 sm:px-4 sm:py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
         firstButton.textContent = '1';
         firstButton.addEventListener('click', () => {
           currentPage = 1;
           displayRepos();
+          window.scrollTo(0, 0); // Scroll to top
         });
         pagination.appendChild(firstButton);
-        
-        // Ellipsis if needed
+
         if (startPage > 2) {
           const ellipsis = document.createElement('span');
-          ellipsis.className = 'px-4 py-2';
+          ellipsis.className = 'px-3 py-1 sm:px-4 sm:py-2';
           ellipsis.textContent = '...';
           pagination.appendChild(ellipsis);
         }
       }
-      
-      // Page buttons
+
       for (let i = startPage; i <= endPage; i++) {
         const pageButton = document.createElement('button');
-        pageButton.className = 'px-4 py-2 border rounded-md ' + 
+        pageButton.className = 'px-3 py-1 sm:px-4 sm:py-2 border rounded-md ' +
           (i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50');
         pageButton.textContent = i.toString();
         pageButton.addEventListener('click', () => {
           currentPage = i;
           displayRepos();
+          window.scrollTo(0, 0); // Scroll to top
         });
         pagination.appendChild(pageButton);
       }
-      
-      // Last page button if not visible
+
       if (endPage < totalPages) {
-        // Ellipsis if needed
         if (endPage < totalPages - 1) {
           const ellipsis = document.createElement('span');
-          ellipsis.className = 'px-4 py-2';
+          ellipsis.className = 'px-3 py-1 sm:px-4 sm:py-2';
           ellipsis.textContent = '...';
           pagination.appendChild(ellipsis);
         }
-        
+
         const lastButton = document.createElement('button');
-        lastButton.className = 'px-4 py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
+        lastButton.className = 'px-3 py-1 sm:px-4 sm:py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
         lastButton.textContent = totalPages.toString();
         lastButton.addEventListener('click', () => {
           currentPage = totalPages;
           displayRepos();
+          window.scrollTo(0, 0); // Scroll to top
         });
         pagination.appendChild(lastButton);
       }
-      
+
       // Next button
       const nextButton = document.createElement('button');
-      nextButton.className = 'px-4 py-2 border rounded-md ' + 
+      nextButton.className = 'px-3 py-1 sm:px-4 sm:py-2 border rounded-md ' +
         (currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50');
       nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
       nextButton.disabled = currentPage === totalPages;
@@ -738,26 +669,30 @@
         if (currentPage < totalPages) {
           currentPage++;
           displayRepos();
+          window.scrollTo(0, 0); // Scroll to top
         }
       });
       pagination.appendChild(nextButton);
-      
-      // Page info
+
+      // Page info text container
       const pageInfo = document.createElement('div');
-      pageInfo.className = 'ml-4 text-sm text-gray-600';
+      pageInfo.className = 'text-sm text-gray-600 mt-2 sm:mt-0'; // Add margin top for small screens
       pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredRepos.length} repositories)`;
-      
-      // Append to container
+
+      // Append controls and info to the main pagination container
       paginationContainer.appendChild(pagination);
       paginationContainer.appendChild(pageInfo);
-      
+
+
       // Update URL with current page
       const url = new URL(window.location.href);
       url.searchParams.set('page', currentPage);
-      window.history.replaceState({}, '', url);
+      // Use replaceState to avoid polluting browser history on pagination clicks
+      window.history.replaceState({ path: url.toString() }, '', url);
     }
 
-    // Function to create a repository card
+
+    // Function to create a repository card (unchanged)
     function createRepoCard(repo) {
       const card = document.createElement('div');
       card.className = 'repo-card bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col';
@@ -792,9 +727,8 @@
       let categoryBarChartHtml = `
         <div class="category-bar-chart flex justify-between items-end h-24 mt-2 mb-3 px-1" style="margin-top: 2.5rem;">
       `;
-      
+
       // Use a fixed category order instead of sorting by score
-      // Define the categories in the order we want them to appear
       const fixedCategoryOrder = [
         'documentation',
         'security',
@@ -807,14 +741,14 @@
         'licensing',
         'community'
       ];
-      
+
       // Add bars for each category in the fixed order
       for (const category of fixedCategoryOrder) {
         // Get the score and metadata for this category
         const score = repo.category_scores?.[category] || 0;
         const icon = categoryIcons[category] || 'fa-question-circle';
         const name = categoryNames[category] || category;
-        
+
         // Determine color class based on score
         let colorClass;
         if (score >= 70) {
@@ -824,23 +758,27 @@
         } else {
           colorClass = 'bg-red-500'; // Red for scores 0-39
         }
-        
+
         // Calculate height based on score (0-100%)
         const heightPercentage = Math.max(5, score); // Minimum 5% height for visibility
-        
+
         // Modified structure to put icons at the bottom
         categoryBarChartHtml += `
-          <div class="flex flex-col items-center" title="${name}: ${score}">
-            <div class="relative w-5 h-20">
+          <div class="flex flex-col items-center w-1/10 px-0.5" title="${name}: ${score.toFixed(1)}"> <!-- Added width and padding -->
+            <div class="relative w-full h-20"> <!-- Use full width of parent -->
               <div class="${colorClass} absolute bottom-0 w-full rounded-t" style="height: ${heightPercentage}%;"></div>
             </div>
             <span class="text-xs mt-1 text-gray-600">${Math.round(score)}</span>
-            <i class="fas ${icon} text-gray-700 mt-1"></i>
+            <i class="fas ${icon} text-gray-700 mt-1 text-xs sm:text-sm"></i> <!-- Adjusted icon size -->
           </div>
         `;
       }
-      
+
       categoryBarChartHtml += `</div>`;
+
+      // Determine the target URL for the detailed report link
+      // Use full_name if ID is missing (e.g., from repositories.jsonl fallback)
+      const detailLinkTarget = repoData.id ? repoData.id : (repoData.full_name || '');
 
       card.innerHTML = `
         <div class="p-5 flex-grow">
@@ -864,7 +802,7 @@
           </div>
 
           <p class="text-gray-700 mb-2" style="font-size: 0.9rem;">${description}</p>
-          
+
           <!-- Category Score Bar Chart -->
           ${categoryBarChartHtml}
 
@@ -879,9 +817,15 @@
           </div>
 
           <div class="mt-4 text-center">
-            <a href="/repo/${repoData.id || ''}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <i class="fas fa-chart-bar mr-1"></i> View Detailed Report
-            </a>
+             ${detailLinkTarget ? `
+               <a href="/repo/${encodeURIComponent(detailLinkTarget)}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                 <i class="fas fa-chart-bar mr-1"></i> View Detailed Report
+               </a>
+             ` : `
+               <span class="inline-block px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed" title="Detailed report unavailable (missing ID/Name)">
+                 <i class="fas fa-chart-bar mr-1"></i> View Detailed Report
+               </span>
+             `}
           </div>
         </div>
         <div class="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm text-gray-600">
@@ -895,12 +839,13 @@
       return card;
     }
 
-    // Function to format large numbers
+
+    // Helper functions (unchanged)
     function formatNumber(num) {
+      if (typeof num !== 'number') return '0';
       return num.toLocaleString();
     }
 
-    // Function to truncate text
     function truncateText(text, maxLength) {
       if (!text) return '';
       if (text.length > maxLength) {
@@ -909,20 +854,19 @@
       return text;
     }
 
-    // Function to format date
     function formatDate(dateString) {
       if (!dateString) return 'Unknown';
-      
+
       try {
         const date = new Date(dateString);
-        return date.toLocaleDateString();
+        // More user-friendly format
+        return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
       } catch (e) {
         console.warn('Invalid date:', dateString);
         return 'Invalid date';
       }
     }
 
-    // Function to get language color
     function getLanguageColor(language) {
       const colors = {
         'JavaScript': '#f1e05a',
@@ -935,10 +879,23 @@
         'Go': '#00ADD8',
         'C#': '#178600',
         'C++': '#f34b7d',
-        'PHP': '#4F5D95'
+        'PHP': '#4F5D95',
+        'Shell': '#89e051',
+        'C': '#555555',
+        'Swift': '#ffac45',
+        'Kotlin': '#F18E33',
+        'Rust': '#dea584',
+        'Scala': '#c22d40',
+        'Perl': '#0298c3',
+        'Lua': '#000080',
+        'Objective-C': '#438eff',
+        'Dart': '#00B4AB',
+        'R': '#198CE7',
+        'Jupyter Notebook': '#DA5B0B'
+        // Add more as needed
       };
 
-      return colors[language] || '#8F8F8F';
+      return colors[language] || '#8F8F8F'; // Default gray
     }
   });
 </script>
