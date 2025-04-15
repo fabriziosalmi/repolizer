@@ -790,7 +790,7 @@
 
       // Generate vertical bar chart HTML for category scores
       let categoryBarChartHtml = `
-        <div class="category-bar-chart flex justify-between items-end h-24 mt-2 mb-3 px-1" style="margin-top: 1.5rem;">
+        <div class="category-bar-chart flex justify-between items-end h-24 mt-2 mb-3 px-1" style="margin-top: 2.5rem;">
       `;
       
       // Use a fixed category order instead of sorting by score
@@ -863,7 +863,7 @@
             </div>
           </div>
 
-          <p class="text-gray-700 mb-2">${description}</p>
+          <p class="text-gray-700 mb-2" style="font-size: 0.9rem;">${description}</p>
           
           <!-- Category Score Bar Chart -->
           ${categoryBarChartHtml}
