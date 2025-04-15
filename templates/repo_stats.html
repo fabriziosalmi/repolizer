@@ -232,6 +232,19 @@
                 </div>
             </div>
             
+            <!-- Common Issues Section -->
+            <div class="bg-white rounded-lg shadow-md mb-6">
+                <div class="p-5 border-b border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-800">Most Common Issues</h3>
+                    <p class="text-gray-600">Top issues found across analyzed repositories</p>
+                </div>
+                <div class="p-5">
+                    <ul id="common-issues-list" class="space-y-2">
+                        <!-- Common issues will be inserted here dynamically -->
+                    </ul>
+                </div>
+            </div>
+            
             <!-- Repository Checks Section -->
             <div class="bg-white rounded-lg shadow-md">
                 <div class="p-5 border-b border-gray-200">
@@ -259,209 +272,290 @@
     </footer>
 
     <script>
-  document.addEventListener('DOMContentLoaded', async () => {
-    // Get DOM elements
-    const statsContainer = document.getElementById('stats-container');
-    const loadingIndicator = document.getElementById('loading');
-    const errorContainer = document.getElementById('error-container');
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Get DOM elements
+            const statsContainer = document.getElementById('stats-container');
+            const loadingIndicator = document.getElementById('loading');
+            const errorContainer = document.getElementById('error-container');
 
-    if (!statsContainer || !loadingIndicator || !errorContainer) {
-      console.error('Required DOM elements not found');
-      return;
-    }
+            // Show loading indicator
+            loadingIndicator.style.display = 'flex';
+            statsContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
 
-    // Show loading indicator
-    loadingIndicator.style.display = 'flex';
-    statsContainer.classList.add('hidden');
-    errorContainer.classList.add('hidden');
+            // Chart colors
+            const chartColors = [
+                '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+                '#ec4899', '#6366f1', '#f97316', '#14b8a6', '#f43f5e'
+            ];
 
-    // Create the initial structure for the stats page
-    statsContainer.innerHTML = `
-      <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">Repository Health Overview</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-blue-50 p-4 rounded-lg shadow-sm">
-            <h3 class="text-lg font-semibold text-blue-700 mb-2">Analyzed Repositories</h3>
-            <p class="text-3xl font-bold text-blue-800" id="total-repos">Loading...</p>
-          </div>
-          <div class="bg-green-50 p-4 rounded-lg shadow-sm">
-            <h3 class="text-lg font-semibold text-green-700 mb-2">Average Health Score</h3>
-            <p class="text-3xl font-bold text-green-800" id="average-score">Loading...</p>
-          </div>
-          <div class="bg-purple-50 p-4 rounded-lg shadow-sm">
-            <h3 class="text-lg font-semibold text-purple-700 mb-2">Most Common Issues</h3>
-            <p class="text-md text-purple-800" id="common-issues">Loading...</p>
-          </div>
-        </div>
+            // Category icons and names
+            const categoryIcons = {
+                'documentation': 'fa-file-lines',
+                'security': 'fa-shield-alt',
+                'code_quality': 'fa-code',
+                'performance': 'fa-tachometer-alt',
+                'accessibility': 'fa-universal-access',
+                'ci_cd': 'fa-sync',
+                'maintainability': 'fa-wrench',
+                'testing': 'fa-vial',
+                'licensing': 'fa-balance-scale',
+                'community': 'fa-users'
+            };
+            
+            const categoryNames = {
+                'documentation': 'Documentation',
+                'security': 'Security',
+                'code_quality': 'Code Quality',
+                'performance': 'Performance',
+                'accessibility': 'Accessibility',
+                'ci_cd': 'CI/CD',
+                'maintainability': 'Maintainability',
+                'testing': 'Testing',
+                'licensing': 'Licensing',
+                'community': 'Community'
+            };
 
-        <h3 class="text-xl font-bold text-gray-800 mb-3">Category Scores</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="category-details">
-          <div class="bg-gray-100 p-4 rounded-lg shadow-sm animate-pulse">
-            <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div class="h-8 bg-gray-200 rounded mb-1"></div>
-            <div class="h-2 bg-gray-200 rounded mb-2"></div>
-            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-          <div class="bg-gray-100 p-4 rounded-lg shadow-sm animate-pulse">
-            <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div class="h-8 bg-gray-200 rounded mb-1"></div>
-            <div class="h-2 bg-gray-200 rounded mb-2"></div>
-            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-          <div class="bg-gray-100 p-4 rounded-lg shadow-sm animate-pulse">
-            <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div class="h-8 bg-gray-200 rounded mb-1"></div>
-            <div class="h-2 bg-gray-200 rounded mb-2"></div>
-            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Now get references to newly created elements
-    const totalRepos = document.getElementById('total-repos');
-    const avgScore = document.getElementById('average-score');
-    const commonIssues = document.getElementById('common-issues');
-    const categoryDetailsContainer = document.getElementById('category-details');
-    const checkDetailsContainer = document.getElementById('check-details');
-
-    // Category icons and names
-    const categoryIcons = {
-      'documentation': 'fa-file-lines',
-      'security': 'fa-shield-alt',
-      'code_quality': 'fa-code',
-      'performance': 'fa-tachometer-alt',
-      'accessibility': 'fa-universal-access',
-      'ci_cd': 'fa-sync',
-      'maintainability': 'fa-wrench',
-      'testing': 'fa-vial',
-      'licensing': 'fa-balance-scale',
-      'community': 'fa-users'
-    };
-
-    const categoryNames = {
-      'documentation': 'Documentation',
-      'security': 'Security',
-      'code_quality': 'Code Quality',
-      'performance': 'Performance',
-      'accessibility': 'Accessibility',
-      'ci_cd': 'CI/CD',
-      'maintainability': 'Maintainability',
-      'testing': 'Testing',
-      'licensing': 'Licensing',
-      'community': 'Community'
-    };
-
-    try {
-      console.log("Fetching statistics data...");
-      
-      // Get statistics from the API with timeout to prevent hanging requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
-      const response = await fetch('/api/statistics', {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-      }
-      
-      const stats = await response.json();
-      console.log("Fetched statistics data:", stats);
-
-      // Check for API errors
-      if (stats.error) {
-        throw new Error(stats.error);
-      }
-
-      // Explicitly hide loading indicator and show stats container
-      loadingIndicator.style.display = 'none';
-      loadingIndicator.classList.add('hidden');
-      statsContainer.classList.remove('hidden');
-
-      // Process and display stats
-      if (!stats || typeof stats !== 'object') {
-        throw new Error('Invalid statistics data received');
-      }
-
-      // Update metrics
-      if (totalRepos) {
-        totalRepos.textContent = stats.total_repositories || 0;
-      }
-      
-      if (avgScore) {
-        const avgScoreValue = stats.average_overall_score || 0;
-        avgScore.textContent = avgScoreValue.toFixed(1);
-      }
-
-      // Set common issues
-      if (commonIssues) {
-        if (stats.common_issues && stats.common_issues.length > 0) {
-          commonIssues.innerHTML = stats.common_issues.slice(0, 3).map(issue => 
-            `<div class="mb-1">• ${issue}</div>`
-          ).join('');
-        } else {
-          commonIssues.textContent = 'No common issues found';
-        }
-      }
-
-      // Update category details
-      if (categoryDetailsContainer) {
-        categoryDetailsContainer.innerHTML = '';
-        
-        // Get category scores
-        const categoryScores = stats.category_average_scores || {};
-        
-        Object.entries(categoryScores).forEach(([category, avgScore]) => {
-          if (!categoryNames[category]) return;
-          
-          const score = avgScore || 0;
-          const scoreFormatted = score.toFixed(1);
-          const scoreClass = score >= 70 ? 'score-high' : (score >= 40 ? 'score-medium' : 'score-low');
-          const icon = categoryIcons[category] || 'fa-question-circle';
-          const displayName = categoryNames[category] || category;
-          const repoCount = stats.category_repo_counts?.[category] || 0;
-          const percentage = stats.total_repositories > 0 ? 
-            Math.round((repoCount / stats.total_repositories) * 100) : 0;
-
-          const card = document.createElement('div');
-          card.className = 'score-card bg-white border rounded-lg p-4 shadow-sm';
-          card.innerHTML = `
-            <div class="flex items-center mb-2">
-              <i class="fas ${icon} mr-2 text-lg ${scoreClass.replace('score-', 'text-').replace('high', 'green-500').replace('medium', 'yellow-500').replace('low', 'red-500')}"></i>
-              <h4 class="font-semibold text-gray-700">${displayName}</h4>
-            </div>
-            <p class="text-2xl font-bold mb-1 ${scoreClass.replace('score-', 'text-').replace('high', 'green-500').replace('medium', 'yellow-500').replace('low', 'red-500')}">${scoreFormatted}</p>
-            <div class="score-bar w-full bg-gray-200 rounded-full mb-2">
-              <div class="score-bar-fill ${scoreClass} rounded-full" style="width: ${score}%;"></div>
-            </div>
-            <p class="text-xs text-gray-500">${repoCount.toLocaleString()} / ${stats.total_repositories.toLocaleString()} Repos (${percentage}%)</p>
-          `;
-          categoryDetailsContainer.appendChild(card);
+            try {
+                // Get statistics from the API
+                const response = await fetch('/api/statistics');
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+                
+                const stats = await response.json();
+                
+                // Hide loading indicator and show stats container
+                loadingIndicator.style.display = 'none';
+                statsContainer.classList.remove('hidden');
+                
+                // Update basic stats
+                document.getElementById('total-repos').textContent = stats.total_repositories.toLocaleString();
+                
+                const avgScore = stats.average_overall_score || 0;
+                document.getElementById('avg-score').textContent = avgScore.toFixed(1);
+                
+                const avgScoreBar = document.getElementById('avg-score-bar');
+                avgScoreBar.style.width = `${avgScore}%`;
+                
+                if (avgScore >= 70) {
+                    avgScoreBar.classList.add('score-high');
+                    avgScoreBar.classList.remove('score-medium', 'score-low');
+                } else if (avgScore >= 40) {
+                    avgScoreBar.classList.add('score-medium');
+                    avgScoreBar.classList.remove('score-high', 'score-low');
+                } else {
+                    avgScoreBar.classList.add('score-low');
+                    avgScoreBar.classList.remove('score-high', 'score-medium');
+                }
+                
+                // Update languages count
+                const languages = stats.language_distribution || {};
+                document.getElementById('languages-count').textContent = Object.keys(languages).length.toLocaleString();
+                
+                // Update total checks
+                document.getElementById('checks-count').textContent = stats.total_checks.toLocaleString();
+                
+                // Create category average scores chart
+                const categoryScores = stats.category_average_scores || {};
+                const categoryLabels = Object.keys(categoryScores).map(key => categoryNames[key] || key);
+                const categoryValues = Object.values(categoryScores);
+                
+                new Chart(document.getElementById('category-scores-chart'), {
+                    type: 'bar',
+                    data: {
+                        labels: categoryLabels,
+                        datasets: [{
+                            label: 'Average Score',
+                            data: categoryValues,
+                            backgroundColor: categoryLabels.map((_, i) => chartColors[i % chartColors.length]),
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Score'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+                
+                // Create language distribution chart
+                const languageLabels = Object.keys(languages);
+                const languageValues = Object.values(languages);
+                
+                new Chart(document.getElementById('language-distribution-chart'), {
+                    type: 'pie',
+                    data: {
+                        labels: languageLabels,
+                        datasets: [{
+                            data: languageValues,
+                            backgroundColor: languageLabels.map((_, i) => chartColors[i % chartColors.length]),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right'
+                            }
+                        }
+                    }
+                });
+                
+                // Create score distribution chart
+                const scoreDistribution = stats.score_distribution || {};
+                const scoreRanges = Object.keys(scoreDistribution);
+                const scoreCounts = Object.values(scoreDistribution);
+                
+                new Chart(document.getElementById('score-distribution-chart'), {
+                    type: 'bar',
+                    data: {
+                        labels: scoreRanges,
+                        datasets: [{
+                            label: 'Repositories',
+                            data: scoreCounts,
+                            backgroundColor: '#3b82f6',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Repositories'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Score Range'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Populate category details
+                const categoryDetailsContainer = document.getElementById('category-details');
+                categoryDetailsContainer.innerHTML = '';
+                
+                Object.entries(categoryScores).forEach(([category, score]) => {
+                    const repoCount = stats.category_repo_counts?.[category] || 0;
+                    const percentage = stats.total_repositories > 0 ? 
+                        Math.round((repoCount / stats.total_repositories) * 100) : 0;
+                    
+                    const scoreClass = score >= 70 ? 'score-high' : (score >= 40 ? 'score-medium' : 'score-low');
+                    const textColor = score >= 70 ? 'text-green-500' : (score >= 40 ? 'text-yellow-500' : 'text-red-500');
+                    
+                    const categoryCard = document.createElement('div');
+                    categoryCard.className = 'score-card bg-white rounded-lg shadow-sm p-4';
+                    categoryCard.innerHTML = `
+                        <div class="flex items-center mb-2">
+                            <i class="fas ${categoryIcons[category] || 'fa-question-circle'} ${textColor} mr-2"></i>
+                            <h4 class="font-semibold text-gray-800">${categoryNames[category] || category}</h4>
+                        </div>
+                        <p class="text-2xl font-bold ${textColor} mb-2">${score.toFixed(1)}</p>
+                        <div class="score-bar mb-3">
+                            <div class="score-bar-fill ${scoreClass}" style="width: ${score}%"></div>
+                        </div>
+                        <p class="text-sm text-gray-600">${repoCount} repos (${percentage}% coverage)</p>
+                    `;
+                    
+                    categoryDetailsContainer.appendChild(categoryCard);
+                });
+                
+                // Populate common issues list
+                const commonIssuesList = document.getElementById('common-issues-list');
+                commonIssuesList.innerHTML = '';
+                
+                const commonIssues = stats.common_issues || [];
+                if (commonIssues.length > 0) {
+                    commonIssues.forEach(issue => {
+                        const issueItem = document.createElement('li');
+                        issueItem.className = 'flex items-start p-2 rounded hover:bg-gray-50';
+                        
+                        // Parse the category from the issue string (format: "category: check_name")
+                        const parts = issue.split(':');
+                        const category = parts[0].trim();
+                        const checkName = parts.slice(1).join(':').trim();
+                        
+                        issueItem.innerHTML = `
+                            <i class="fas ${categoryIcons[category.toLowerCase()] || 'fa-exclamation-circle'} text-red-500 mt-0.5 mr-2"></i>
+                            <div>
+                                <span class="font-semibold">${checkName}</span>
+                                <span class="text-sm text-gray-500 ml-2">(${categoryNames[category.toLowerCase()] || category})</span>
+                            </div>
+                        `;
+                        
+                        commonIssuesList.appendChild(issueItem);
+                    });
+                } else {
+                    commonIssuesList.innerHTML = '<li class="text-gray-500">No common issues found</li>';
+                }
+                
+                // Populate check details
+                const checkDetailsContainer = document.getElementById('check-details');
+                checkDetailsContainer.innerHTML = '';
+                
+                const checksByCategory = stats.checks_by_category || [];
+                checksByCategory.forEach(category => {
+                    const categorySection = document.createElement('div');
+                    categorySection.className = 'bg-gray-50 rounded-lg p-4';
+                    
+                    const checks = category.checks || [];
+                    const categoryName = categoryNames[category.category] || category.category;
+                    
+                    categorySection.innerHTML = `
+                        <div class="flex items-center mb-3">
+                            <i class="fas ${categoryIcons[category.category] || 'fa-question-circle'} text-gray-700 mr-2"></i>
+                            <h4 class="text-lg font-semibold text-gray-800">${categoryName}</h4>
+                            <span class="ml-2 text-sm text-gray-500">(${checks.length} checks)</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            ${checks.map(check => `
+                                <div class="check-item bg-white p-2 rounded text-sm">
+                                    ${check}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    
+                    checkDetailsContainer.appendChild(categorySection);
+                });
+                
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+                
+                // Hide loading indicator and show error message
+                loadingIndicator.style.display = 'none';
+                errorContainer.classList.remove('hidden');
+                
+                const errorMessage = errorContainer.querySelector('p');
+                if (errorMessage) {
+                    errorMessage.textContent = `Error loading statistics: ${error.message}`;
+                }
+            }
         });
-      }
-
-    } catch (error) {
-      console.error('Error loading statistics data:', error);
-      
-      // Make sure loading indicator is hidden and error is shown
-      loadingIndicator.style.display = 'none';
-      loadingIndicator.classList.add('hidden');
-      statsContainer.classList.add('hidden');
-      
-      if (errorContainer) {
-        errorContainer.classList.remove('hidden');
-        
-        const errorMessage = errorContainer.querySelector('p');
-        if (errorMessage) {
-          errorMessage.textContent = `Failed to load statistics data: ${error.message}`;
-        }
-      }
-    }
-  });
-</script>
+    </script>
 </body>
 </html>

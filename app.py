@@ -1022,6 +1022,14 @@ def get_statistics():
     category_scores = defaultdict(lambda: {'total': 0, 'count': 0, 'repo_count': set()})
     issue_counts = defaultdict(int)
     
+    # New stats: language distribution and score distribution
+    language_distribution = defaultdict(int)
+    score_distribution = {
+        '0-10': 0, '11-20': 0, '21-30': 0, '31-40': 0, '41-50': 0,
+        '51-60': 0, '61-70': 0, '71-80': 0, '81-90': 0, '91-100': 0
+    }
+    total_checks = 0
+    
     # Process JSONL file line by line to avoid memory issues
     try:
         repo_count = 0
@@ -1046,9 +1054,19 @@ def get_statistics():
                     if not repo_id:
                         continue
                         
+                    # Track repository language for distribution
+                    repo_language = result.get('repository', {}).get('language')
+                    if repo_language:
+                        language_distribution[repo_language] += 1
+                        
                     # Accumulate overall score
                     overall_score = result.get('overall_score', 0)
                     total_overall_scores += overall_score
+                    
+                    # Track score distribution
+                    score_range = min(9, int(overall_score / 10))
+                    score_key = f"{score_range*10+1}-{(score_range+1)*10}" if score_range > 0 else "0-10"
+                    score_distribution[score_key] += 1
                     
                     # Process each category
                     for category in ['documentation', 'security', 'maintainability', 'code_quality', 
@@ -1074,6 +1092,9 @@ def get_statistics():
                             category_scores[category]['total'] += category_avg
                             category_scores[category]['count'] += 1
                             category_scores[category]['repo_count'].add(repo_id)
+                            
+                            # Track total checks
+                            total_checks += len(category_checks)
                             
                             # Record issues (checks with score < 50)
                             for check_name, check_data in category_data.items():
@@ -1104,7 +1125,10 @@ def get_statistics():
                 "category_average_scores": {},
                 "category_repo_counts": {},
                 "checks_by_category": [],
-                "common_issues": ["No repositories found"]
+                "common_issues": ["No repositories found"],
+                "language_distribution": {},
+                "score_distribution": {},
+                "total_checks": 0
             })
 
         average_overall_score = total_overall_scores / total_repositories if total_repositories else 0
@@ -1129,6 +1153,13 @@ def get_statistics():
             )[:10]
         ]
 
+        # Process language distribution to include only top 10 languages
+        top_languages = dict(sorted(
+            language_distribution.items(), 
+            key=lambda x: x[1], 
+            reverse=True
+        )[:10])
+
         # Extract checks by category - no need to process all repos again
         checks_by_category = []
         for category in ['documentation', 'security', 'maintainability', 'code_quality', 
@@ -1151,7 +1182,10 @@ def get_statistics():
             'category_average_scores': category_average_scores,
             'category_repo_counts': category_repo_counts,
             'checks_by_category': checks_by_category,
-            'common_issues': common_issues
+            'common_issues': common_issues,
+            'language_distribution': top_languages,
+            'score_distribution': score_distribution,
+            'total_checks': total_checks
         }
 
         return jsonify(stats_data)
