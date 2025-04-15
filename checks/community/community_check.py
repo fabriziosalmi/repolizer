@@ -47,7 +47,7 @@ def check_community_health(repo_path: str = None, repo_data: Dict = None) -> Dic
         if not repo_data:
             return result
     else:
-        logger.info("Conducting community health check using local clone analysis")
+        logger.debug("Conducting community health check using local clone analysis")
     
     # Community files to check for
     community_files = {

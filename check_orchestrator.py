@@ -470,7 +470,7 @@ class CheckOrchestrator:
                     api_checks.append((category, check))
 
         if not api_checks:
-            self.logger.warning(f"No API checks to run for {repo_name}")
+            self.logger.debug(f"No API checks to run for {repo_name}")
             return results
 
         self.logger.debug(f"Running {len(api_checks)} API checks sequentially for {repo_name}")

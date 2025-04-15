@@ -39,7 +39,7 @@ def check_community_events(repo_path: str = None, repo_data: Dict = None) -> Dic
     
     # Prioritize local repository analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing community events in local repository")
+        logger.debug(f"Analyzing community events in local repository")
         
         # Files and directories that may contain event information
         event_file_patterns = [
