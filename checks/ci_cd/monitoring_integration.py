@@ -36,7 +36,7 @@ def check_monitoring_integration(repo_path: str = None, repo_data: Dict = None) 
     
     # Always prioritize local analysis for more accurate results
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path} for monitoring integrations")
+        logger.debug(f"Analyzing local repository at {repo_path} for monitoring integrations")
         
         # Monitoring tools and platforms to check for
         monitoring_tools = {

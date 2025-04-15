@@ -263,7 +263,7 @@ def check_license_compatibility(repo_path: Optional[str] = None, repo_data: Opti
         # Skip local analysis, use API data later
     else:
         try:
-            logger.info(f"Analyzing local repository at {repo_path} for license compatibility")
+            logger.debug(f"Analyzing local repository at {repo_path} for license compatibility")
             
             # Track analysis start time for global timeout
             start_time = datetime.now()

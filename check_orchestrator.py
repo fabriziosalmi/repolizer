@@ -500,9 +500,9 @@ class CheckOrchestrator:
 
         # Log whether this check uses local clone or API
         if is_api_check:
-            self.logger.info(f"📊 Running API-based check: {category}/{check_name} for {repo_name}")
+            self.logger.debug(f"📊 Running API-based check: {category}/{check_name} for {repo_name}")
         else:
-            self.logger.info(f"📊 Running local clone-based check: {category}/{check_name} for {repo_name}")
+            self.logger.debug(f"📊 Running local clone-based check: {category}/{check_name} for {repo_name}")
 
         # Define a function to run the check with rate limiting
         def run_with_rate_limit():

@@ -74,7 +74,7 @@ def check_deployment_frequency(repo_path: str = None, repo_data: Dict = None) ->
     
     # First check if repository is available locally for more accurate analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path} for deployment frequency")
+        logger.debug(f"Analyzing local repository at {repo_path} for deployment frequency")
         
         # CI/CD configuration files to check
         ci_cd_files = [

@@ -53,7 +53,7 @@ def check_logging_usage(repo_path: str = None, repo_data: Dict = None) -> Dict[s
         return result
     
     # Prioritize local repository analysis
-    logger.info(f"Analyzing local repository at {repo_path}")
+    logger.debug(f"Analyzing local repository at {repo_path}")
     
     # Language-specific logging patterns
     logging_patterns = {

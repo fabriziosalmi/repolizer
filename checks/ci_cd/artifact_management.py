@@ -39,7 +39,7 @@ def check_artifact_management(repo_path: str = None, repo_data: Dict = None) -> 
     
     # First check if repository is available locally
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path} for artifact management")
+        logger.debug(f"Analyzing local repository at {repo_path} for artifact management")
         
         # File types and patterns to check for faster processing
         ci_config_paths = [

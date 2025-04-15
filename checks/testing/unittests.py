@@ -70,7 +70,7 @@ def check_unit_tests(repo_path: str = None, repo_data: Dict = None) -> Dict[str,
     try:
         # Prioritize local repository analysis
         if repo_path and os.path.isdir(repo_path):
-            logger.info(f"Analyzing local repository at {repo_path}")
+            logger.debug(f"Analyzing local repository at {repo_path}")
             
             # Common patterns for unit test directories and files
             unit_dir_patterns = [

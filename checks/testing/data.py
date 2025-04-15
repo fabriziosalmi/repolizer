@@ -45,7 +45,7 @@ def check_test_data_quality(repo_path: str = None, repo_data: Dict = None) -> Di
     
     # Prioritize local repository analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path}")
+        logger.debug(f"Analyzing local repository at {repo_path}")
         
         # Common patterns for test data directories and files
         test_data_dir_patterns = [

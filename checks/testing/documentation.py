@@ -59,7 +59,7 @@ def check_test_documentation(repo_path: str = None, repo_data: Dict = None) -> D
     try:
         # Prioritize local repository analysis
         if repo_path and os.path.isdir(repo_path):
-            logger.info(f"Analyzing local repository at {repo_path}")
+            logger.debug(f"Analyzing local repository at {repo_path}")
             
             # Common test file patterns
             test_file_patterns = [

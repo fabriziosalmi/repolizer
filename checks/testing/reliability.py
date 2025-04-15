@@ -58,7 +58,7 @@ def check_test_reliability(repo_path: str = None, repo_data: Dict = None) -> Dic
     
     # Prioritize local repository analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path}")
+        logger.debug(f"Analyzing local repository at {repo_path}")
         
         # Compile regex patterns for better performance
         flaky_pattern = re.compile(r'flaky|intermittent|non-deterministic|unstable|occasionally fails|retry|@Retry|@FlakyTest|Test.retryTimes|pytest.mark.flaky|flake8|quarantine', re.IGNORECASE)

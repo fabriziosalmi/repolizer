@@ -42,7 +42,7 @@ def check_test_coverage(repo_path: str = None, repo_data: Dict = None) -> Dict[s
     
     # Prioritize local repository analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path}")
+        logger.debug(f"Analyzing local repository at {repo_path}")
         
         # Common coverage report file patterns
         coverage_report_patterns = [

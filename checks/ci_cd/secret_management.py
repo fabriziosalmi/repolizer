@@ -37,7 +37,7 @@ def check_secret_management(repo_path: str = None, repo_data: Dict = None) -> Di
     
     # First check if repository is available locally for accurate analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path} for secret management")
+        logger.debug(f"Analyzing local repository at {repo_path} for secret management")
         
         # Secret management tools to check for
         secret_tools = {

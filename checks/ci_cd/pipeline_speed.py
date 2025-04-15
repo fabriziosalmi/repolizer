@@ -40,7 +40,7 @@ def check_pipeline_speed(repo_path: str = None, repo_data: Dict = None) -> Dict[
     
     # First check if repository is available locally for accurate analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path} for pipeline speed")
+        logger.debug(f"Analyzing local repository at {repo_path} for pipeline speed")
         
         # CI/CD configuration files to check
         ci_configs = {

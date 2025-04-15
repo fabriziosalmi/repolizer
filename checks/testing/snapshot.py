@@ -39,7 +39,7 @@ def check_snapshot_testing(repo_path: str = None, repo_data: Dict = None) -> Dic
     try:
         # Prioritize local repository analysis
         if repo_path and os.path.isdir(repo_path):
-            logger.info(f"Analyzing local repository at {repo_path}")
+            logger.debug(f"Analyzing local repository at {repo_path}")
             
             # Common patterns for snapshot test files and directories
             snapshot_dir_patterns = [

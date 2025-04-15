@@ -68,7 +68,7 @@ def check_test_speed(repo_path: str = None, repo_data: Dict = None) -> Dict[str,
     
     # Prioritize local repository analysis
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path}")
+        logger.debug(f"Analyzing local repository at {repo_path}")
         
         # Track performance metrics
         start_time = datetime.now()

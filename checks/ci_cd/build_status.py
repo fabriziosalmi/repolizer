@@ -40,7 +40,7 @@ def check_build_status(repo_path: str = None, repo_data: Dict = None) -> Dict[st
     
     # First check if repository is available locally
     if repo_path and os.path.isdir(repo_path):
-        logger.info(f"Analyzing local repository at {repo_path} for build status")
+        logger.debug(f"Analyzing local repository at {repo_path} for build status")
         
         # CI configuration files to check
         ci_config_patterns = {

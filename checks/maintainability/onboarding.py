@@ -133,7 +133,7 @@ def check_onboarding_experience(repo_path: str = None, repo_data: Dict = None) -
         return result
     
     # Prioritize local repository analysis
-    logger.info(f"Analyzing local repository at {repo_path}")
+    logger.debug(f"Analyzing local repository at {repo_path}")
     
     # Files that indicate onboarding materials
     onboarding_files = {
