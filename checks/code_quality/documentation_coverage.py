@@ -449,7 +449,7 @@ def check_documentation_coverage(repo_path: str = None, repo_data: Dict = None) 
             # Increment directory counter and check limit
             dir_count += 1
             if dir_count > max_dir_count:
-                logger.warning(f"Directory count limit ({max_dir_count}) reached.")
+                logger.debug(f"Directory count limit ({max_dir_count}) reached.")
                 break
             
             # Process files in this directory

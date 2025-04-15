@@ -217,7 +217,7 @@ def check_code_smells(repo_path: str = None, repo_data: Dict = None, timeout_sec
         # Check if we should continue or if we've already timed out or found no files
         if STOP_ANALYSIS or time.time() > hard_timeout or not files_to_analyze:
             if not files_to_analyze and not result["timed_out"]:
-                logger.info("No relevant files found to analyze for code smells.")
+                logger.warning("No relevant files found to analyze for code smells.")
             elif STOP_ANALYSIS or time.time() > hard_timeout:
                  result["timed_out"] = True
             result["processing_time"] = round(time.time() - start_time, 2)

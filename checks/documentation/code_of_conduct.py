@@ -116,7 +116,7 @@ def check_code_of_conduct(repo_path: str = None, repo_data: Dict = None) -> Dict
         for coc_type, pattern in coc_types.items():
             if re.search(pattern, coc_content, re.IGNORECASE):
                 result["coc_type"] = coc_type
-                logger.info(f"Identified Code of Conduct type: {coc_type}")
+                logger.debug(f"Identified Code of Conduct type: {coc_type}")
                 break
         
         # Check for reporting guidelines

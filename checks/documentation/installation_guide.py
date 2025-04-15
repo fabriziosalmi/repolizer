@@ -104,7 +104,7 @@ def check_installation_guide(repo_path: str = None, repo_data: Dict = None) -> D
         if installation_content:
             result["has_installation_section"] = True
             result["installation_section"] = section_name
-            logger.info(f"Found installation section: {section_name}")
+            logger.debug(f"Found installation section: {section_name}")
     
     # Analyze installation content if found
     if installation_content:

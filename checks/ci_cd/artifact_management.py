@@ -370,7 +370,7 @@ def check_artifact_management(repo_path: str = None, repo_data: Dict = None) -> 
     
     # Only use API data if we don't have meaningful local results
     if repo_data and (not result["has_artifact_storage"] or not result["artifact_types"]):
-        logger.info("Local analysis insufficient. Supplementing with API data for artifact management check.")
+        logger.debug("Local analysis insufficient. Supplementing with API data for artifact management check.")
         
         # Extract artifact information from API data if available
         if 'artifacts' in repo_data:

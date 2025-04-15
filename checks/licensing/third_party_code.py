@@ -213,7 +213,7 @@ def check_third_party_code(repo_path: Optional[str] = None, repo_data: Optional[
                         
                         # Limit directory traversal to prevent hanging
                         if dirs_traversed > MAX_DIRS_TO_CHECK:
-                            logger.warning(f"Reached maximum directory check limit ({MAX_DIRS_TO_CHECK}) for {tp_dir}. Limiting traversal.")
+                            logger.debug(f"Reached maximum directory check limit ({MAX_DIRS_TO_CHECK}) for {tp_dir}. Limiting traversal.")
                             result["early_termination"] = {
                                 "reason": "max_dirs_reached",
                                 "limit": MAX_DIRS_TO_CHECK,

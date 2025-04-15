@@ -61,7 +61,7 @@ def check_changelog(repo_path: str = None, repo_data: Dict = None) -> Dict[str, 
                     changelog_file = change_file
                     result["has_changelog"] = True
                     result["changelog_path"] = change_file
-                    logger.info(f"Found changelog file: {change_file}")
+                    logger.debug(f"Found changelog file: {change_file}")
                     break
             except Exception as e:
                 logger.error(f"Error reading changelog file {change_path}: {e}")

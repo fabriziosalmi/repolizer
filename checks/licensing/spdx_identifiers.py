@@ -291,7 +291,7 @@ def check_spdx_identifiers(repo_path: Optional[str] = None, repo_data: Optional[
                     # Count directories checked
                     dirs_checked += 1
                     if dirs_checked > MAX_DIRS:
-                        logger.warning(f"Reached maximum directories to check ({MAX_DIRS})")
+                        logger.debug(f"Reached maximum directories to check ({MAX_DIRS})")
                         break
                     
                     # Limit directory depth for large repositories

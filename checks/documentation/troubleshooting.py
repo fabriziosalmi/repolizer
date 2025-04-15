@@ -167,7 +167,7 @@ def check_troubleshooting_docs(repo_path: str = None, repo_data: Dict = None) ->
                                     troubleshooting_file_path = f"{doc_file} (section: {section_name})"
                                     result["has_troubleshooting_docs"] = True
                                     result["troubleshooting_location"] = troubleshooting_file_path
-                                    logger.info(f"Found troubleshooting section in {doc_file}")
+                                    logger.debug(f"Found troubleshooting section in {doc_file}")
                                     break
                         
                         if troubleshooting_content:

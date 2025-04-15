@@ -285,7 +285,7 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
                     # Count directories and limit depth
                     scanned_directories += 1
                     if scanned_directories > MAX_DIRECTORIES:
-                        logger.info(f"Reached maximum directory limit ({MAX_DIRECTORIES}). Stopping source file analysis.")
+                        logger.debug(f"Reached maximum directory limit ({MAX_DIRECTORIES}). Stopping source file analysis.")
                         break
                     
                     # Limit depth for large repositories - more aggressive limit
@@ -336,7 +336,7 @@ def check_attribution(repo_path: Optional[str] = None, repo_data: Optional[Dict]
                     
                     # Stop if we've checked enough files
                     if source_files_checked >= MAX_SOURCE_FILES_TO_CHECK:
-                        logger.info(f"Reached maximum source files limit ({MAX_SOURCE_FILES_TO_CHECK}). Stopping source file analysis.")
+                        logger.debug(f"Reached maximum source files limit ({MAX_SOURCE_FILES_TO_CHECK}). Stopping source file analysis.")
                         break
                 
                 # If we've checked any source files and some have attribution, consider it present

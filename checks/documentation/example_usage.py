@@ -169,7 +169,7 @@ def check_example_usage(repo_path: str = None, repo_data: Dict = None) -> Dict[s
     # Check project type
     project_type = detect_project_type(repo_path)
     if project_type:
-        logger.info(f"Detected project type: {project_type}")
+        logger.debug(f"Detected project type: {project_type}")
     
     # Check for examples directories and files
     for example_path in example_files:

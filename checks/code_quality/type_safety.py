@@ -260,7 +260,7 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
             for file_path in file_sample:
                 # Check overall file limit
                 if total_file_count >= max_total_files:
-                    logger.info(f"Reached maximum file count limit ({max_total_files}). Stopping file discovery.")
+                    logger.debug(f"Reached maximum file count limit ({max_total_files}). Stopping file discovery.")
                     result["performance_info"]["early_termination"] = True
                     result["performance_info"]["timeout_reason"] = "file_count_limit"
                     break
@@ -376,7 +376,7 @@ def check_type_safety(repo_path: str = None, repo_data: Dict = None) -> Dict[str
     
     # Inline quick analysis for very small repos
     if len(eligible_files) <= 5:  # For tiny repos, avoid ThreadPoolExecutor overhead
-        logger.info("Using fast-path analysis for small codebase")
+        logger.debug("Using fast-path analysis for small codebase")
         analysis_results = []
         for file_data in eligible_files:
             file_path, file_language, typing_category = file_data

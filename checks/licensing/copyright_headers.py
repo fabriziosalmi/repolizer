@@ -367,7 +367,7 @@ def check_copyright_headers(repo_path: Optional[str] = None, repo_data: Optional
                 for file in files:
                     # --- Check Global Timeout and File Limits ---
                     if files_checked >= MAX_FILES_TO_CHECK: # Use constant
-                        logger.warning(f"Reached maximum file count limit ({MAX_FILES_TO_CHECK}). Stopping analysis.")
+                        logger.debug(f"Reached maximum file count limit ({MAX_FILES_TO_CHECK}). Stopping analysis.")
                         analysis_terminated_early = True
                         result["early_termination"] = {
                             "reason": "max_files_reached",
