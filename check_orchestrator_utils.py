@@ -673,10 +673,10 @@ def save_to_jsonl(data: Dict, file_path: str, append: bool = True) -> bool:
         mode = 'a' if append and os.path.exists(file_path) else 'w'
         with jsonlines.open(file_path, mode=mode) as writer:
             writer.write(data)
-        logger.info(f"Data {'appended to' if mode == 'a' else 'saved to'} {file_path}")
+        logger.debug(f"Data {'appended to' if mode == 'a' else 'saved to'} {file_path}")
         return True
     except Exception as e:
-        logger.error(f"⚠️ Error saving data to {file_path}: {e}")
+        logger.error(f"Error saving data to {file_path}: {e}")
         return False
 
 def extract_processed_repo_ids(results_path: str) -> Set[str]:
