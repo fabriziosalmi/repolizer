@@ -1694,7 +1694,7 @@ if __name__ == "__main__":
             engine_version = results.get("engine_version", orchestrator.VERSION)
             timestamp = results.get("timestamp", datetime.now().isoformat())
 
-            orchestrator.logger.info(f"Repository {repo_full_name or repo_name} processed with overall score: {overall_score}.")
+            orchestrator.logger.info(f"✨ Repository {repo_full_name or repo_name} processed with overall score: {overall_score}.")
 
             # Format timestamp for display
             try:
