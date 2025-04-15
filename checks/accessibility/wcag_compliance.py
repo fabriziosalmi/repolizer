@@ -332,7 +332,7 @@ def check_wcag_compliance(repo_path: str = None, repo_data: Dict = None) -> Dict
     
     # Update execution time info
     execution_time = time.time() - start_time
-    logger.info(f"WCAG compliance check completed in {execution_time:.2f}s, checked {files_checked} files")
+    logger.info(f"✅ WCAG compliance check completed in {execution_time:.2f}s, checked {files_checked} files")
     
     return result
 

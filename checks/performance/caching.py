@@ -440,7 +440,7 @@ def check_caching(repo_path: str = None, repo_data: Dict = None, timeout: int = 
     rounded_score = round(score, 1)
     result["caching_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
     
-    logger.info(f"Caching check completed in {execution_time:.2f}s, score: {result['caching_score']}, "
+    logger.info(f"✅ Caching check completed in {execution_time:.2f}s, score: {result['caching_score']}, "
                 f"files checked: {total_files_checked}, files with caching: {files_with_caching}")
     
     return result

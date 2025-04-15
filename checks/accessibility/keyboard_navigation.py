@@ -494,7 +494,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         
         # Calculate execution time
         execution_time = time.time() - start_time
-        logger.info(f"Keyboard navigation check completed in {execution_time:.2f}s with score: {result.get('keyboard_navigation_score', 0)}")
+        logger.info(f"✅ Keyboard navigation check completed in {execution_time:.2f}s with score: {result.get('keyboard_navigation_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

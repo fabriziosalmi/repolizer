@@ -465,7 +465,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         
         # Calculate execution time
         execution_time = time.time() - start_time
-        logger.info(f"Focus management check completed in {execution_time:.2f}s with score: {result.get('focus_management_score', 0)}")
+        logger.info(f"✅ Focus management check completed in {execution_time:.2f}s with score: {result.get('focus_management_score', 0)}")
         
         # Return the result with enhanced metadata
         return {

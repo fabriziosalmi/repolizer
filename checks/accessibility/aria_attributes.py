@@ -379,7 +379,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
             
             if start_time:
                 execution_time = time.time() - start_time
-                logger.info(f"ARIA attributes check completed in {execution_time:.2f}s with score: {result.get('aria_usage_score', 0)}")
+                logger.info(f"✅ ARIA attributes check completed in {execution_time:.2f}s with score: {result.get('aria_usage_score', 0)}")
         except Exception as e:
             if start_time:
                 execution_time = time.time() - start_time
