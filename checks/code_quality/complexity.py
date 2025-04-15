@@ -57,7 +57,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
         check_timeout()
         # Check if repository is available locally
         if not repo_path or not os.path.isdir(repo_path):
-            logger.warning("No local repository path provided or path is not a directory")
+            logging.warning("No local repository path provided or path is not a directory")
             return result
         
         # Language-specific function/method patterns and complexity indicators
@@ -155,7 +155,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                     # Limit file size to prevent hanging on very large files
                     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
                     if file_size_mb > 5:  # Skip files larger than 5MB
-                        logger.debug(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
+                        logging.debug(f"Skipping large file: {file_path} ({file_size_mb:.2f} MB)")
                         continue
                         
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -165,7 +165,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                         # Limit content size for very large files
                         if len(content) > 1000000:  # ~1MB of text
                             content = content[:1000000]
-                            logger.debug(f"Truncated large file content: {file_path}")
+                            logging.debug(f"Truncated large file content: {file_path}")
                         
                         files_checked += 1
                         result["language_stats"][file_language]["files"] += 1
@@ -176,7 +176,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                         try:
                             function_matches = list(re.finditer(language_config["function_pattern"], content, re.MULTILINE))
                         except Exception as e:
-                            logger.error(f"Regex error in {file_path}: {e}")
+                            logging.error(f"Regex error in {file_path}: {e}")
                             continue
                         check_timeout()  # Add timeout check after regex operation
                         
@@ -185,7 +185,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                         
                         # Limit number of functions to analyze per file
                         if len(function_matches) > 100:
-                            logger.debug(f"Limiting analysis to 100 functions in {file_path}")
+                            logging.debug(f"Limiting analysis to 100 functions in {file_path}")
                             function_matches = function_matches[:100]
                         
                         for match in function_matches:
@@ -206,7 +206,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                             try:
                                 next_match = re.search(language_config["function_pattern"], search_content, re.MULTILINE)
                             except Exception as e:
-                                logger.error(f"Regex error in function body search in {file_path}: {e}")
+                                logging.error(f"Regex error in function body search in {file_path}: {e}")
                                 next_match = None
                             end_pos = start_pos + next_match.start() if next_match else min(len(content), start_pos + search_limit)
                             
@@ -216,7 +216,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                             # Limit function body size for analysis
                             if len(function_body) > 50000:  # ~50KB
                                 function_body = function_body[:50000]
-                                logger.debug(f"Truncated large function body in {file_path}")
+                                logging.debug(f"Truncated large function body in {file_path}")
                             
                             # Calculate function complexity with timeout protection
                             complexity = 1  # Base complexity
@@ -225,7 +225,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                                 try:
                                     complexity += len(re.findall(pattern, function_body))
                                 except Exception as e:
-                                    logger.error(f"Regex error in complexity pattern in {file_path}: {e}")
+                                    logging.error(f"Regex error in complexity pattern in {file_path}: {e}")
                             
                             # Update complexity distribution
                             if complexity <= 5:
@@ -258,7 +258,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
                         total_functions += functions_found
                         
                 except Exception as e:
-                    logger.error(f"Error analyzing file {file_path}: {e}")
+                    logging.error(f"Error analyzing file {file_path}: {e}")
                     check_timeout()  # Add timeout check after exception
         
         result["files_checked"] = files_checked
@@ -315,7 +315,7 @@ def check_code_complexity(repo_path: str = None, repo_data: Dict = None) -> Dict
         result["complexity_score"] = int(rounded_score) if rounded_score == int(rounded_score) else rounded_score
         
     except TimeoutError:
-        logger.warning("check_code_complexity timed out")
+        logging.warning("check_code_complexity timed out")
         result["timed_out"] = True
         # Ensure score is 0 on timeout if not already set
         if "complexity_score" not in result:
@@ -372,7 +372,7 @@ def run_check(repository: Dict[str, Any]) -> Dict[str, Any]:
         }
     except Exception as e:
         processing_time = time.time() - start_time
-        logger.error(f"Error during complexity check: {e}", exc_info=True)
+        logging.error(f"Error during complexity check: {e}", exc_info=True)
         return {
             "status": "failed",
             "score": 0,
