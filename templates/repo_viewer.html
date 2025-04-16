@@ -935,7 +935,7 @@
         </div>
         <div class="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm text-gray-600 border-t">
           <span class="flex items-center">
-            <i class="far fa-calendar-alt mr-1"></i> Last updated: ${updatedAt}
+            <i class="far fa-calendar-alt mr-1"></i> ${updatedAt}
           </span>
           ${languageBadge}
         </div>
@@ -959,9 +959,26 @@
       return card;
     }
 
-    // Function to format large numbers
+    // Function to format large numbers with k/M/B suffix
     function formatNumber(num) {
-      return num.toLocaleString();
+      if (num === null || num === undefined) return '0';
+      
+      // Convert to number if it's a string
+      num = typeof num === 'string' ? parseInt(num, 10) : num;
+      
+      if (isNaN(num)) return '0';
+      
+      // Format with k, M, B suffixes for thousand, million, billion
+      if (num >= 1000000000) {
+        return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+      }
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+      }
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+      }
+      return num.toString();
     }
 
     // Function to truncate text

@@ -318,14 +318,14 @@
                         <div class="flex items-center border-left-gradient text-blue-400 pl-3 py-2 transition-all hover:bg-blue-50">
                             <i class="fas fa-star text-yellow-500 mr-3 text-xl"></i>
                             <div>
-                                <div class="text-xl font-bold text-gray-800">{{ repo.repository.stargazers_count or 0 }}</div>
+                                <div class="text-xl font-bold text-gray-800 repo-stat-number">{{ repo.repository.stargazers_count or 0 }}</div>
                                 <div class="text-xs text-gray-500">Stars</div>
                             </div>
                         </div>
                         <div class="flex items-center border-left-gradient text-green-400 pl-3 py-2 transition-all hover:bg-green-50">
                             <i class="fas fa-code-fork text-green-600 mr-3 text-xl"></i>
                             <div>
-                                <div class="text-xl font-bold text-gray-800">{{ repo.repository.forks_count or 0 }}</div>
+                                <div class="text-xl font-bold text-gray-800 repo-stat-number">{{ repo.repository.forks_count or 0 }}</div>
                                 <div class="text-xs text-gray-500">Forks</div>
                             </div>
                         </div>
@@ -447,7 +447,38 @@
 
             <!-- JavaScript for improving interactivity -->
             <script>
+                // Function to format large numbers with k/M/B suffix
+                function formatNumber(num) {
+                    if (num === null || num === undefined) return '0';
+                    
+                    // Convert to number if it's a string
+                    num = typeof num === 'string' ? parseInt(num, 10) : num;
+                    
+                    if (isNaN(num)) return '0';
+                    
+                    // Format with k, M, B suffixes for thousand, million, billion
+                    if (num >= 1000000000) {
+                        return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+                    }
+                    if (num >= 1000000) {
+                        return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+                    }
+                    if (num >= 1000) {
+                        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+                    }
+                    return num.toString();
+                }
+
                 document.addEventListener('DOMContentLoaded', function() {
+                    // Apply number formatting to star and fork counts
+                    const statNumbers = document.querySelectorAll('.repo-stat-number');
+                    statNumbers.forEach(element => {
+                        const originalValue = element.textContent.trim();
+                        if (!isNaN(originalValue) && originalValue !== '') {
+                            element.textContent = formatNumber(parseInt(originalValue, 10));
+                        }
+                    });
+                    
                     // Add tooltips or any other JavaScript enhancement here if needed
                     
                     // Make check name labels clickable to show detailed description
