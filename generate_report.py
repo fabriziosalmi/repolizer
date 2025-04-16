@@ -2,7 +2,7 @@
 """
 Repository Report Generator
 
-This script generates comprehensive PDF and HTML reports from repository analysis data.
+This script generates comprehensive HTML reports from repository analysis data.
 It extracts analysis results from the JSONL file and uses a local LLM to generate
 narrative content, combined with visualizations of key metrics.
 
@@ -79,15 +79,14 @@ except ImportError as e:
 
 # Import report generators
 try:
-    from generate_report_pdf import PDFReportGenerator
     from generate_report_html import HTMLReportGenerator
     HAS_REPORT_GENERATORS = True
 except ImportError as e:
     if console:
-        console.print(f"[yellow]Warning:[/yellow] Report generator modules missing: {e}")
+        console.print(f"[yellow]Warning:[/yellow] HTML report generator module missing: {e}")
         console.print("[yellow]Will use built-in report generation fallbacks.[/yellow]")
     else:
-        print(f"Warning: Report generator modules missing: {e}")
+        print(f"Warning: HTML report generator module missing: {e}")
         print("Will use built-in report generation fallbacks.")
     HAS_REPORT_GENERATORS = False
 
@@ -193,7 +192,7 @@ class ReportGenerator:
         
         # Initialize report generators if available
         if HAS_REPORT_GENERATORS:
-            self.pdf_generator = PDFReportGenerator(self.report_dir)
+            self.pdf_generator = None
             self.html_generator = HTMLReportGenerator(self.report_dir, self.template_dir)
         else:
             self.pdf_generator = None
@@ -854,8 +853,8 @@ This automated analysis indicates areas where the repository demonstrates good p
         logger.error("HTML fallback generation not implemented")
         return ""
     
-    def generate_reports(self, repo_id: str) -> Tuple[str, str]:
-        """Generate both PDF and HTML reports for a repository"""
+    def generate_reports(self, repo_id: str) -> str:
+        """Generate HTML report for a repository"""
         logger.info(f"Starting report generation process for repository: {repo_id}")
         start_time = time.time()
         
@@ -864,7 +863,7 @@ This automated analysis indicates areas where the repository demonstrates good p
         
         if not repo_data:
             logger.error(f"Could not find data for repository ID: {repo_id}")
-            return "", ""
+            return ""
         
         # Process the data
         self.process_repo_data(repo_data)
@@ -875,22 +874,20 @@ This automated analysis indicates areas where the repository demonstrates good p
         # Generate visualizations
         self.generate_visualizations()
         
-        # Generate reports
-        pdf_path = self.generate_pdf_report()
+        # Generate HTML report
         html_path = self.generate_html_report()
         
         # Log completion
         elapsed_time = time.time() - start_time
         repo_name = self.report_data["repository"].get("full_name", repo_id)
         
-        if pdf_path and html_path:
+        if html_path:
             logger.info(f"Report generation for {repo_name} completed successfully in {elapsed_time:.1f} seconds")
-            logger.info(f"PDF report: {pdf_path}")
             logger.info(f"HTML report: {html_path}")
         else:
             logger.error(f"Report generation for {repo_name} failed after {elapsed_time:.1f} seconds")
         
-        return pdf_path, html_path
+        return html_path
 
 def main():
     """Main function to handle command-line arguments and generate reports"""
@@ -936,25 +933,22 @@ def main():
         generator.llm_available = False
         logger.info("Using fallback text generation (LLM disabled via --no-llm flag)")
     
-    pdf_path, html_path = generator.generate_reports(args.repo_id)
+    html_path = generator.generate_reports(args.repo_id)
     
     elapsed_time = time.time() - start_time
     logger.info(f"Total execution time: {elapsed_time:.1f} seconds")
     
-    if pdf_path and html_path:
+    if html_path:
         logger.info("Reports generated successfully")
         
         if HAS_RICH and console and not args.quiet:
             console.print("\n[bold green]Reports generated successfully:[/bold green]")
             # Use plain text for log messages to avoid markup errors
-            logger.info(f"PDF report: {pdf_path}")
             logger.info(f"HTML report: {html_path}")
             # Use Rich's console.print for formatted output with proper escaping
-            console.print(f"PDF report: {pdf_path}")
             console.print(f"HTML report: {html_path}")
         else:
             print(f"\nReports generated successfully:")
-            print(f"PDF report: {pdf_path}")
             print(f"HTML report: {html_path}")
         return 0
     else:
