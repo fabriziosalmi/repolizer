@@ -78,12 +78,15 @@
         }
         .score-high {
             color: #4caf50;
+            background: linear-gradient(to right, #66bb6a, #4caf50, #66bb6a);
         }
         .score-medium {
             color: #ff9800;
+            background: linear-gradient(to right, #ffb74d, #ff9800, #ffb74d);
         }
         .score-low {
             color: #f44336;
+            background: linear-gradient(to right, #ef5350, #f44336, #ef5350);
         }
         .score-label {
             font-size: 1.2em;
@@ -144,19 +147,26 @@
             padding: 20px;
             border-radius: 8px;
             background-color: #f9f9fa;
-            border-left: 4px solid #ddd;
+            position: relative;
+            overflow: hidden;
         }
-        .category-analysis.high-score {
-            border-left-color: #4caf50;
-            background-color: rgba(76, 175, 80, 0.05);
+        .category-analysis::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, transparent, currentColor 50%, transparent);
         }
-        .category-analysis.medium-score {
-            border-left-color: #ff9800;
-            background-color: rgba(255, 152, 0, 0.05);
+        .category-analysis.high-score::after {
+            color: #4caf50;
         }
-        .category-analysis.low-score {
-            border-left-color: #f44336;
-            background-color: rgba(244, 67, 54, 0.05);
+        .category-analysis.medium-score::after {
+            color: #ff9800;
+        }
+        .category-analysis.low-score::after {
+            color: #f44336;
         }
         .recommendations {
             background-color: #f8f9fa;

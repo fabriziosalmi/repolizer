@@ -11,7 +11,7 @@
     <style>
         .score-bar {
             height: 8px;
-            border-radius: 4px;
+            border-radius: 10px;
             position: relative;
             overflow: hidden;
             background-color: #e5e7eb;
@@ -21,18 +21,21 @@
             top: 0;
             left: 0;
             height: 100%;
-            border-radius: 4px;
+            border-radius: 10px;
             transition: width 0.5s ease;
         }
         /* Score color gradients */
         .score-high {
             background-color: #34d399;
+            background-image: linear-gradient(to right, #4ade80, #34d399, #4ade80);
         }
         .score-medium {
             background-color: #fbbf24;
+            background-image: linear-gradient(to right, #fcd34d, #fbbf24, #fcd34d);
         }
         .score-low {
             background-color: #f87171;
+            background-image: linear-gradient(to right, #fb7185, #f87171, #fb7185);
         }
         /* Category badge styles */
         .category-badge {
@@ -42,6 +45,40 @@
             display: inline-block;
             margin-right: 0.25rem;
             margin-bottom: 0.25rem;
+        }
+        
+        /* Enhanced borders with gradients */
+        .border-gradient {
+            position: relative;
+        }
+        .border-gradient::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1px; /* Border width */
+            border-radius: inherit;
+            background: linear-gradient(to right, transparent, currentColor, transparent);
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            pointer-events: none;
+        }
+        .border-left-gradient {
+            position: relative;
+        }
+        .border-left-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, transparent, currentColor 50%, transparent);
         }
     </style>
 </head>
@@ -154,28 +191,28 @@
                 <div class="bg-white rounded-lg shadow p-6 md:w-1/2">
                     <h3 class="text-lg font-semibold text-gray-800 mb-3">Repository Stats</h3>
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="flex items-center border-l-4 border-blue-400 pl-3 py-2">
+                        <div class="flex items-center border-left-gradient text-blue-400 pl-3 py-2">
                             <i class="fas fa-star text-yellow-500 mr-3 text-xl"></i>
                             <div>
                                 <div class="text-xl font-bold text-gray-800">{{ repo.repository.stargazers_count or 0 }}</div>
                                 <div class="text-xs text-gray-500">Stars</div>
                             </div>
                         </div>
-                        <div class="flex items-center border-l-4 border-green-400 pl-3 py-2">
+                        <div class="flex items-center border-left-gradient text-green-400 pl-3 py-2">
                             <i class="fas fa-code-fork text-green-600 mr-3 text-xl"></i>
                             <div>
                                 <div class="text-xl font-bold text-gray-800">{{ repo.repository.forks_count or 0 }}</div>
                                 <div class="text-xs text-gray-500">Forks</div>
                             </div>
                         </div>
-                        <div class="flex items-center border-l-4 border-purple-400 pl-3 py-2">
+                        <div class="flex items-center border-left-gradient text-purple-400 pl-3 py-2">
                             <i class="fas fa-code text-purple-600 mr-3 text-xl"></i>
                             <div>
                                 <div class="text-xl font-bold text-gray-800">{{ repo.repository.language or 'Unknown' }}</div>
                                 <div class="text-xs text-gray-500">Language</div>
                             </div>
                         </div>
-                        <div class="flex items-center border-l-4 border-gray-400 pl-3 py-2">
+                        <div class="flex items-center border-left-gradient text-gray-400 pl-3 py-2">
                             <i class="fas fa-clock text-gray-600 mr-3 text-xl"></i>
                             <div>
                                 <div class="text-xl font-bold text-gray-800">
@@ -256,7 +293,16 @@
                                                 </div>
                                                 <div class="w-1/2 flex items-center">
                                                     <div class="w-3/4 bg-gray-100 rounded-full h-2 mr-2">
-                                                        <div class="h-2 rounded-full {{ check_score_class }}" style="width: {{ check_score }}%"></div>
+                                                        <div class="h-2 rounded-full {{ check_score_class }}" 
+                                                             style="width: {{ check_score }}%; 
+                                                                    {% if check_score >= 70 %}
+                                                                    background-image: linear-gradient(to right, rgba(167, 243, 208, 0.8), rgba(52, 211, 153, 1), rgba(167, 243, 208, 0.8));
+                                                                    {% elif check_score >= 40 %}
+                                                                    background-image: linear-gradient(to right, rgba(253, 230, 138, 0.8), rgba(251, 191, 36, 1), rgba(253, 230, 138, 0.8));
+                                                                    {% else %}
+                                                                    background-image: linear-gradient(to right, rgba(254, 202, 202, 0.8), rgba(248, 113, 113, 1), rgba(254, 202, 202, 0.8));
+                                                                    {% endif %}">
+                                                        </div>
                                                     </div>
                                                     <span class="w-1/4 font-medium {{ check_text_class }}">{{ check_score|round(1) }}</span>
                                                 </div>

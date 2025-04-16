@@ -38,13 +38,50 @@
         }
         
         /* Existing styles */
-        .repo-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
         .repo-card {
             transition: all 0.3s ease;
+            position: relative;
+            background-color: white;
+            border-radius: 0.5rem; /* Match the Tailwind rounded-lg class (8px) */
+            outline: 2px solid transparent;
+            outline-offset: -1px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
+        
+        /* Simple outline animation for card hover */
+        .repo-card:hover {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transform: none;
+            outline: 2px solid #3b82f6; /* Blue-500 */
+            border-radius: 0.5rem;
+            outline-color: #3b82f6; /* Blue-500 */
+            
+            /* Add browser-specific animation if needed */
+            animation: outlineGradient 2s linear infinite;
+            -webkit-animation: outlineGradient 2s linear infinite;
+        }
+        
+        @keyframes outlineGradient {
+            0% { outline-color: #4ade80; } /* green-400 */
+            25% { outline-color: #3b82f6; } /* blue-500 */
+            50% { outline-color: #a855f7; } /* purple-500 */
+            75% { outline-color: #f43f5e; } /* rose-500 */
+            100% { outline-color: #4ade80; } /* green-400 */
+        }
+        
+        @-webkit-keyframes outlineGradient {
+            0% { outline-color: #4ade80; } /* green-400 */
+            25% { outline-color: #3b82f6; } /* blue-500 */
+            50% { outline-color: #a855f7; } /* purple-500 */
+            75% { outline-color: #f43f5e; } /* rose-500 */
+            100% { outline-color: #4ade80; } /* green-400 */
+        }
+        
+        /* Remove previous pseudo-elements */
+        .repo-card::before, .repo-card::after {
+            content: none;
+        }
+        
         .score-bar {
             height: 20px;
             border-radius: 9999px;
@@ -63,12 +100,60 @@
         /* Score color gradients */
         .score-high {
             background-color: #34d399;
+            background-image: linear-gradient(to right, #4ade80, #34d399, #4ade80);
         }
         .score-medium {
             background-color: #fbbf24;
+            background-image: linear-gradient(to right, #fcd34d, #fbbf24, #fcd34d);
         }
         .score-low {
             background-color: #f87171;
+            background-image: linear-gradient(to right, #fb7185, #f87171, #fb7185);
+        }
+        
+        /* Category gradients for vertical bars */
+        .category-bar-gradient-high {
+            background-image: linear-gradient(to top, rgba(167, 243, 208, 0.8), rgba(52, 211, 153, 1), rgba(167, 243, 208, 0.8));
+        }
+        .category-bar-gradient-medium {
+            background-image: linear-gradient(to top, rgba(253, 230, 138, 0.8), rgba(251, 191, 36, 1), rgba(253, 230, 138, 0.8));
+        }
+        .category-bar-gradient-low {
+            background-image: linear-gradient(to top, rgba(254, 202, 202, 0.8), rgba(248, 113, 113, 1), rgba(254, 202, 202, 0.8));
+        }
+        
+        /* Border gradients */
+        .border-gradient {
+            position: relative;
+        }
+        .border-gradient::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1px; /* Border width */
+            border-radius: inherit;
+            background: linear-gradient(to right, transparent, currentColor, transparent);
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            pointer-events: none;
+        }
+        .border-left-gradient {
+            position: relative;
+        }
+        .border-left-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, transparent, currentColor 50%, transparent);
         }
         /* Category badge styles */
         .category-badge {
@@ -758,7 +843,7 @@
           </span>` : '';
       const overallScore = repo.overall_score || 0;
       const scoreColorClass = overallScore >= 70 ? 'text-green-600' : (overallScore >= 40 ? 'text-yellow-600' : 'text-red-600');
-      const scoreBarFillClass = overallScore >= 70 ? 'bg-green-500' : (overallScore >= 40 ? 'bg-yellow-500' : 'bg-red-500');
+      const scoreBarFillClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
 
       // --- Category Bar Chart ---
       let categoryBarChartHtml = `
@@ -773,14 +858,24 @@
         const icon = categoryIcons[category] || 'fa-question-circle';
         const name = categoryNames[category] || category;
         let colorClass;
-        if (score >= 70) colorClass = 'bg-green-500';
-        else if (score >= 40) colorClass = 'bg-yellow-500';
-        else colorClass = 'bg-red-500';
+        let gradientClass;
+        if (score >= 70) {
+          colorClass = 'bg-green-500';
+          gradientClass = 'category-bar-gradient-high';
+        }
+        else if (score >= 40) {
+          colorClass = 'bg-yellow-500';
+          gradientClass = 'category-bar-gradient-medium';
+        }
+        else {
+          colorClass = 'bg-red-500';
+          gradientClass = 'category-bar-gradient-low';
+        }
         const heightPercentage = Math.max(5, score);
         categoryBarChartHtml += `
           <div class="flex flex-col items-center group" title="${name}: ${score.toFixed(1)}">
-            <div class="relative w-5 h-20 bg-gray-200 rounded-t overflow-hidden">
-              <div class="${colorClass} absolute bottom-0 w-full rounded-t transition-all duration-300" style="height: ${heightPercentage}%;"></div>
+            <div class="relative w-5 h-20 bg-gray-200 rounded-t overflow-hidden" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; width: 1rem;">
+              <div class="${colorClass} ${gradientClass} absolute bottom-0 w-full rounded-t transition-all duration-300" style="height: ${heightPercentage}%;"></div>
             </div>
             <span class="text-xs mt-1 text-gray-600">${Math.round(score)}</span>
             <i class="fas ${icon} text-gray-500 mt-1 group-hover:text-blue-500 transition-colors"></i>
