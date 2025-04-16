@@ -404,7 +404,15 @@
             <div class="category-grid">
                 {% for category, data in categories.items() %}
                 <div class="category-card">
-                    <div class="category-name">{{ category.capitalize() }}</div>
+                    <div class="category-name">
+                        {% if category == 'code_quality' %}
+                            Code
+                        {% elif category == 'ci_cd' %}
+                            CI/CD
+                        {% else %}
+                            {{ category.capitalize() }}
+                        {% endif %}
+                    </div>
                     <div class="category-score {{ 'score-high' if data.score >= 70 else 'score-medium' if data.score >= 40 else 'score-low' }}">
                         {{ "%.2f"|format(data.score) }}
                     </div>
@@ -433,7 +441,15 @@
             <h2 id="category-analysis">Category Analysis</h2>
             {% for insight in insights %}
             <div class="category-analysis {{ 'high-score' if insight.score >= 70 else 'medium-score' if insight.score >= 40 else 'low-score' }}">
-                <h2 style="font-size: 1.8em; margin-top: 0;">{{ insight.category.capitalize() }}</h2>
+                <h2 style="font-size: 1.8em; margin-top: 0;">
+                    {% if insight.category == 'code_quality' %}
+                        Code
+                    {% elif insight.category == 'ci_cd' %}
+                        CI/CD
+                    {% else %}
+                        {{ insight.category.capitalize() }}
+                    {% endif %}
+                </h2>
                 <div class="category-score {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
                     <span class="health-indicator {{ 'health-good' if insight.score >= 70 else 'health-medium' if insight.score >= 40 else 'health-poor' }}"></span>
                     Score: {{ "%.2f"|format(insight.score) }}
