@@ -1007,12 +1007,15 @@ def repo_stats():
     return render_template('repo_stats.html')
 
 @app.route('/api/statistics')
+@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def get_statistics():
     """
     API endpoint to get repository statistics.
     Returns:
         JSON response with statistics data.
     """
+    print("Calculating repository statistics (cached for 15 minutes)")
+    
     # Load results data
     results_file_info = get_results_file_info()
     results_path = results_file_info['path']
@@ -1191,6 +1194,7 @@ def get_statistics():
             'total_checks': total_checks
         }
 
+        print(f"Statistics calculated for {total_repositories} repositories with {total_checks} total checks")
         return jsonify(stats_data)
 
     except Exception as e:
