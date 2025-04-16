@@ -37,3 +37,4 @@ temp/
 # Generated results
 results.jsonl
 repositories.jsonl
+reports/

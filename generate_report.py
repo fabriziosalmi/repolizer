@@ -696,80 +696,48 @@ This automated analysis indicates areas where the repository demonstrates good p
         logger.info(f"Visualization generation completed in {elapsed_time:.1f} seconds")
     
     def _generate_category_radar_chart(self, output_path: Path) -> None:
-        """Generate a radar chart of category scores"""
+        """Generate a radar chart of category scores with a flat color palette"""
         try:
             categories = list(self.report_data["categories"].keys())
             scores = [self.report_data["categories"][cat]["score"] for cat in categories]
-            
-            # Make data circular for radar chart
             categories.append(categories[0])
             scores.append(scores[0])
-            
-            # Compute angles for radar chart
             angles = [n / float(len(categories)-1) * 2 * 3.14159 for n in range(len(categories))]
-            
-            # Create figure
             fig = plt.figure(figsize=(10, 10))
             ax = fig.add_subplot(111, polar=True)
-            
-            # Draw category lines
-            ax.plot(angles, scores, 'o-', linewidth=2)
-            ax.fill(angles, scores, alpha=0.25)
-            
-            # Fix axis to go clockwise and start from top
+            # Use a flat accent color for the radar line and fill
+            accent_color = '#2563eb'  # Flat blue
+            ax.plot(angles, scores, 'o-', linewidth=2, color=accent_color)
+            ax.fill(angles, scores, color=accent_color, alpha=0.18)
             ax.set_theta_offset(3.14159 / 2)
             ax.set_theta_direction(-1)
-            
-            # Draw category labels on the axes
             plt.xticks(angles[:-1], [cat.capitalize() for cat in categories[:-1]])
-            
-            # Add score labels at each point
             for i, (angle, score) in enumerate(zip(angles[:-1], scores[:-1])):
-                ax.text(angle, score + 5, f'{score:.1f}', 
-                        ha='center', va='center', 
-                        bbox=dict(facecolor='white', alpha=0.8, boxstyle='round,pad=0.2'))
-            
-            # Set radar limits
+                ax.text(angle, score + 5, f'{score:.1f}', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.8, boxstyle='round,pad=0.2'))
             plt.ylim(0, 100)
-            
-            # Title
             repo_name = self.report_data["repository"].get("full_name", "Unknown")
-            plt.title(f"Repository Health Categories: {repo_name}\nOverall Score: {self.report_data['overall_score']}/100", 
-                     pad=20, fontsize=14)
-            
-            # Save figure
+            plt.title(f"Repository Health Categories: {repo_name}\nOverall Score: {self.report_data['overall_score']}/100", pad=20, fontsize=14)
             plt.tight_layout()
             plt.savefig(output_path, dpi=300, bbox_inches='tight')
             plt.close()
-            
             logger.info(f"Radar chart saved to {output_path}")
         except Exception as e:
             logger.error(f"Error generating radar chart: {e}")
-    
+
     def _generate_category_bar_chart(self, output_path: Path) -> None:
-        """Generate a bar chart of category scores"""
+        """Generate a bar chart of category scores with a flat color palette"""
         try:
-            # Sort categories by score for better visualization
             categories_sorted = sorted(
                 self.report_data["categories"].items(),
                 key=lambda x: x[1]["score"]
             )
-            
             categories = [cat.capitalize() for cat, _ in categories_sorted]
             scores = [data["score"] for _, data in categories_sorted]
-            
-            # Color gradient based on scores
-            colors = plt.cm.RdYlGn(
-                [score/100 for score in scores]
-            )
-            
-            # Create figure
+            # Use a flat color palette for bars
+            palette = ['#2563eb', '#10b981', '#f59e42', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#f97316', '#14b8a6', '#f43f5e']
+            colors = [palette[i % len(palette)] for i in range(len(scores))]
             fig, ax = plt.subplots(figsize=(12, 8))
-            
-            # Create horizontal bar chart
             bars = ax.barh(categories, scores, color=colors)
-            
-            # Add score labels
             for i, bar in enumerate(bars):
                 ax.text(
                     min(bar.get_width() + 2, 98),
@@ -777,24 +745,15 @@ This automated analysis indicates areas where the repository demonstrates good p
                     f'{scores[i]:.1f}',
                     va='center'
                 )
-            
-            # Configure axes
             ax.set_xlim(0, 100)
             ax.set_xlabel('Score (0-100)', fontsize=12)
             ax.set_ylabel('Categories', fontsize=12)
-            
-            # Add grid lines
             ax.grid(True, axis='x', linestyle='--', alpha=0.7)
-            
-            # Title
             repo_name = self.report_data["repository"].get("full_name", "Unknown")
             plt.title(f"Repository Health Category Scores: {repo_name}", fontsize=14)
-            
-            # Save figure
             plt.tight_layout()
             plt.savefig(output_path, dpi=300, bbox_inches='tight')
             plt.close()
-            
             logger.info(f"Category bar chart saved to {output_path}")
         except Exception as e:
             logger.error(f"Error generating bar chart: {e}")
