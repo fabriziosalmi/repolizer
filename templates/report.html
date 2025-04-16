@@ -335,7 +335,7 @@
             {# Category Analysis Section - Adjusted Styling #}
             <h2 id="category-analysis" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Category Analysis</h2>
             <div class="space-y-6 mb-8"> {# Added mb-8 #}
-            {% for insight in insights %}
+            {% for insight in insights %} {# Outer loop starts #}
                 {% set cat_border_color = 'border-success-500' if insight.score >= 70 else 'border-warning-500' if insight.score >= 40 else 'border-danger-500' %}
                 {% set cat_score_text_color = 'text-success-700 dark:text-success-400' if insight.score >= 70 else 'text-warning-700 dark:text-warning-400' if insight.score >= 40 else 'text-danger-700 dark:text-danger-400' %}
                 {% set cat_indicator_color = 'bg-success-500' if insight.score >= 70 else 'bg-warning-500' if insight.score >= 40 else 'bg-danger-500' %}
@@ -367,11 +367,11 @@
                 </div>
 
                 {# Check Details - Adjusted Styling #}
-                {% if insight.checks %}
+                {% if insight.checks %} {# Inner conditional starts #}
                 <div class="border-t border-gray-200 dark:border-gray-600 pt-4">
                     <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">Check Details</h4>
                     <div class="space-y-3">
-                    {% for check in insight.checks %}
+                    {% for check in insight.checks %} {# Innermost loop starts #}
                         {% set check_score_text_color = 'text-success-700 dark:text-success-400' if check.score >= 70 else 'text-warning-700 dark:text-warning-400' if check.score >= 40 else 'text-danger-700 dark:text-danger-400' %}
                         {% set check_indicator_color = 'bg-success-500' if check.score >= 70 else 'bg-warning-500' if check.score >= 40 else 'bg-danger-500' %}
                         {% set check_bar_bg_color = 'bg-success-500' if check.score >= 70 else 'bg-warning-500' if check.score >= 40 else 'bg-danger-500' %}
@@ -387,12 +387,12 @@
                                 <span class="inline-block w-2.5 h-2.5 rounded-full ml-1.5 {{ check_indicator_color }}"></span>
                             </div>
                         </div>
-                    {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
+                    {% endfor %} {# Innermost loop ends #}
+                    </div> {# End space-y-3 #}
+                </div> {# End border-t #}
+                {% endif %} {# Inner conditional ends correctly here #}
+            </div> {# End analysis-{{ insight.category }} div #}
+            {% endfor %} {# Outer loop ends #}
             </div> {# End space-y-6 #}
 
             {# NEW: Next Steps Section #}
