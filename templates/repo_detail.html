@@ -113,37 +113,77 @@
                 </div>
             </div>
 
-            <div class="flex justify-between items-start mb-6">
-                <div class="flex flex-col items-end">
-                    <div class="text-3xl font-bold {% if repo.overall_score >= 70 %}text-green-600{% elif repo.overall_score >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                        {{ repo.overall_score|round(1) }}/100
+            <!-- Repository stats and overall score in a single row -->
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <!-- Left side: Larger overall score card -->
+                <div class="bg-white rounded-lg shadow p-6 md:w-1/2">
+                    <div class="flex flex-col items-center">
+                        <div class="text-sm text-gray-500 mb-2">Overall Health Score</div>
+                        <div class="text-5xl font-bold {% if repo.overall_score >= 70 %}text-green-600{% elif repo.overall_score >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ repo.overall_score|round(1) }}/100
+                        </div>
+                        <div class="mt-4 w-full max-w-xs">
+                            <div class="score-bar h-3">
+                                <div class="score-bar-fill {{ 'score-high' if repo.overall_score >= 70 else ('score-medium' if repo.overall_score >= 40 else 'score-low') }}"
+                                     style="width: {{ repo.overall_score }}%"></div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-gray-600">
+                            {% if repo.overall_score >= 70 %}
+                                <span class="inline-flex items-center text-green-700">
+                                    <i class="fas fa-check-circle mr-1"></i> Good health
+                                </span>
+                            {% elif repo.overall_score >= 40 %}
+                                <span class="inline-flex items-center text-yellow-700">
+                                    <i class="fas fa-exclamation-circle mr-1"></i> Needs improvement
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center text-red-700">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i> Critical issues
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="text-sm text-gray-500">Overall Health Score</div>
                 </div>
-            </div>
-
-            <!-- Repository stats -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-gray-50 p-3 rounded-lg">
-                    <div class="text-sm font-medium text-gray-500">Stars</div>
-                    <div class="text-xl font-bold text-blue-600">{{ repo.repository.stargazers_count or 0 }}</div>
-                </div>
-                <div class="bg-gray-50 p-3 rounded-lg">
-                    <div class="text-sm font-medium text-gray-500">Forks</div>
-                    <div class="text-xl font-bold text-green-600">{{ repo.repository.forks_count or 0 }}</div>
-                </div>
-                <div class="bg-gray-50 p-3 rounded-lg">
-                    <div class="text-sm font-medium text-gray-500">Language</div>
-                    <div class="text-xl font-bold text-purple-600">{{ repo.repository.language or 'Unknown' }}</div>
-                </div>
-                <div class="bg-gray-50 p-3 rounded-lg">
-                    <div class="text-sm font-medium text-gray-500">Last Updated</div>
-                    <div class="text-xl font-bold text-gray-600">
-                        {% if repo.repository.updated_at %}
-                            {{ repo.repository.updated_at | replace('T', ' ') | replace('Z', '') | truncate(16, true, '') }}
-                        {% else %}
-                            Unknown
-                        {% endif %}
+                
+                <!-- Right side: Repository stats card -->
+                <div class="bg-white rounded-lg shadow p-6 md:w-1/2">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Repository Stats</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex items-center border-l-4 border-blue-400 pl-3 py-2">
+                            <i class="fas fa-star text-yellow-500 mr-3 text-xl"></i>
+                            <div>
+                                <div class="text-xl font-bold text-gray-800">{{ repo.repository.stargazers_count or 0 }}</div>
+                                <div class="text-xs text-gray-500">Stars</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center border-l-4 border-green-400 pl-3 py-2">
+                            <i class="fas fa-code-fork text-green-600 mr-3 text-xl"></i>
+                            <div>
+                                <div class="text-xl font-bold text-gray-800">{{ repo.repository.forks_count or 0 }}</div>
+                                <div class="text-xs text-gray-500">Forks</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center border-l-4 border-purple-400 pl-3 py-2">
+                            <i class="fas fa-code text-purple-600 mr-3 text-xl"></i>
+                            <div>
+                                <div class="text-xl font-bold text-gray-800">{{ repo.repository.language or 'Unknown' }}</div>
+                                <div class="text-xs text-gray-500">Language</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center border-l-4 border-gray-400 pl-3 py-2">
+                            <i class="fas fa-clock text-gray-600 mr-3 text-xl"></i>
+                            <div>
+                                <div class="text-xl font-bold text-gray-800">
+                                    {% if repo.repository.updated_at %}
+                                        {{ repo.repository.updated_at | replace('T', ' ') | replace('Z', '') | truncate(10, true, '') }}
+                                    {% else %}
+                                        Unknown
+                                    {% endif %}
+                                </div>
+                                <div class="text-xs text-gray-500">Last Updated</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
