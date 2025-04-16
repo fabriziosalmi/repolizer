@@ -396,43 +396,44 @@
         .check-item {
             display: flex;
             align-items: center;
-            margin-bottom: 10px; /* Slightly reduced margin */
-            gap: 10px;
-            flex-wrap: wrap; /* Allow wrapping for check name */
+            margin-bottom: 12px; /* Increased margin slightly */
+            gap: 15px; /* Match category header gap */
+            flex-wrap: wrap;
         }
         .check-name {
-            flex: 1 1 200px; /* Allow name to grow and shrink, base width 200px */
+            flex: 1 1 200px;
             font-weight: 500;
-            margin-right: auto; /* Push score display/bar to the right */
+            margin-right: auto;
         }
-        .check-score-display { /* Container for dot and score value */
+        .check-score-display { /* Container for dot and score value - Match category score text */
             display: flex;
             align-items: center;
             gap: 5px;
             font-weight: bold;
-            font-size: 0.95em;
+            font-size: 1.1em; /* Match category score text size */
             white-space: nowrap;
         }
         .check-score-display.score-high { color: var(--success); }
         .check-score-display.score-medium { color: var(--warning); }
         .check-score-display.score-low { color: var(--danger); }
 
-        .score-bar-container {
-            flex: 1 1 150px; /* Allow bar to grow/shrink, base width 150px */
-            height: 18px;
+        .score-bar-container { /* Match category bar container */
+            flex: 1 1 200px; /* Match category bar flex-basis */
+            flex-grow: 2; /* Match category bar flex-grow */
+            height: 25px; /* Match category bar height */
             background-color: var(--secondary);
-            border-radius: 4px;
+            border-radius: 5px; /* Match category bar radius */
             overflow: hidden;
             border: 1px solid var(--border);
-            min-width: 100px; /* Prevent bar becoming too small */
+            min-width: 100px; /* Keep min-width */
         }
         .dark-mode .score-bar-container {
              background-color: #374151; /* Darker background for dark mode */
              border-color: #4b5563;
         }
-        .score-bar-inner {
+        .score-bar-inner { /* Match category bar inner */
             height: 100%;
-            border-radius: 3px 0 0 3px; /* Match container rounding */
+            border-radius: 4px 0 0 4px; /* Match category bar inner radius */
             transition: width 0.5s ease-in-out;
             box-shadow: inset -2px 0 4px rgba(0,0,0,0.1);
         }
@@ -445,7 +446,7 @@
         @media (max-width: 600px) {
              /* ... existing media queries ... */
             .check-item {
-                gap: 5px; /* Reduce gap further on small screens */
+                gap: 10px; /* Adjusted gap */
             }
             .check-name {
                 flex-basis: 100%; /* Check name takes full width */
@@ -453,11 +454,13 @@
                 margin-right: 0; /* Reset margin */
             }
             .check-score-display {
-                order: 1; /* Move score display before bar */
+                order: 1;
+                font-size: 1em; /* Slightly smaller on mobile */
             }
             .score-bar-container {
-                order: 2; /* Ensure bar comes after score display */
-                flex-basis: auto; /* Let it take remaining space */
+                order: 2;
+                flex-basis: 150px; /* Adjust basis for mobile */
+                height: 22px; /* Slightly smaller bar on mobile */
             }
         }
     </style>
@@ -580,7 +583,7 @@
                     </h2>
                     <div class="category-score-text {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
                         <span class="health-indicator {{ 'health-good' if insight.score >= 70 else 'health-medium' if insight.score >= 40 else 'health-poor' }}"></span>
-                        {{ "%.1f"|format(insight.score) }} / 100 {# Simplified score text #}
+                        {{ "%.1f"|format(insight.score) }}  {# Simplified score text #}
                     </div>
                     <div class="category-overall-score-bar-container">
                         <div class="category-overall-score-bar-inner {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}"
