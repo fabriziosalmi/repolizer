@@ -80,6 +80,31 @@ class HTMLReportGenerator:
                 
         return processed_recs
     
+    def _normalize_recommendations(self, recommendations: Any) -> List[str]:
+        """Ensure recommendations are a list of strings, splitting if needed."""
+        if not recommendations:
+            return []
+        if isinstance(recommendations, list):
+            # Flatten any HTML-wrapped divs
+            flat = []
+            for rec in recommendations:
+                # Remove HTML div wrappers if present
+                rec = re.sub(r'<div[^>]*>(.*?)</div>', r'\1', rec, flags=re.DOTALL)
+                flat.extend([r.strip() for r in re.split(r'\n\s*(?:\d+\.|\-|\*)\s*', rec) if r.strip()])
+            return flat
+        if isinstance(recommendations, str):
+            # Split on newlines, numbers, dashes, or asterisks
+            return [r.strip() for r in re.split(r'\n\s*(?:\d+\.|\-|\*)\s*', recommendations) if r.strip()]
+        return []
+
+    def _safe_section(self, value, default_msg):
+        """Return value if non-empty, else a user-friendly placeholder."""
+        if isinstance(value, str):
+            return value.strip() if value and value.strip() else f'<em>{default_msg}</em>'
+        if isinstance(value, list):
+            return value if value and any(str(v).strip() for v in value) else [f'<em>{default_msg}</em>']
+        return f'<em>{default_msg}</em>'
+
     def generate_html_report(self, report_data: Dict) -> str:
         """Generate an HTML report from the analysis data"""
         repo_name = report_data["repository"].get("full_name", "Unknown repository")
@@ -91,8 +116,27 @@ class HTMLReportGenerator:
         
         # Process recommendations for better formatting
         if "recommendations" in report_data and report_data["recommendations"]:
-            report_data["recommendations"] = self._preprocess_recommendations(report_data["recommendations"])
-        
+            recs = self._normalize_recommendations(report_data["recommendations"])
+            report_data["recommendations"] = [self._markdown_to_html(r) for r in recs]
+        else:
+            report_data["recommendations"] = [self._safe_section(None, "No recommendations available.")]
+
+        # Remove the recommendations key from the report data
+        report_data.pop("recommendations", None)
+
+        # Ensure all narrative sections are robust
+        report_data["summary"] = self._safe_section(report_data.get("summary"), "No executive summary available.")
+        report_data["key_opportunities"] = self._safe_section(report_data.get("key_opportunities"), "No key opportunities available.")
+        report_data["strengths_risks"] = self._safe_section(report_data.get("strengths_risks"), "No strengths/risks available.")
+        report_data["next_steps"] = self._safe_section(report_data.get("next_steps"), "No next steps available.")
+        report_data["resources"] = self._safe_section(report_data.get("resources"), "No resources available.")
+        # Insights: ensure each category has content
+        if "insights" in report_data and report_data["insights"]:
+            for insight in report_data["insights"]:
+                insight["text"] = self._safe_section(insight.get("text"), f"No insight available for {insight.get('category', 'this category')}.")
+        else:
+            report_data["insights"] = [{"category": "General", "score": 0, "text": self._safe_section(None, "No insights available.") }]
+
         # Load template
         template = self.env.get_template('report.html')
         
@@ -102,9 +146,10 @@ class HTMLReportGenerator:
                 try:
                     with open(viz_path, 'rb') as f:
                         img_data = f.read()
-                        img_type = viz_path.split('.')[-1]
-                        data_uri = f"data:image/{img_type};base64,{base64.b64encode(img_data).decode()}"
-                        report_data["visualizations"][i] = data_uri
+                        img_type = viz_path.split('.')[-1].lower()  # Ensure lowercase
+                        if img_type == 'png':
+                            data_uri = f"data:image/{img_type};base64,{base64.b64encode(img_data).decode()}"
+                            report_data["visualizations"][i] = data_uri
                 except Exception as e:
                     logger.error(f"Failed to embed visualization: {e}")
         
