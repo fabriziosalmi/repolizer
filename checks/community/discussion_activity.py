@@ -107,8 +107,8 @@ def check_discussion_activity(repo_path: str = None, repo_data: Dict = None) -> 
                                     
                                     # Try to extract the actual discussion link
                                     link_patterns = [
-                                        rf'https?://[^\s\)\"\']+{pattern.replace(".", "\\.")}[^\s\)\"\']*',
-                                        rf'https?://[^\s\)\"\']+{platform}[^\s\)\"\']*'
+                                        f'https?://[^\\s\\)\\"\\\']+{re.escape(pattern)}[^\\s\\)\\"\\\']*',
+                                        f'https?://[^\\s\\)\\"\\\']+{platform}[^\\s\\)\\"\\\']*'
                                     ]
                                     
                                     for link_pattern in link_patterns:
