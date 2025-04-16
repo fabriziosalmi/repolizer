@@ -12,12 +12,12 @@ _cache = {}
 # Lock for thread safety
 _cache_lock = RLock()
 
-def timed_cache(seconds=300, max_size=128):
+def timed_cache(seconds=300, max_size=100000):
     """
     Function decorator that caches the result for a specified time period.
     Args:
         seconds: Number of seconds to cache the result (default 5 minutes)
-        max_size: Maximum number of items to keep in cache (default 128)
+        max_size: Maximum number of items to keep in cache (default 100000)
     """
     def decorator(func):
         cache_key = f"func:{func.__module__}.{func.__name__}"
