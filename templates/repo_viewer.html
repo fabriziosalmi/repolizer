@@ -323,18 +323,21 @@
 
       console.log(`Detected file format: ${isJson ? 'JSON' : 'JSONL'}`);
 
-      // Process based on the file format
+      // Use a dictionary to store the latest entry for each repo ID
+      const repoDataMap = {};
+
       if (isJson) {
         // Handle JSON format (array of objects)
         try {
           const jsonData = JSON.parse(text);
-          
-          // Check if it's an array or a single object
-          if (Array.isArray(jsonData)) {
-            allRepos = jsonData.filter(repo => repo && repo.repository);
-          } else if (jsonData && jsonData.repository) {
-            allRepos = [jsonData];
-          }
+          const repos = Array.isArray(jsonData) ? jsonData : (jsonData && jsonData.repository ? [jsonData] : []);
+
+          repos.forEach(parsedRepo => {
+            if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+              // Store the latest entry (or only entry) for this ID
+              repoDataMap[parsedRepo.repository.id] = parsedRepo;
+            }
+          });
         } catch (e) {
           console.error('Error parsing JSON:', e);
           throw new Error('Invalid JSON format');
@@ -343,62 +346,66 @@
         // Handle JSONL format (one JSON object per line)
         const lines = text.split('\n').filter(line => line.trim() !== '');
         console.log(`Processing ${lines.length} lines of JSONL`);
-        
-        const processedRepoIds = new Set(); // Track processed repos to avoid duplicates
-        allRepos = [];
-        
+
         for (const line of lines) {
           try {
             const parsedRepo = JSON.parse(line);
-            if (parsedRepo && parsedRepo.repository) {
-              // Only include each repository once (take latest analysis)
-              const repoId = parsedRepo.repository.id;
-              if (!processedRepoIds.has(repoId)) {
-                processedRepoIds.add(repoId);
-                allRepos.push(parsedRepo);
-              }
+            if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+              // Store the latest entry for this ID, overwriting previous ones
+              repoDataMap[parsedRepo.repository.id] = parsedRepo;
             }
           } catch (e) {
             console.warn('Error parsing line:', line.substring(0, 100) + '...', e);
-            // Continue to next line instead of failing completely
+            // Continue to next line
           }
         }
       }
 
-      console.log(`Loaded ${allRepos.length} repositories successfully.`);
+      // Convert the map values back to an array
+      allRepos = Object.values(repoDataMap);
 
-      // If no results found or empty, try repositories.jsonl as fallback
-      if (allRepos.length === 0) {
+      console.log(`Total unique repositories loaded (before filtering): ${allRepos.length}`);
+
+      // Fallback logic remains the same...
+      if (allRepos.length === 0 && resultPath !== 'repositories.jsonl') { // Avoid infinite loop if fallback fails
         console.log("No repositories found in the results file. Trying repositories.jsonl as fallback.");
-        const fallbackResponse = await fetch('repositories.jsonl');
-
-        if (fallbackResponse.ok) {
-          const fallbackText = await fallbackResponse.text();
-
-          if (fallbackText.trim()) {
-            const fallbackLines = fallbackText.split('\n').filter(line => line.trim() !== '');
-            
-            for (const line of fallbackLines) {
-              try {
-                // Convert repo data to match results.jsonl format
-                const rawRepo = JSON.parse(line);
-                if (rawRepo) {
-                  allRepos.push({
-                    repository: rawRepo,
-                    overall_score: 0,
-                    timestamp: new Date().toISOString()
-                  });
+        // ... (rest of fallback logic using repositories.jsonl) ...
+        // Note: Fallback currently doesn't deduplicate, might need adjustment if duplicates exist there too.
+        try {
+            const fallbackResponse = await fetch('repositories.jsonl');
+            if (fallbackResponse.ok) {
+                const fallbackText = await fallbackResponse.text();
+                if (fallbackText.trim()) {
+                    const fallbackLines = fallbackText.split('\n').filter(line => line.trim() !== '');
+                    const fallbackRepoMap = {}; // Use map for fallback deduplication too
+                    for (const line of fallbackLines) {
+                        try {
+                            const rawRepo = JSON.parse(line);
+                            if (rawRepo && rawRepo.id) { // Assuming fallback has ID
+                                // Convert to results format and store latest
+                                fallbackRepoMap[rawRepo.id] = {
+                                    repository: rawRepo,
+                                    overall_score: 0, // Default score for raw repo data
+                                    timestamp: new Date().toISOString()
+                                    // Add other default fields if needed
+                                };
+                            }
+                        } catch (e) {
+                            console.warn('Error parsing fallback line:', e);
+                        }
+                    }
+                    allRepos = Object.values(fallbackRepoMap); // Replace allRepos with fallback data
+                    console.log(`Loaded ${allRepos.length} unique repositories from fallback repositories.jsonl.`);
+                    console.log(`Total unique repositories loaded from fallback (before filtering): ${allRepos.length}`);
                 }
-              } catch (e) {
-                console.warn('Error parsing fallback line:', e);
-                // Continue to next line
-              }
+            } else {
+                console.log("No fallback repository data found either.");
             }
-          }
-        } else {
-          console.log("No fallback repository data found either.");
+        } catch (fallbackError) {
+             console.error("Error fetching or processing fallback repositories.jsonl:", fallbackError);
         }
       }
+
 
       // Process each repo to calculate category averages
       allRepos.forEach(repo => {
@@ -445,7 +452,10 @@
           noResults.classList.remove('hidden');
         }
       } else {
-        updatePagination();
+         if (noResults) { // Ensure no-results is hidden if we have data
+            noResults.classList.add('hidden');
+         }
+        // updatePagination(); // Called within filterRepos/sortRepos -> displayRepos
       }
 
     } catch (error) {
@@ -502,7 +512,7 @@
       const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
       console.log(`Filtering repos with: Search="${searchTerm}", Language=${currentLanguage}, MinScore=${minScoreFilter}`);
-      console.log(`Total repos before filtering: ${allRepos.length}`);
+      console.log(`Total unique repos available for filtering: ${allRepos.length}`);
 
       filteredRepos = allRepos.filter(repo => {
         // Filter by search term (repo name or description)
@@ -713,7 +723,7 @@
       // Page info
       const pageInfo = document.createElement('div');
       pageInfo.className = 'ml-4 text-sm text-gray-600';
-      pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredRepos.length} repositories)`;
+      pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredRepos.length} matching repositories)`;
       
       // Append to container
       paginationContainer.appendChild(pagination);
