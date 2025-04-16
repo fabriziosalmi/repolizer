@@ -476,8 +476,8 @@ def stop_scraper():
         }), 500
 
 @app.route('/')
+@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def index():
-@timed_cache(seconds=60*5)  # Cache for 5 minutes
     # Publicly accessible
     return render_template('repo_viewer.html')
 
@@ -487,6 +487,7 @@ def scraper():
     return render_template('repo_scraper.html')
 
 @app.route('/repositories.jsonl')
+@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def serve_repos_file():
     # Serve the repositories.jsonl file directly
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
@@ -504,6 +505,7 @@ def serve_repos_file():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
 
 @app.route('/results.jsonl')
+@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def serve_results_file():
     # Serve the results.jsonl file directly - this is for analyzed repos
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
@@ -522,6 +524,7 @@ def serve_results_file():
 
 # Add endpoint to serve any result file
 @app.route('/results/<filename>')
+@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def serve_result_file(filename):
     # Security check - only allow specific file extensions
     allowed_extensions = ['.jsonl', '.json']
