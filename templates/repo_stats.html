@@ -83,6 +83,23 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* Toast notification style */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background-color: #34d399;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        #toast.error {
+            background-color: #f87171;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen" style="background-color: rgb(227, 227, 227);">
@@ -113,12 +130,29 @@
     </header>
 
     <main class="container mx-auto p-4">
+        <!-- Title and refresh button -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Repository Statistics</h1>
+            
+            <!-- Refresh button - visible to authenticated users only -->
+            {% if current_user.is_authenticated %}
+            <button id="refresh-stats" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i> Refresh Statistics
+            </button>
+            {% endif %}
+        </div>
+
         <div id="loading">
              <div class="spinner"></div>
              <span>Loading statistics...</span>
         </div>
 
         <div id="stats-container" class="hidden">
+            <!-- Last updated timestamp -->
+            <div class="text-right text-sm text-gray-500 mb-4">
+                <span>Last updated: <span id="last-updated">Just now</span></span>
+            </div>
+            
             <!-- Overall Stats Summary -->
             <div class="mb-6">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">Repository Analysis Summary</h2>
@@ -255,47 +289,13 @@
         </div>
     </main>
 
+    <!-- Toast notification -->
+    <div id="toast" class="hidden">
+        <span id="toast-message">Statistics refreshed successfully!</span>
+    </div>
+
     <footer class="bg-gray-800 text-white mt-auto py-6">
         <div class="container mx-auto px-4 text-center">
-            <p>&copy; {{ current_year }} Repolizer</p> <!-- Use context variable -->
-        </div>
-    </footer>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Get DOM elements
-            const statsContainer = document.getElementById('stats-container');
-            const loadingIndicator = document.getElementById('loading');
-            const errorContainer = document.getElementById('error-container');
-
-            // Show loading indicator
-            loadingIndicator.style.display = 'flex';
-            statsContainer.classList.add('hidden');
-            errorContainer.classList.add('hidden');
-
-            // Chart colors
-            const chartColors = [
-                '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
-                '#ec4899', '#6366f1', '#f97316', '#14b8a6', '#f43f5e'
-            ];
-
-            // Category icons and names
-            const categoryIcons = {
-                'documentation': 'fa-file-lines',
-                'security': 'fa-shield-alt',
-                'code_quality': 'fa-code',
-                'performance': 'fa-tachometer-alt',
-                'accessibility': 'fa-universal-access',
-                'ci_cd': 'fa-sync',
-                'maintainability': 'fa-wrench',
-                'testing': 'fa-vial',
-                'licensing': 'fa-balance-scale',
-                'community': 'fa-users'
-            };
-            
-            const categoryNames = {
-                'documentation': 'Documentation',
-                'security': 'Security',
                 'code_quality': 'Code Quality',
                 'performance': 'Performance',
                 'accessibility': 'Accessibility',

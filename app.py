@@ -1265,6 +1265,34 @@ def inject_global_vars():
         'current_user': current_user # Make current_user available to templates
     }
 
+@app.route('/api/statistics/refresh', methods=['POST'])
+@login_required  # Protect this API endpoint
+def refresh_statistics():
+    """
+    Clear the statistics cache to force recalculation on next request.
+    This is useful after analyzing new repositories.
+    """
+    try:
+        # Get the function object for the get_statistics endpoint
+        stats_func = app.view_functions.get('get_statistics')
+        if stats_func:
+            # Clear the cache for this specific function
+            clear_cache_for_function(stats_func)
+            return jsonify({
+                'status': 'success',
+                'message': 'Statistics cache cleared successfully'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Statistics endpoint not found'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to clear statistics cache: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not
     templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
