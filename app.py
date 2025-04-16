@@ -505,6 +505,7 @@ def scraper():
     return render_template('repo_scraper.html')
 
 @app.route('/repositories.jsonl')
+@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def serve_repos_file():
     # Serve the repositories.jsonl file directly
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
@@ -514,14 +515,21 @@ def serve_repos_file():
         # Try to use sample data if available
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_repositories.jsonl')
         if os.path.exists(sample_path):
-            return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'sample_repositories.jsonl')
+            response = send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'sample_repositories.jsonl')
+            # Add cache control headers
+            response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
+            return response
         else:
             # No sample file exists either, return 404
             return jsonify({"error": "Repositories file not found"}), 404
     
-    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
+    response = send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
+    # Add cache control headers
+    response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
+    return response
 
 @app.route('/results.jsonl')
+@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def serve_results_file():
     # Serve the results.jsonl file directly - this is for analyzed repos
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
@@ -531,12 +539,18 @@ def serve_results_file():
         # Try to use sample data if available
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
         if os.path.exists(sample_path):
-            return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
+            response = send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
+            # Add cache control headers
+            response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
+            return response
         else:
             # No sample file exists either, return 404
             return jsonify({"error": "Results file not found"}), 404
     
-    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+    response = send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+    # Add cache control headers
+    response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
+    return response
 
 # Add endpoint to serve any result file
 @app.route('/results/<filename>')
@@ -1293,6 +1307,15 @@ def refresh_statistics():
             'status': 'error',
             'message': f'Failed to clear statistics cache: {str(e)}'
         }), 500
+
+@app.before_request
+def clear_cache_on_start():
+    """Clear all caches on first request to ensure a fresh start."""
+    # Only run once by checking if we've set a flag
+    if not hasattr(app, '_cache_cleared'):
+        print("Clearing all caches on application start...")
+        clear_cache()
+        app._cache_cleared = True
 
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not
