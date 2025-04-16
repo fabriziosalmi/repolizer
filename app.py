@@ -494,6 +494,7 @@ def stop_scraper():
         }), 500
 
 @app.route('/')
+@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def index():
     # Publicly accessible
     return render_template('repo_viewer.html')
