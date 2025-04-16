@@ -561,107 +561,85 @@ This automated analysis indicates areas where the repository demonstrates good p
         return recommendations.strip()
 
     def generate_narrative_content(self) -> None:
-        """Generate narrative content using the LLM with better error handling"""
+        """Generate detailed, premium narrative content using the LLM"""
         repo_name = self.report_data["repository"].get("full_name", "Unknown repository")
-        
-        # Track timing for performance analysis
         start_time = time.time()
-        logger.info(f"Starting narrative content generation for {repo_name}")
-        
-        # Generate overall summary
-        logger.info(f"Generating executive summary")
+        logger.info(f"Starting premium narrative content generation for {repo_name}")
+
+        # Executive summary: 4-6 paragraphs, actionable insights, risks, unique strengths
         summary_prompt = [
-            {"role": "system", "content": "You are a software analysis expert creating a comprehensive repository health report. Provide detailed, professional analysis focused on actionable insights."},
-            {"role": "user", "content": f"Create a concise executive summary (3-4 paragraphs) of a GitHub repository's health analysis. Repository: {repo_name}, Overall health score: {self.report_data['overall_score']}/100. Category scores: {json.dumps([(k, v['score']) for k, v in self.report_data['categories'].items()])}. Focus on the overall health assessment, strengths, weaknesses, and general recommendations."}
+            {"role": "system", "content": "You are a senior software analysis expert creating a premium, in-depth repository health report for paying users. Your analysis should be detailed, actionable, and highly valuable."},
+            {"role": "user", "content": f"Write a comprehensive executive summary (at least 4-6 paragraphs) for a GitHub repository health analysis. Include: 1) an overview of the repository's purpose and context, 2) a summary of the overall health and key metrics, 3) unique strengths and best practices found, 4) critical risks or weaknesses, 5) actionable opportunities for improvement, and 6) a closing statement on the repository's future potential. Repository: {repo_name}, Overall health score: {self.report_data['overall_score']}/100. Category scores: {json.dumps([(k, v['score']) for k, v in self.report_data['categories'].items()])}."}
         ]
-        
         self.report_data["summary"] = self.query_llm(summary_prompt)
-        
-        # Generate insights for each category - with chunking for large repositories
-        logger.info("Generating category insights")
+
+        # Key Opportunities section
+        opportunities_prompt = [
+            {"role": "system", "content": "You are a software engineering consultant. Summarize the top 3-5 most impactful, actionable opportunities for improvement in this repository, based on the analysis data. Each opportunity should be specific, actionable, and include a brief rationale."},
+            {"role": "user", "content": f"Based on the following category scores and checks, list the top 3-5 key opportunities for improvement. For each, provide a title, a 2-3 sentence explanation, and why it matters. Data: {json.dumps(self.report_data['categories'])}"}
+        ]
+        self.report_data["key_opportunities"] = self.query_llm(opportunities_prompt)
+
+        # Strengths & Risks section
+        strengths_risks_prompt = [
+            {"role": "system", "content": "You are a code review expert. Write a section highlighting the repository's greatest strengths (with examples) and any critical risks or weaknesses that could impact users or maintainers. Be specific and practical."},
+            {"role": "user", "content": f"For this repository, summarize 2-3 unique strengths and 2-3 critical risks or weaknesses, using evidence from the analysis. Repository: {repo_name}, Data: {json.dumps(self.report_data['categories'])}"}
+        ]
+        self.report_data["strengths_risks"] = self.query_llm(strengths_risks_prompt)
+
+        # Category insights: 2-3 paragraphs per category, with examples and suggestions
+        logger.info("Generating premium category insights")
         insights = []
-        
-        # Process categories in order from strongest to weakest for better report flow
         sorted_categories = sorted(
             self.report_data["categories"].items(),
             key=lambda x: x[1]["score"],
             reverse=True
         )
-        
         for i, (category, cat_data) in enumerate(sorted_categories):
-            logger.info(f"Generating insights for category {i+1}/{len(sorted_categories)}: {category}")
-            
-            # For large repositories, limit the amount of check data sent to LLM
-            checks = cat_data["checks"]
-            original_check_count = len(checks)
-            
-            if len(checks) > 5:
-                # Sort by score and take a sample of highest and lowest scoring checks
-                sorted_checks = sorted(checks, key=lambda x: x["score"])
-                selected_checks = sorted_checks[:2] + sorted_checks[-3:]
-                logger.debug(f"Limiting checks from {original_check_count} to {len(selected_checks)} for {category}")
-                
-                # For very large repos, limit details further
-                for check in selected_checks:
-                    # Remove or truncate large detail objects
-                    if "details" in check and isinstance(check["details"], dict):
-                        details_size = len(str(check["details"]))
-                        if details_size > 500:
-                            logger.debug(f"Truncating large details object ({details_size} chars) for check {check['name']}")
-                            check["details"] = {"note": "Details truncated for brevity", 
-                                              "summary": list(check["details"].keys())}
-            else:
-                selected_checks = checks
-                
-            # Track message size for debugging
-            checks_data = json.dumps(selected_checks, indent=2)
-            logger.debug(f"Check data size for {category}: {len(checks_data)} chars")
-            
+            checks_data = json.dumps(cat_data["checks"][:8])  # Limit to 8 checks for prompt size
             category_prompt = [
-                {"role": "system", "content": "You are a software engineering expert providing code quality and health analysis for repositories."},
-                {"role": "user", "content": f"Analyze the following data for the '{category}' category (score: {cat_data['score']}/100) from repository {repo_name} and provide 1-2 paragraphs of technical insights about the strengths and weaknesses, specifically supporting your analysis with data from the checks. Check data: {checks_data}"}
+                {"role": "system", "content": "You are a senior software engineering consultant. Write a detailed, premium analysis (2-3 paragraphs) for the '{category}' category, including: 1) strengths and best practices, 2) weaknesses or gaps, 3) specific improvement suggestions, and 4) examples from the data."},
+                {"role": "user", "content": f"Category: {category} (score: {cat_data['score']}/100). Checks: {checks_data}"}
             ]
-            
             insight = self.query_llm(category_prompt)
             insights.append({
                 "category": category,
                 "score": cat_data["score"],
                 "text": insight
             })
-            
-            # Brief pause between LLM calls to avoid overwhelming the server
-            if i < len(sorted_categories) - 1:  # Skip pause after the last category
-                pause_time = 1.5  # seconds
-                logger.debug(f"Pausing for {pause_time}s before next LLM call")
-                time.sleep(pause_time)
-        
+            if i < len(sorted_categories) - 1:
+                time.sleep(1.2)
         self.report_data["insights"] = insights
-        
-        # Generate overall recommendations
-        logger.info("Generating recommendations")
-        # Simplify the data sent to reduce token count
-        category_scores = [(k, v["score"]) for k, v in self.report_data["categories"].items()]
+
+        # Recommendations: more specific, with rationale and impact
         recommendations_prompt = [
-            {"role": "system", "content": "You are a senior software engineering consultant specializing in improving code quality and repository health."},
-            {"role": "user", "content": f"Based on the repository analysis for {repo_name} with an overall score of {self.report_data['overall_score']}/100 and category scores {json.dumps(category_scores)}, provide a prioritized list of 5-7 specific, actionable recommendations to improve the repository health. Focus on the categories with the lowest scores. Format as a list with brief explanations."}
+            {"role": "system", "content": "You are a senior software consultant. Write a prioritized list of 7-10 highly actionable, specific recommendations for this repository. For each, include: 1) a clear title, 2) a 2-3 sentence rationale, and 3) the potential impact if implemented."},
+            {"role": "user", "content": f"Repository: {repo_name}, Overall score: {self.report_data['overall_score']}/100, Category scores: {json.dumps([(k, v['score']) for k, v in self.report_data['categories'].items()])}."}
         ]
-        
         recommendations = self.query_llm(recommendations_prompt)
-        
-        # Split into a list of recommendations
         import re
-        # Look for numbered list items or bullet points
         rec_list = re.split(r'\n\s*(?:\d+\.|\*|\-)\s*', recommendations)
-        # Remove empty items and strip whitespace
         rec_list = [item.strip() for item in rec_list if item.strip()]
-        
         self.report_data["recommendations"] = rec_list
-        
-        # Log completion time
+
+        # Next Steps checklist
+        next_steps_prompt = [
+            {"role": "system", "content": "You are a technical project manager. Write a short, practical 'Next Steps' checklist (5-7 items) for the repository owner to quickly improve their repo based on this analysis."},
+            {"role": "user", "content": f"Repository: {repo_name}, Data: {json.dumps(self.report_data['categories'])}"}
+        ]
+        self.report_data["next_steps"] = self.query_llm(next_steps_prompt)
+
+        # Resources section
+        resources_prompt = [
+            {"role": "system", "content": "You are a developer advocate. Suggest 3-5 high-quality online resources (articles, guides, or tools) relevant to the main improvement areas for this repository. List each with a title and a short description."},
+            {"role": "user", "content": f"Repository: {repo_name}, Weakest categories: {json.dumps(sorted_categories[-3:])}"}
+        ]
+        self.report_data["resources"] = self.query_llm(resources_prompt)
+
         elapsed_time = time.time() - start_time
-        logger.info(f"Narrative content generation completed in {elapsed_time:.1f} seconds")
-        logger.info(f"Generated: 1 summary, {len(insights)} category insights, {len(rec_list)} recommendations")
-    
+        logger.info(f"Premium narrative content generation completed in {elapsed_time:.1f} seconds")
+        logger.info(f"Generated: summary, key opportunities, strengths/risks, {len(insights)} category insights, recommendations, next steps, resources")
+
     def generate_visualizations(self) -> None:
         """Generate visualizations of repository metrics"""
         if not HAS_VISUALIZATION_LIBS:
