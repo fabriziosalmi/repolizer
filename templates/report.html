@@ -359,6 +359,9 @@
             white-space: nowrap; /* Prevent score text wrapping */
             font-size: 1.1em;
         }
+        .category-header .category-score-text.score-high { color: var(--success); }
+        .category-header .category-score-text.score-medium { color: var(--warning); }
+        .category-header .category-score-text.score-low { color: var(--danger); }
         .category-overall-score-bar-container { /* Container for the overall category score bar */
             flex-basis: 200px; /* Give the bar a base width */
             flex-grow: 2; /* Allow it to grow */
@@ -393,23 +396,35 @@
         .check-item {
             display: flex;
             align-items: center;
-            margin-bottom: 12px;
-            gap: 10px; /* Reduced gap */
+            margin-bottom: 10px; /* Slightly reduced margin */
+            gap: 10px;
+            flex-wrap: wrap; /* Allow wrapping for check name */
         }
         .check-name {
-            flex: 1; /* Allow name to take available space */
+            flex: 1 1 200px; /* Allow name to grow and shrink, base width 200px */
             font-weight: 500;
-            min-width: 150px; /* Ensure name doesn't get too squished */
-            margin-right: 5px; /* Add some space before the bar */
+            margin-right: auto; /* Push score display/bar to the right */
         }
+        .check-score-display { /* Container for dot and score value */
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+            font-size: 0.95em;
+            white-space: nowrap;
+        }
+        .check-score-display.score-high { color: var(--success); }
+        .check-score-display.score-medium { color: var(--warning); }
+        .check-score-display.score-low { color: var(--danger); }
+
         .score-bar-container {
-            flex: 2; /* Allow bar to take more space */
-            height: 18px; /* Slightly shorter bar for checks */
+            flex: 1 1 150px; /* Allow bar to grow/shrink, base width 150px */
+            height: 18px;
             background-color: var(--secondary);
-            border-radius: 4px; /* Fully rounded */
+            border-radius: 4px;
             overflow: hidden;
             border: 1px solid var(--border);
-            /* Removed position relative */
+            min-width: 100px; /* Prevent bar becoming too small */
         }
         .dark-mode .score-bar-container {
              background-color: #374151; /* Darker background for dark mode */
@@ -418,29 +433,33 @@
         .score-bar-inner {
             height: 100%;
             border-radius: 3px 0 0 3px; /* Match container rounding */
-            /* Removed text alignment, color, padding, font-size, line-height, white-space */
             transition: width 0.5s ease-in-out;
             box-shadow: inset -2px 0 4px rgba(0,0,0,0.1);
-        }
-        .check-score-value { /* Style for the score value next to the bar */
-            font-weight: bold;
-            font-size: 0.9em;
-            min-width: 35px; /* Ensure space for "100.0" */
-            text-align: right;
-            color: var(--text);
-        }
-        .dark-mode .check-score-value {
-            color: var(--text);
         }
 
         /* Score colors applied to the inner bar */
         .score-bar-inner.score-high { background-color: var(--success); }
-        .score-bar-inner.score-medium { background-color: var(--warning); } /* Removed text color */
+        .score-bar-inner.score-medium { background-color: var(--warning); }
         .score-bar-inner.score-low { background-color: var(--danger); }
 
-        /* Removed dark mode text color adjustments for medium score bar */
-
-        /* ... rest of existing styles ... */
+        @media (max-width: 600px) {
+             /* ... existing media queries ... */
+            .check-item {
+                gap: 5px; /* Reduce gap further on small screens */
+            }
+            .check-name {
+                flex-basis: 100%; /* Check name takes full width */
+                margin-bottom: 5px; /* Add space below name */
+                margin-right: 0; /* Reset margin */
+            }
+            .check-score-display {
+                order: 1; /* Move score display before bar */
+            }
+            .score-bar-container {
+                order: 2; /* Ensure bar comes after score display */
+                flex-basis: auto; /* Let it take remaining space */
+            }
+        }
     </style>
     <script>
     // Dark mode toggle
@@ -581,17 +600,20 @@
                 <div class="check-details">
                     <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1em; color: var(--primary);">Check Details</h3>
                     {% for check in insight.checks %}
+                    {# Updated Check Item Layout #}
                     <div class="check-item">
                         <div class="check-name">{{ check.name }}</div>
+                        {# Added score display with dot and value #}
+                        <div class="check-score-display {{ 'score-high' if check.score >= 70 else 'score-medium' if check.score >= 40 else 'score-low' }}">
+                            <span class="health-indicator {{ 'health-good' if check.score >= 70 else 'health-medium' if check.score >= 40 else 'health-poor' }}"></span>
+                            {{ "%.1f"|format(check.score) }}
+                        </div>
                         <div class="score-bar-container">
                             <div class="score-bar-inner {{ 'score-high' if check.score >= 70 else 'score-medium' if check.score >= 40 else 'score-low' }}"
                                  style="width: {{ check.score }}%;"
                                  title="Score: {{ "%.1f"|format(check.score) }}/100">
-                                {# Score value removed from here #}
                             </div>
                         </div>
-                        {# Score value added outside the bar #}
-                        <div class="check-score-value">{{ "%.1f"|format(check.score) }}</div>
                     </div>
                     {% endfor %}
                 </div>
