@@ -939,7 +939,7 @@ HERO
               </button>
               <button type="button" title="Share Repository Report"
                       class="share-button inline-flex items-center justify-center px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem; font-weight: bold;"
-                      data-repo-url="${window.location.origin}/repo/${repoId}" data-repo-name="${repoData.full_name || ''}">
+                      data-repo-id="${repoId}" data-repo-name="${repoData.full_name || ''}">
                 <i class="fas fa-share-alt mr-2"></i>
                 SHARE
               </button>
@@ -973,21 +973,24 @@ HERO
       const shareButton = card.querySelector('.share-button');
       if (shareButton) {
           shareButton.addEventListener('click', (event) => {
-              const repoUrl = event.currentTarget.getAttribute('data-repo-url');
+              const repoId = event.currentTarget.getAttribute('data-repo-id');
               const repoName = event.currentTarget.getAttribute('data-repo-name');
+              
+              // Create full URL with current hostname
+              const fullRepoUrl = `${window.location.origin}/repo/${repoId}`;
               
               // Use Web Share API if available (mobile devices)
               if (navigator.share) {
                   navigator.share({
                       title: `Repolizer Report for ${repoName}`,
                       text: `Check out the health analysis for ${repoName} on Repolizer!`,
-                      url: repoUrl
+                      url: fullRepoUrl
                   })
                   .then(() => console.log('Successfully shared'))
                   .catch((error) => console.log('Error sharing:', error));
               } else {
                   // Fallback for desktop - copy to clipboard
-                  navigator.clipboard.writeText(repoUrl)
+                  navigator.clipboard.writeText(fullRepoUrl)
                   .then(() => {
                       // Show temporary tooltip
                       const tooltip = document.createElement('div');
@@ -1004,7 +1007,7 @@ HERO
                   })
                   .catch(err => {
                       console.error('Failed to copy link: ', err);
-                      alert('Failed to copy link. Please copy this URL manually: ' + repoUrl);
+                      alert('Failed to copy link. Please copy this URL manually: ' + fullRepoUrl);
                   });
               }
           });
