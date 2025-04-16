@@ -522,13 +522,7 @@ def serve_repos_file():
 
 @app.route('/results.jsonl')
 def serve_results_file():
-    """Serve the results.jsonl file directly - this is for analyzed repos"""
-    # Use a helper function instead of directly decorating the route
-    return _get_cached_results_file()
-
-@timed_cache(seconds=300)  # Cache for 5 minutes
-def _get_cached_results_file():
-    """Helper function that's cached but preserves Flask response headers"""
+    # Serve the results.jsonl file directly - this is for analyzed repos
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
     
     # If results.jsonl doesn't exist but we have sample data, use it
@@ -541,7 +535,6 @@ def _get_cached_results_file():
             # No sample file exists either, return 404
             return jsonify({"error": "Results file not found"}), 404
     
-    print("Serving results.jsonl (cached for 5 minutes)")
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
 
 # Add endpoint to serve any result file
@@ -1014,15 +1007,12 @@ def repo_stats():
     return render_template('repo_stats.html')
 
 @app.route('/api/statistics')
-@timed_cache(seconds=300)  # Cache for 5 minutes
 def get_statistics():
     """
     API endpoint to get repository statistics.
     Returns:
         JSON response with statistics data.
     """
-    print("Fetching statistics (cached for 5 minutes)")
-    
     # Load results data
     results_file_info = get_results_file_info()
     results_path = results_file_info['path']
