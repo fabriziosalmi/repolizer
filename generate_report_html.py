@@ -13,6 +13,7 @@ from typing import Dict, List, Any
 import jinja2
 import markdown
 import base64
+import json # Add this import
 
 logger = logging.getLogger('report_generator.html')
 
@@ -156,38 +157,35 @@ class HTMLReportGenerator:
 
         # Load template
         template = self.env.get_template('report.html')
-        
-        # Convert visualization paths to data URIs if they exist
-        embedded_visualizations = []
-        for viz_path in report_data.get("visualizations", []):
-            if os.path.exists(viz_path):
-                try:
-                    with open(viz_path, 'rb') as f:
-                        img_data = f.read()
-                        img_type = viz_path.split('.')[-1].lower()
-                        if img_type in ['png', 'jpg', 'jpeg', 'gif', 'svg']: # Support more types
-                            mime_type = f"image/{'svg+xml' if img_type == 'svg' else img_type}"
-                            data_uri = f"data:{mime_type};base64,{base64.b64encode(img_data).decode()}"
-                            embedded_visualizations.append(data_uri)
-                        else:
-                             logger.warning(f"Unsupported image type for embedding: {img_type}")
-                except Exception as e:
-                    logger.error(f"Failed to embed visualization '{viz_path}': {e}")
-            else:
-                 logger.warning(f"Visualization file not found: {viz_path}")
-        report_data["visualizations"] = embedded_visualizations # Update with embedded data URIs
+
+        # Remove visualization embedding logic
+        # embedded_visualizations = []
+        # for viz_path in report_data.get("visualizations", []):
+        #     # ... (removed embedding logic) ...
+        # report_data["visualizations"] = embedded_visualizations # Remove this line
+
+        # Ensure categories data is available for the template
+        categories_for_template = []
+        if "categories" in report_data:
+             categories_for_template = [
+                 {"name": cat.capitalize().replace('_', ' '), "score": data["score"]}
+                 for cat, data in report_data["categories"].items()
+             ]
+             # Sort alphabetically for consistent radar chart axis order
+             categories_for_template.sort(key=lambda x: x["name"])
 
         # Add additional context data
         context = {
             **report_data,
             'current_year': datetime.now().year,
             'repo': report_data['repository'],
-            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'categories_data_json': json.dumps(categories_for_template) # Pass category data as JSON for JS
         }
-        
+
         # Render HTML
         html_content = template.render(**context)
-        
+
         # Write to file
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(html_content)

@@ -1,668 +1,380 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class=""> {# Add class for potential dark mode toggle #}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ repo.full_name }} - Repository Health Report</title>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --secondary: #f1f5f9;
-            --accent: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e42;
-            --success: #22c55e;
-            --text: #222;
-            --bg: #f8f9fa;
-            --card: #fff;
-            --border: #e5e7eb;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text);
-            background-color: var(--bg);
-            margin: 0;
-            padding: 0;
-        }
-        .sticky-nav {
-            position: sticky;
-            top: 0;
-            background: var(--card);
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            padding: 0.5em 0;
-        }
-        .nav-links {
-            display: flex;
-            justify-content: center;
-            gap: 2em;
-            font-size: 1.1em;
-        }
-        .nav-links a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.3em 0.7em;
-            border-radius: 6px;
-            transition: background 0.2s;
-        }
-        .nav-links a:hover, .nav-links a:focus {
-            background: var(--secondary);
-        }
-        .report-container {
-            background-color: var(--card);
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.07);
-            padding: 32px 24px;
-            margin: 32px auto 32px auto;
-            max-width: 1100px;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 36px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 18px;
-        }
-        h1 {
-            font-size: 2.6em;
-            margin-bottom: 8px;
-            color: var(--primary);
-        }
-        h2 {
-            font-size: 1.7em;
-            margin-top: 32px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 4px;
-            color: var(--primary);
-        }
-        h3 {
-            font-size: 1.2em;
-            margin-top: 22px;
-            color: var(--primary);
-        }
-        .subtitle {
-            color: #666;
-            font-size: 1.1em;
-        }
-        .repo-meta {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            margin: 18px 0;
-            flex-wrap: wrap;
-        }
-        .meta-item {
-            padding: 7px 14px;
-            background-color: var(--secondary);
-            border-radius: 7px;
-            font-weight: 500;
-        }
-        .score-container {
-            text-align: center;
-            background: var(--secondary);
-            border-radius: 10px;
-            padding: 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            margin: 18px 0 28px 0;
-            position: relative;
-        }
-        .score {
-            font-size: 2.7em;
-            font-weight: bold;
-            text-align: center;
-            margin: 8px 0;
-        }
-        .score-high {
-            color: var(--success);
-            background: none;
-        }
-        .score-medium {
-            color: var(--warning);
-            background: none;
-        }
-        .score-low {
-            color: var(--danger);
-            background: none;
-        }
-        .score-label {
-            font-size: 1.1em;
-            color: #666;
-            margin-bottom: 8px;
-        }
-        .category-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 18px;
-            margin: 28px 0;
-        }
-        .category-card {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 13px 12px;
-            background-color: var(--secondary);
-            transition: transform 0.18s, box-shadow 0.18s;
-        }
-        .category-card:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-        }
-        .category-name {
-            font-weight: bold;
-            font-size: 1.1em;
-            margin-bottom: 4px;
-        }
-        .category-score {
-            font-size: 1.9em;
-            margin: 8px 0;
-            font-weight: bold;
-        }
-        .visualizations {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 28px 0;
-        }
-        .visualization {
-            width: 100%;
-            max-width: 700px;
-            margin-bottom: 24px;
-        }
-        .visualization img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .viz-caption {
-            text-align: center;
-            margin-top: 7px;
-            color: #666;
-            font-style: italic;
-        }
-        .category-analysis {
-            margin-bottom: 32px;
-            padding: 18px 16px;
-            border-radius: 8px;
-            background-color: var(--secondary);
-            border-left: 5px solid var(--primary);
-        }
-        .category-analysis.high-score {
-            border-left-color: var(--success);
-        }
-        .category-analysis.medium-score {
-            border-left-color: var(--warning);
-        }
-        .category-analysis.low-score {
-            border-left-color: var(--danger);
-        }
-        .recommendations {
-            background-color: var(--secondary);
-            padding: 22px 18px;
-            border-radius: 8px;
-            margin: 28px 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        .recommendation-item {
-            margin-bottom: 16px;
-            padding: 13px 12px;
-            background-color: var(--card);
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-            border-left: 4px solid var(--primary);
-        }
-        .recommendation-priority-high {
-            border-left-color: var(--danger) !important;
-        }
-        .recommendation-priority-medium {
-            border-left-color: var(--warning) !important;
-        }
-        .recommendation-priority-low {
-            border-left-color: var(--success) !important;
-        }
-        code {
-            background-color: #f0f0f0;
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-            font-size: 0.93em;
-        }
-        .markdown p {
-            margin-bottom: 13px;
-        }
-        .markdown ul, .markdown ol {
-            padding-left: 22px;
-            margin-bottom: 13px;
-        }
-        .markdown li {
-            margin-bottom: 4px;
-        }
-        .health-indicator {
-            display: inline-block;
-            width: 13px;
-            height: 13px;
-            border-radius: 50%;
-            margin-right: 5px;
-            vertical-align: middle;
-        }
-        .health-good {
-            background-color: var(--success);
-        }
-        .health-medium {
-            background-color: var(--warning);
-        }
-        .health-poor {
-            background-color: var(--danger);
-        }
-        .dark-mode {
-            --primary: #60a5fa;
-            --secondary: #23272f;
-            --accent: #34d399;
-            --danger: #ef4444;
-            --warning: #f59e42;
-            --success: #22c55e;
-            --text: #e5e7eb;
-            --bg: #18181b;
-            --card: #23272f;
-            --border: #374151;
-        }
-        .dark-mode body {
-            color: var(--text);
-            background: var(--bg);
-        }
-        .dark-mode .report-container,
-        .dark-mode .category-card,
-        .dark-mode .recommendation-item {
-            background: var(--card);
-            color: var(--text);
-        }
-        .dark-mode .score-container,
-        .dark-mode .recommendations,
-        .dark-mode .category-analysis {
-            background: var(--secondary);
-        }
-        .dark-mode .meta-item {
-            background: #1e293b;
-        }
-        .dark-mode .category-card {
-            border-color: var(--border);
-        }
-        .dark-mode .category-analysis {
-            border-left: 5px solid var(--primary);
-        }
-        .dark-mode .category-analysis.high-score {
-            border-left-color: var(--success);
-        }
-        .dark-mode .category-analysis.medium-score {
-            border-left-color: var(--warning);
-        }
-        .dark-mode .category-analysis.low-score {
-            border-left-color: var(--danger);
-        }
-        .dark-toggle {
-            position: fixed;
-            top: 18px;
-            right: 32px;
-            z-index: 200;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 6px 14px;
-            cursor: pointer;
-            color: var(--primary);
-            font-size: 1em;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            transition: background 0.2s, color 0.2s;
-        }
-        .dark-toggle:hover {
-            background: var(--secondary);
-        }
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #888;
-            font-size: 0.93em;
-            border-top: 1px solid var(--border);
-            padding-top: 18px;
-        }
-        @media (max-width: 900px) {
-            .report-container { padding: 16px 2vw; }
-            .visualization { max-width: 98vw; }
-        }
-        @media (max-width: 600px) {
-            .category-grid { grid-template-columns: 1fr; }
-            .repo-meta { flex-direction: column; gap: 8px; align-items: center; }
-            .dark-toggle { right: 10px; top: 10px; }
-        }
-        .category-card a {
-            text-decoration: none;
-            color: inherit; /* Inherit text color from parent */
-            display: block; /* Make the link fill the card */
-        }
-
-        /* Category Analysis Header */
-        .category-header {
-            display: flex;
-            align-items: center; /* Vertically align items */
-            gap: 15px; /* Space between title, score text, and bar */
-            margin-bottom: 15px; /* Space below header */
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
-        }
-        .category-header h2 {
-            margin: 0; /* Remove default margins */
-            border-bottom: none; /* Remove border from h2 */
-            flex-grow: 1; /* Allow title to take up space */
-            min-width: 150px; /* Prevent title from becoming too small */
-            margin-right: auto; /* Push score elements to the right */
-        }
-        .category-overall-score-bar-container { /* Container for the overall category score bar */
-            flex-basis: 200px; /* Give the bar a base width */
-            flex-grow: 2; /* Allow it to grow */
-            height: 25px; /* Slightly taller bar */
-            background-color: var(--secondary);
-            border-radius: 5px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            order: 2; /* Order after title */
-        }
-        .category-header .category-score-text { /* Style for the "Overall Score: XX.XX" text */
-            font-weight: bold;
-            white-space: nowrap; /* Prevent score text wrapping */
-            font-size: 1.1em;
-            order: 3; /* Order after bar */
-            margin-left: 5px; /* Add space before score text */
-        }
-        .category-header .health-indicator { /* Style for the dot */
-             order: 4; /* Order after score text */
-             margin-left: -2px; /* Adjust spacing near score text */
-             margin-right: 5px; /* Add some space at the end */
-        }
-        /* Apply score colors to the overall bar */
-        .category-overall-score-bar-inner { /* Inner part of the overall category score bar */
-            height: 100%;
-            border-radius: 4px 0 0 4px;
-            transition: width 0.5s ease-in-out;
-            box-shadow: inset -2px 0 4px rgba(0,0,0,0.1);
-        }
-        .category-overall-score-bar-inner.score-high { background-color: var(--success); }
-        .category-overall-score-bar-inner.score-medium { background-color: var(--warning); }
-        .category-overall-score-bar-inner.score-low { background-color: var(--danger); }
-
-        /* Check Details */
-        .check-details {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid var(--border);
-        }
-        .check-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px; /* Increased margin slightly */
-            gap: 15px; /* Match category header gap */
-            flex-wrap: wrap;
-        }
-        .check-name {
-            flex: 1 1 200px;
-            font-weight: 500;
-            margin-right: auto; /* Push score display/bar to the right */
-        }
-        .check-score-display { /* Container for dot and score value - Match category score text */
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-weight: bold;
-            font-size: 1.1em; /* Match category score text size */
-            white-space: nowrap;
-            order: 3; /* Match category header order */
-            margin-left: 5px; /* Match category header margin */
-        }
-        .check-score-display .health-indicator { /* Dot within check score display */
-             order: 2; /* Put dot after score number */
-             margin-left: 0px; /* Reset margin */
-             margin-right: 0; /* Reset margin */
-        }
-        .check-score-display.score-high { color: var(--success); }
-        .check-score-display.score-medium { color: var(--warning); }
-        .check-score-display.score-low { color: var(--danger); }
-
-        .score-bar-container { /* Match category bar container */
-            flex: 1 1 200px; /* Match category bar flex-basis */
-            flex-grow: 2; /* Match category bar flex-grow */
-            height: 25px; /* Match category bar height */
-            background-color: var(--secondary);
-            border-radius: 5px; /* Match category bar radius */
-            overflow: hidden;
-            border: 1px solid var(--border);
-            min-width: 100px; /* Keep min-width */
-            order: 2; /* Match category header order */
-        }
-        .dark-mode .score-bar-container {
-             background-color: #374151; /* Darker background for dark mode */
-             border-color: #4b5563;
-        }
-        .score-bar-inner { /* Match category bar inner */
-            height: 100%;
-            border-radius: 4px 0 0 4px; /* Match category bar inner radius */
-            transition: width 0.5s ease-in-out;
-            box-shadow: inset -2px 0 4px rgba(0,0,0,0.1);
-        }
-
-        /* Score colors applied to the inner bar */
-        .score-bar-inner.score-high { background-color: var(--success); }
-        .score-bar-inner.score-medium { background-color: var(--warning); }
-        .score-bar-inner.score-low { background-color: var(--danger); }
-
-        @media (max-width: 600px) {
-             /* ... existing media queries ... */
-            .category-header h2 {
-                margin-right: 0; /* Remove auto margin on small screens */
-                flex-basis: 100%; /* Title takes full width */
-                margin-bottom: 8px; /* Add space below title */
-            }
-            .category-overall-score-bar-container {
-                order: 1; /* Bar first */
-                flex-basis: 150px; /* Adjust basis */
-                height: 22px; /* Adjust height */
-            }
-            .category-header .category-score-text {
-                order: 2; /* Score text second */
-                margin-left: 0; /* Reset margin */
-            }
-            .category-header .health-indicator {
-                order: 3; /* Dot third */
-                margin-left: -2px;
-                margin-right: 0;
-            }
-
-            .check-item {
-                gap: 10px;
-            }
-            .check-name {
-                flex-basis: 100%;
-                margin-bottom: 5px;
-                margin-right: 0;
-            }
-            .score-bar-container {
-                order: 1; /* Bar first */
-                flex-basis: 150px;
-                height: 22px;
-            }
-             .check-score-display {
-                order: 2; /* Score display second */
-                font-size: 1em;
-                margin-left: 0; /* Reset margin */
-            }
-            .check-score-display .health-indicator {
-                 order: 2; /* Keep dot after score */
-            }
-        }
-    </style>
+    {# Add Tailwind CSS CDN #}
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
-    // Dark mode toggle
-    function toggleDarkMode() {
-        document.documentElement.classList.toggle('dark-mode');
-        localStorage.setItem('repolizer-dark', document.documentElement.classList.contains('dark-mode'));
-    }
-    window.onload = function() {
-        if (localStorage.getItem('repolizer-dark') === 'true') {
-            document.documentElement.classList.add('dark-mode');
+        // Basic Tailwind Dark Mode Setup
+        tailwind.config = {
+            darkMode: 'class', // Use class-based dark mode
+            theme: {
+                extend: {
+                    colors: {
+                        // Define custom colors matching the old theme (optional, Tailwind defaults are good)
+                        primary: { DEFAULT: '#2563eb', dark: '#60a5fa' },
+                        secondary: { DEFAULT: '#f1f5f9', dark: '#23272f' },
+                        accent: { DEFAULT: '#10b981', dark: '#34d399' },
+                        danger: { DEFAULT: '#ef4444', dark: '#ef4444' },
+                        warning: { DEFAULT: '#f59e42', dark: '#f59e42' },
+                        success: { DEFAULT: '#22c55e', dark: '#22c55e' },
+                        // Tailwind uses neutral/gray for text/bg/borders
+                    }
+                }
+            }
         }
-    };
+
+        // Dark mode toggle function
+        function toggleDarkMode() {
+            const htmlEl = document.documentElement;
+            htmlEl.classList.toggle('dark');
+            localStorage.setItem('repolizer-dark', htmlEl.classList.contains('dark'));
+        }
+
+        // Apply dark mode on load
+        function applyInitialDarkMode() {
+             if (localStorage.getItem('repolizer-dark') === 'true' ||
+                (!('repolizer-dark' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+        applyInitialDarkMode(); // Apply on initial load
+
+    </script>
+    {# Remove the entire <style> block #}
+    {# <style> ... </style> #}
+
+    {# Link Font Awesome (keep this) #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <script>
+    // Radar Chart Generation Script (minor style adjustments)
+    function generateRadarChart(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container || !data || data.length === 0) {
+            console.error("Radar chart container or data missing.");
+            if (container) container.innerHTML = "<p class='text-center text-red-600 dark:text-red-400'>Could not generate radar chart.</p>";
+            return;
+        }
+
+        const svgNS = "http://www.w3.org/2000/svg";
+        const width = container.offsetWidth;
+        const height = width;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const radius = Math.min(centerX, centerY) * 0.8;
+        const numAxes = data.length;
+        const angleSlice = (Math.PI * 2) / numAxes;
+        const levels = 5;
+
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        svg.setAttribute("class", "w-full h-auto block"); // Use Tailwind classes
+        container.appendChild(svg);
+
+        const g = document.createElementNS(svgNS, "g");
+        svg.appendChild(g);
+
+        // Determine colors based on dark mode
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const gridColor = isDarkMode ? '#374151' : '#e5e7eb'; // gray-700 : gray-200
+        const axisColor = isDarkMode ? '#4b5563' : '#d1d5db'; // gray-600 : gray-300
+        const labelColor = isDarkMode ? '#e5e7eb' : '#374151'; // gray-200 : gray-700
+        const dataStrokeColor = isDarkMode ? '#60a5fa' : '#2563eb'; // primary-dark : primary
+        const dataFillColor = isDarkMode ? 'rgba(96, 165, 250, 0.2)' : 'rgba(37, 99, 235, 0.2)'; // primary-dark with opacity : primary with opacity
+        const dataPointFillColor = dataStrokeColor;
+        const dataPointStrokeColor = isDarkMode ? '#23272f' : '#ffffff'; // secondary-dark : white
+
+        // Draw grid lines
+        for (let i = 1; i <= levels; i++) {
+            const levelFactor = radius * (i / levels);
+            const gridPolygon = document.createElementNS(svgNS, "polygon");
+            let points = "";
+            for (let j = 0; j < numAxes; j++) {
+                const x = centerX + levelFactor * Math.cos(angleSlice * j - Math.PI / 2);
+                const y = centerY + levelFactor * Math.sin(angleSlice * j - Math.PI / 2);
+                points += `${x},${y} `;
+            }
+            gridPolygon.setAttribute("points", points.trim());
+            gridPolygon.setAttribute("style", `stroke:${gridColor}; stroke-width:0.5; fill:none;`);
+            g.appendChild(gridPolygon);
+        }
+
+        // Draw axes and labels
+        for (let i = 0; i < numAxes; i++) {
+            const angle = angleSlice * i - Math.PI / 2;
+            const x2 = centerX + radius * Math.cos(angle);
+            const y2 = centerY + radius * Math.sin(angle);
+
+            const axisLine = document.createElementNS(svgNS, "line");
+            axisLine.setAttribute("x1", centerX);
+            axisLine.setAttribute("y1", centerY);
+            axisLine.setAttribute("x2", x2);
+            axisLine.setAttribute("y2", y2);
+            axisLine.setAttribute("style", `stroke:${axisColor}; stroke-width:1;`);
+            g.appendChild(axisLine);
+
+            const labelX = centerX + radius * 1.1 * Math.cos(angle);
+            const labelY = centerY + radius * 1.1 * Math.sin(angle);
+            const labelText = document.createElementNS(svgNS, "text");
+            labelText.setAttribute("x", labelX);
+            labelText.setAttribute("y", labelY);
+            labelText.setAttribute("style", `font-size:11px; fill:${labelColor};`);
+            labelText.setAttribute("dy", "0.35em");
+            labelText.textContent = data[i].name;
+            if (Math.abs(Math.cos(angle)) < 0.1) { // Top or bottom
+                 labelText.setAttribute("text-anchor", "middle");
+            } else if (Math.cos(angle) > 0) { // Right side
+                 labelText.setAttribute("text-anchor", "start");
+            } else { // Left side
+                 labelText.setAttribute("text-anchor", "end");
+            }
+            g.appendChild(labelText);
+        }
+
+        // Draw data area
+        const dataPolygon = document.createElementNS(svgNS, "polygon");
+        let dataPointsStr = "";
+        data.forEach((item, i) => {
+            const score = Math.max(0, Math.min(100, item.score));
+            const angle = angleSlice * i - Math.PI / 2;
+            const pointRadius = radius * (score / 100);
+            const x = centerX + pointRadius * Math.cos(angle);
+            const y = centerY + pointRadius * Math.sin(angle);
+            dataPointsStr += `${x},${y} `;
+        });
+        dataPolygon.setAttribute("points", dataPointsStr.trim());
+        dataPolygon.setAttribute("style", `fill:${dataFillColor}; stroke:${dataStrokeColor}; stroke-width:2;`);
+        g.appendChild(dataPolygon);
+
+        // Draw data points
+        data.forEach((item, i) => {
+            const score = Math.max(0, Math.min(100, item.score));
+            const angle = angleSlice * i - Math.PI / 2;
+            const pointRadius = radius * (score / 100);
+            const x = centerX + pointRadius * Math.cos(angle);
+            const y = centerY + pointRadius * Math.sin(angle);
+
+            const dataPoint = document.createElementNS(svgNS, "circle");
+            dataPoint.setAttribute("cx", x);
+            dataPoint.setAttribute("cy", y);
+            dataPoint.setAttribute("r", 4);
+            dataPoint.setAttribute("style", `fill:${dataPointFillColor}; stroke:${dataPointStrokeColor}; stroke-width:1;`);
+
+            const title = document.createElementNS(svgNS, "title");
+            title.textContent = `${item.name}: ${score.toFixed(1)}`;
+            dataPoint.appendChild(title);
+
+            g.appendChild(dataPoint);
+        });
+    }
+
+    // Call the function when the DOM is ready
+    document.addEventListener("DOMContentLoaded", function() {
+        try {
+            const categoriesData = JSON.parse('{{ categories_data_json | safe }}');
+            generateRadarChart("radar-chart", categoriesData);
+        } catch (e) {
+            console.error("Failed to parse category data or generate radar chart:", e);
+            const container = document.getElementById("radar-chart");
+            if (container) container.innerHTML = "<p class='text-center text-red-600 dark:text-red-400'>Error loading chart data.</p>";
+        }
+        // Re-apply dark mode in case Tailwind loaded after initial check
+        applyInitialDarkMode();
+    });
     </script>
 </head>
-<body>
-    <button class="dark-toggle" onclick="toggleDarkMode()">🌙/☀️</button>
-    <nav class="sticky-nav">
-        <div class="nav-links">
-            <a href="#summary">Summary</a>
-            <a href="#category-scores">Scores</a>
-            <a href="#visualizations">Visualizations</a>
-            <a href="#category-analysis">Analysis</a>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-sans antialiased">
+    {# Dark Mode Toggle Button - Adjusted Styling #}
+    <button class="fixed top-4 right-4 z-50 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500" onclick="toggleDarkMode()">
+        <span class="dark:hidden">🌙 Dark</span>
+        <span class="hidden dark:inline">☀️ Light</span>
+    </button>
+
+    {# Sticky Navigation - Adjusted Styling #}
+    <nav class="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-md py-2">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-center space-x-8 text-sm font-medium">
+                <a href="#summary" class="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 py-2 px-3 rounded-md transition duration-150 ease-in-out">Summary</a>
+                <a href="#category-scores" class="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 py-2 px-3 rounded-md transition duration-150 ease-in-out">Scores</a>
+                <a href="#visualizations" class="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 py-2 px-3 rounded-md transition duration-150 ease-in-out">Visualizations</a>
+                <a href="#category-analysis" class="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 py-2 px-3 rounded-md transition duration-150 ease-in-out">Analysis</a>
+            </div>
         </div>
     </nav>
-    <div class="report-container">
-        <header>
-            <h1>{{ repo.full_name }}</h1>
-            <div class="subtitle" style="font-size: 1.5rem; font-weight: bold;">Repository Health Report</div>
-            <div class="subtitle">Generated on {{ timestamp }}</div>
-            <div class="repo-meta">
+
+    {# Main Report Container - Adjusted Styling #}
+    <div class="max-w-6xl mx-auto p-6 md:p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg my-8">
+        {# Header Section - Adjusted Styling #}
+        <header class="text-center mb-8 pb-4 border-b border-gray-200 dark:border-gray-700">
+            <h1 class="text-3xl md:text-4xl font-bold text-primary-700 dark:text-primary-400 mb-2">{{ repo.full_name }}</h1>
+            <div class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-1">Repository Health Report</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Generated on {{ timestamp }}</div>
+            {# Repo Meta - Adjusted Styling #}
+            <div class="mt-4 flex justify-center flex-wrap gap-3 text-xs">
                 {% if repo.language %}
-                <div class="meta-item"><i class="fa fa-code"></i> {{ repo.language }}</div>
+                <div class="flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 font-medium">
+                    <i class="fas fa-code mr-1.5"></i> {{ repo.language }}
+                </div>
                 {% endif %}
                 {% if repo.stargazers_count is defined %}
-                <div class="meta-item"><i class="fa fa-star"></i> {{ repo.stargazers_count }} stars</div>
+                <div class="flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 font-medium">
+                    <i class="fas fa-star mr-1.5"></i> {{ repo.stargazers_count }} stars
+                </div>
                 {% endif %}
                 {% if repo.forks_count is defined %}
-                <div class="meta-item"><i class="fa fa-code-fork"></i> {{ repo.forks_count }} forks</div>
+                <div class="flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 font-medium">
+                    <i class="fas fa-code-fork mr-1.5"></i> {{ repo.forks_count }} forks
+                </div>
                 {% endif %}
                 {% if repo.license and repo.license.name %}
-                <div class="meta-item"><i class="fa fa-balance-scale"></i> {{ repo.license.name }}</div>
+                <div class="flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 font-medium">
+                    <i class="fas fa-balance-scale mr-1.5"></i> {{ repo.license.name }}
+                </div>
                 {% endif %}
                 {% if repo.created_at is defined %}
-                <div class="meta-item"><i class="fa fa-calendar"></i> Created: {{ repo.created_at[:10] }}</div>
+                <div class="flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 font-medium">
+                    <i class="fas fa-calendar mr-1.5"></i> Created: {{ repo.created_at[:10] }}
+                </div>
                 {% endif %}
                 {% if repo.updated_at is defined %}
-                <div class="meta-item"><i class="fa fa-refresh"></i> Last updated: {{ repo.updated_at[:10] }}</div>
+                <div class="flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 font-medium">
+                    <i class="fas fa-refresh mr-1.5"></i> Updated: {{ repo.updated_at[:10] }}
+                </div>
                 {% endif %}
             </div>
         </header>
+
         <main>
-            <div id="summary" class="score-container">
-                <div class="score-label">Overall Repository Health</div>
-                <div class="score {{ 'score-high' if overall_score >= 70 else 'score-medium' if overall_score >= 40 else 'score-low' }}">
+            {# Overall Score Section - Adjusted Styling #}
+            <div id="summary" class="text-center bg-gray-100 dark:bg-gray-700 rounded-lg p-6 mb-8 shadow">
+                <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Overall Repository Health</div>
+                {# Conditional Score Color Classes #}
+                {% set score_color = 'text-success-600 dark:text-success-400' if overall_score >= 70 else 'text-warning-600 dark:text-warning-400' if overall_score >= 40 else 'text-danger-600 dark:text-danger-400' %}
+                {% set indicator_color = 'bg-success-500' if overall_score >= 70 else 'bg-warning-500' if overall_score >= 40 else 'bg-danger-500' %}
+                <div class="text-5xl font-bold {{ score_color }} my-2">
                     {{ "%.2f"|format(overall_score) }}
                 </div>
-                <div class="score-description">
+                <div class="text-sm text-gray-700 dark:text-gray-300 flex items-center justify-center">
+                    <span class="inline-block w-3 h-3 rounded-full mr-2 {{ indicator_color }}"></span>
                     {% if overall_score >= 70 %}
-                    <span class="health-indicator health-good"></span> This repository demonstrates good adherence to software development best practices.
+                    This repository demonstrates good adherence to software development best practices.
                     {% elif overall_score >= 40 %}
-                    <span class="health-indicator health-medium"></span> This repository has moderate health and could benefit from targeted improvements.
+                    This repository has moderate health and could benefit from targeted improvements.
                     {% else %}
-                    <span class="health-indicator health-poor"></span> This repository needs significant improvements to meet software development best practices.
+                    This repository needs significant improvements to meet software development best practices.
                     {% endif %}
                 </div>
             </div>
-            <h2 id="category-scores">Category Scores</h2>
-            <div class="category-grid">
+
+            {# Category Scores Grid - Adjusted Styling #}
+            <h2 id="category-scores" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Category Scores</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 {% for category, data in categories.items() %}
-                <a href="#analysis-{{ category }}" style="text-decoration: none; color: inherit;">
-                    <div class="category-card">
-                        <div class="category-name">
-                            {% if category == 'code_quality' %}
-                                Code
-                            {% elif category == 'ci_cd' %}
-                                CI/CD
-                            {% else %}
-                                {{ category.capitalize() }}
-                            {% endif %}
-                        </div>
-                        <div class="category-score {{ 'score-high' if data.score >= 70 else 'score-medium' if data.score >= 40 else 'score-low' }}">
-                            {{ "%.2f"|format(data.score) }}
-                        </div>
-                        <div>
-                            <span class="health-indicator {{ 'health-good' if data.score >= 70 else 'health-medium' if data.score >= 40 else 'health-poor' }}"></span>
-                            {{ data.checks|length }} checks performed
-                        </div>
+                {% set cat_score_color = 'text-success-600 dark:text-success-400' if data.score >= 70 else 'text-warning-600 dark:text-warning-400' if data.score >= 40 else 'text-danger-600 dark:text-danger-400' %}
+                {% set cat_indicator_color = 'bg-success-500' if data.score >= 70 else 'bg-warning-500' if data.score >= 40 else 'bg-danger-500' %}
+                <a href="#analysis-{{ category }}" class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow hover:shadow-md transition duration-150 ease-in-out">
+                    <div class="font-semibold text-lg text-gray-800 dark:text-gray-200 mb-1">
+                        {% if category == 'code_quality' %} Code
+                        {% elif category == 'ci_cd' %} CI/CD
+                        {% else %} {{ category.capitalize().replace('_', ' ') }}
+                        {% endif %}
+                    </div>
+                    <div class="text-3xl font-bold {{ cat_score_color }} my-1">
+                        {{ "%.2f"|format(data.score) }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                        <span class="inline-block w-2.5 h-2.5 rounded-full mr-1.5 {{ cat_indicator_color }}"></span>
+                        {{ data.checks|length }} checks performed
                     </div>
                 </a>
                 {% endfor %}
             </div>
-            <h2 id="visualizations">Visualizations</h2>
-            <div class="visualizations">
-                {% if visualizations %}
-                <div class="visualization">
-                    <img src="{{ visualizations[0] }}" alt="Repository Health Radar Chart">
-                    <div class="viz-caption"></div>
-                        Radar chart showing the distribution of scores across different categories
+
+            {# Visualizations Section - Adjusted Styling #}
+            <h2 id="visualizations" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Visualizations</h2>
+            <div class="mb-8">
+                <div class="max-w-xl mx-auto bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow">
+                    <div class="text-center text-lg font-medium text-gray-800 dark:text-gray-200 mb-3">Repository Health Radar Chart</div>
+                    <div id="radar-chart">
+                        {# SVG generated by JS #}
                     </div>
                 </div>
-                {% else %}
-                <p>No visualizations available.</p>
-                {% endif %}
             </div>
-            <h2 id="category-analysis">Category Analysis</h2>
+
+            {# Category Analysis Section - Adjusted Styling #}
+            <h2 id="category-analysis" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Category Analysis</h2>
+            <div class="space-y-6">
             {% for insight in insights %}
-            <div id="analysis-{{ insight.category }}" class="category-analysis {{ 'high-score' if insight.score >= 70 else 'medium-score' if insight.score >= 40 else 'low-score' }}">
-                {# Updated Category Header Layout #}
-                <div class="category-header">
-                    <h2 style="font-size: 1.6em;">
+                {% set cat_border_color = 'border-success-500' if insight.score >= 70 else 'border-warning-500' if insight.score >= 40 else 'border-danger-500' %}
+                {% set cat_score_text_color = 'text-success-700 dark:text-success-400' if insight.score >= 70 else 'text-warning-700 dark:text-warning-400' if insight.score >= 40 else 'text-danger-700 dark:text-danger-400' %}
+                {% set cat_indicator_color = 'bg-success-500' if insight.score >= 70 else 'bg-warning-500' if insight.score >= 40 else 'bg-danger-500' %}
+                {% set bar_bg_color = 'bg-success-500' if insight.score >= 70 else 'bg-warning-500' if insight.score >= 40 else 'bg-danger-500' %}
+
+            <div id="analysis-{{ insight.category }}" class="bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow border-l-4 {{ cat_border_color }}">
+                {# Category Header - Adjusted Styling #}
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mr-auto">
                         {% if insight.category == 'code_quality' %} Code
                         {% elif insight.category == 'ci_cd' %} CI/CD
-                        {% else %} {{ insight.category.capitalize() }}
+                        {% else %} {{ insight.category.capitalize().replace('_', ' ') }}
                         {% endif %}
-                    </h2>
-                    {# Bar moved before score text #}
-                    <div class="category-overall-score-bar-container">
-                        <div class="category-overall-score-bar-inner {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}"
-                             style="width: {{ insight.score }}%;"
-                             title="Overall Score: {{ "%.1f"|format(insight.score) }}/100">
-                        </div>
+                    </h3>
+                    {# Overall Score Bar #}
+                    <div class="flex-grow sm:flex-grow-0 sm:w-48 h-5 bg-gray-200 dark:bg-gray-600 rounded overflow-hidden order-2 sm:order-1" title="Overall Score: {{ "%.1f"|format(insight.score) }}/100">
+                        <div class="h-full {{ bar_bg_color }}" style="width: {{ insight.score }}%;"></div>
                     </div>
-                    {# Score text moved after bar #}
-                    <div class="category-score-text {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
+                    {# Score Text & Indicator #}
+                    <div class="flex items-center font-bold text-lg {{ cat_score_text_color }} order-1 sm:order-2">
                         {{ "%.1f"|format(insight.score) }}
+                        <span class="inline-block w-3 h-3 rounded-full ml-2 {{ cat_indicator_color }}"></span>
                     </div>
-                    {# Dot moved after score text #}
-                    <span class="health-indicator {{ 'health-good' if insight.score >= 70 else 'health-medium' if insight.score >= 40 else 'health-poor' }}"></span>
                 </div>
 
-                {# Display the overall category narrative #}
-                <div class="markdown" style="margin-top: 5px; margin-bottom: 20px;">
+                {# Category Narrative - Using Tailwind Typography #}
+                <div class="prose prose-sm dark:prose-invert max-w-none mb-5">
                     {{ insight.narrative|markdown_to_html|safe }}
                 </div>
 
-                {# Display individual checks with score bars #}
+                {# Check Details - Adjusted Styling #}
                 {% if insight.checks %}
-                <div class="check-details">
-                    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1em; color: var(--primary);">Check Details</h3>
+                <div class="border-t border-gray-200 dark:border-gray-600 pt-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">Check Details</h4>
+                    <div class="space-y-3">
                     {% for check in insight.checks %}
-                    {# Updated Check Item Layout #}
-                    <div class="check-item">
-                        <div class="check-name">{{ check.name }}</div>
-                        {# Bar moved before score display #}
-                        <div class="score-bar-container">
-                            <div class="score-bar-inner {{ 'score-high' if check.score >= 70 else 'score-medium' if check.score >= 40 else 'score-low' }}"
-                                 style="width: {{ check.score }}%;"
-                                 title="Score: {{ "%.1f"|format(check.score) }}/100">
+                        {% set check_score_text_color = 'text-success-700 dark:text-success-400' if check.score >= 70 else 'text-warning-700 dark:text-warning-400' if check.score >= 40 else 'text-danger-700 dark:text-danger-400' %}
+                        {% set check_indicator_color = 'bg-success-500' if check.score >= 70 else 'bg-warning-500' if check.score >= 40 else 'bg-danger-500' %}
+                        {% set check_bar_bg_color = 'bg-success-500' if check.score >= 70 else 'bg-warning-500' if check.score >= 40 else 'bg-danger-500' %}
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                            <div class="flex-1 min-w-[150px] text-gray-800 dark:text-gray-200">{{ check.name }}</div>
+                            {# Score Bar #}
+                            <div class="flex-grow sm:flex-grow-0 sm:w-40 h-4 bg-gray-200 dark:bg-gray-600 rounded overflow-hidden order-2 sm:order-1" title="Score: {{ "%.1f"|format(check.score) }}/100">
+                                <div class="h-full {{ check_bar_bg_color }}" style="width: {{ check.score }}%;"></div>
+                            </div>
+                            {# Score Text & Indicator #}
+                            <div class="flex items-center font-semibold {{ check_score_text_color }} order-1 sm:order-2">
+                                {{ "%.1f"|format(check.score) }}
+                                <span class="inline-block w-2.5 h-2.5 rounded-full ml-1.5 {{ check_indicator_color }}"></span>
                             </div>
                         </div>
-                        {# Score display moved after bar, dot moved within #}
-                        <div class="check-score-display {{ 'score-high' if check.score >= 70 else 'score-medium' if check.score >= 40 else 'score-low' }}">
-                            {{ "%.1f"|format(check.score) }}
-                            <span class="health-indicator {{ 'health-good' if check.score >= 70 else 'health-medium' if check.score >= 40 else 'health-poor' }}"></span>
-                        </div>
-                    </div>
                     {% endfor %}
+                    </div>
                 </div>
                 {% endif %}
             </div>
             {% endfor %}
+            </div> {# End space-y-6 #}
         </main>
-        <footer>
+
+        {# Footer - Adjusted Styling #}
+        <footer class="text-center mt-10 pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400"></footer>
             <p>Generated by Repolizer Report Generator</p>
             <p>© {{ current_year }} Repolizer</p>
         </footer>
     </div>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </body>
 </html>

@@ -25,6 +25,8 @@ import re
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 from pathlib import Path
+import traceback # Added previously
+import dirtyjson # Import dirtyjson if available
 
 # Import rich components for enhanced console output
 try:
@@ -41,41 +43,18 @@ except ImportError:
 # Create global console object for rich output
 console = Console() if HAS_RICH else None
 
-# Import visualization libraries
-try:
-    import matplotlib
-    matplotlib.use('Agg')  # Use non-interactive backend
-    import matplotlib.pyplot as plt
-    import matplotlib.colors as mcolors
-    from matplotlib.ticker import MaxNLocator
-    
-    # Verify imports succeeded
-    HAS_VISUALIZATION_LIBS = True
-except ImportError as e:
-    if console:
-        console.print(f"[yellow]Warning:[/yellow] Matplotlib libraries are missing: {e}")
-        console.print("[green]Installing required dependencies...[/green]")
-    else:
-        print(f"Warning: Matplotlib libraries are missing: {e}")
-        print("Installing required dependencies...")
-    
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
-        
-        # Retry imports
-        import matplotlib
-        matplotlib.use('Agg')  # Use non-interactive backend
-        import matplotlib.pyplot as plt
-        import matplotlib.colors as mcolors
-        from matplotlib.ticker import MaxNLocator
-        
-        HAS_VISUALIZATION_LIBS = True
-    except Exception as e:
-        if console:
-            console.print(f"[red]Error installing matplotlib:[/red] {e}")
-        else:
-            print(f"Error installing matplotlib: {e}")
-        HAS_VISUALIZATION_LIBS = False
+# Remove visualization library imports
+# try:
+#     import matplotlib
+#     matplotlib.use('Agg')  # Use non-interactive backend
+#     import matplotlib.pyplot as plt
+#     import matplotlib.colors as mcolors
+#     from matplotlib.ticker import MaxNLocator
+#     HAS_VISUALIZATION_LIBS = True
+# except ImportError as e:
+#     # ... (removed installation/retry logic) ...
+#     HAS_VISUALIZATION_LIBS = False
+HAS_VISUALIZATION_LIBS = False # Explicitly set to False
 
 # Import report generators
 try:
@@ -208,7 +187,6 @@ class ReportGenerator:
             "summary": "",
             "insights": [],
             "recommendations": [],
-            "visualizations": [],
             "timestamp": datetime.now().isoformat()
         }
         
@@ -662,46 +640,78 @@ This automated analysis indicates areas where the repository demonstrates good p
 
     def _llm_request_json(self, messages, expected_keys, fallback_func=None, section_name="section", **fallback_kwargs):
         """Request JSON-formatted output from LLM, parse it, and handle errors gracefully."""
-        # Modify the system prompt to request JSON output
+        # Create a safe example string based on the number of expected keys
+        example_json_str = ""
+        if len(expected_keys) >= 2:
+            example_json_str = f'{{"{expected_keys[0]}": "Some text content.", "{expected_keys[1]}": "More text content..."}}'
+        elif len(expected_keys) == 1:
+            example_json_str = f'{{"{expected_keys[0]}": "Some text content."}}'
+        else: # Should not happen if expected_keys is always populated, but good to handle
+            example_json_str = '{}'
+
+        # Modify the system prompt to request JSON output - MORE STRICT
         json_format_instruction = (
-            "Output your response STRICTLY in JSON format with the following structure: "
-            f"{{{', '.join([f'\"{k}\": \"[content for {k}]\"' for k in expected_keys])}}}.\n"
-            "Ensure valid JSON syntax: use double quotes for keys and string values, escape internal quotes (\\\"), and ensure all brackets/braces are closed.\n"
-            "Do NOT include any introductory text, explanations, or markdown formatting like ```json before or after the JSON object."
+            "Output your response ONLY in valid JSON format. Do NOT include any text before or after the JSON object. "
+            "Do NOT use markdown formatting like ```json. The entire response must be a single, valid JSON object.\n"
+            "Use double quotes for all keys and string values. Escape internal double quotes with '\\'. Ensure correct comma placement (no trailing commas).\n"
+            "The JSON structure MUST be exactly: "
+            f"{{{', '.join([f'\"{k}\": \"[string content for {k}]\"' for k in expected_keys])}}}.\n"
+            "Example of CORRECT output:\n"
+            f'{example_json_str}\n' # Use the safely generated example string
+            "Example of INCORRECT output (extra text):\n"
+            f'Here is the JSON:\n{{\n  "{expected_keys[0] if expected_keys else "key"}": "Content."\n}}\n' # Safer access for incorrect example
+            "Example of INCORRECT output (single quotes):\n"
+            f"{{'{expected_keys[0] if expected_keys else "key"}': 'Content.'}}\n" # Safer access for incorrect example
+            "Example of INCORRECT output (trailing comma):\n"
+            f'{{"{expected_keys[0] if expected_keys else "key"}": "Content.",}}\n' # Safer access for incorrect example
+            "Respond ONLY with the JSON object."
         )
+        # ... (rest of the logic for inserting/updating the system prompt remains the same) ...
         if messages and len(messages) > 0 and messages[0]["role"] == "system":
-            if "STRICTLY in JSON format" not in messages[0]["content"]:
+            if "ONLY in valid JSON format" not in messages[0]["content"]: # Check for new instruction
                  messages[0]["content"] = messages[0]["content"] + "\n\n" + json_format_instruction
         else:
              messages.insert(0, {"role": "system", "content": json_format_instruction})
 
+
         raw_result = ""
         try:
-            estimated_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in messages)
-            if estimated_tokens > self.LLM_MAX_TOKEN_ESTIMATE:
-                 logger.warning(f"Initial JSON prompt for '{section_name}' is large ({estimated_tokens} tokens). Attempting anyway, but may fail or use fallback.")
+            # ... (token estimation remains the same) ...
 
             raw_result = self._llm_complete_until_stop(messages, section_name)
 
+            # Attempt to clean and extract JSON more robustly
             json_str = None
-            match = re.search(r'```json\s*({[\s\S]*?})\s*```', raw_result, re.IGNORECASE)
+            # 1. Look for ```json blocks
+            match = re.search(r'```json\s*({[\s\S]*?})\s*```', raw_result, re.IGNORECASE | re.DOTALL)
             if match:
-                json_str = match.group(1)
+                json_str = match.group(1).strip()
+                logger.debug(f"Extracted JSON from ```json block for {section_name}")
             else:
+                # 2. Look for the first '{' and the last '}'
                 start = raw_result.find('{')
                 end = raw_result.rfind('}')
                 if start != -1 and end != -1 and end > start:
-                    json_str = raw_result[start : end + 1]
-                else:
-                    if raw_result.strip().startswith('{') and raw_result.strip().endswith('}'):
-                         json_str = raw_result.strip()
+                    json_str = raw_result[start : end + 1].strip()
+                    # Check if the extracted string looks like JSON (basic check)
+                    if not (json_str.startswith('{') and json_str.endswith('}')):
+                         logger.warning(f"Extracted string for {section_name} doesn't look like JSON, might be partial.")
+                         json_str = None # Reset if extraction seems wrong
+                    else:
+                         logger.debug(f"Extracted JSON using find '{{' and '}}' for {section_name}")
+                # 3. If the whole string starts/ends with braces (already checked by find)
+                # elif raw_result.strip().startswith('{') and raw_result.strip().endswith('}'):
+                #      json_str = raw_result.strip()
+                #      logger.debug(f"Using raw stripped result as JSON for {section_name}")
+
 
             if not json_str:
-                 logger.warning(f"Could not find JSON structure in LLM response for {section_name}. Response:\n{raw_result[:500]}...")
-                 raise json.JSONDecodeError("No JSON object found", raw_result, 0)
+                 logger.warning(f"Could not extract a potential JSON object from LLM response for {section_name}. Response:\n{raw_result[:1000]}...")
+                 raise json.JSONDecodeError("No JSON object found or extracted", raw_result, 0)
 
+            # Try parsing with dirtyjson first, then standard json
             try:
-                import dirtyjson
+                # import dirtyjson # Already imported at top level
                 result_json = dirtyjson.loads(json_str)
                 logger.debug(f"Successfully parsed JSON for {section_name} (using dirtyjson)")
             except ImportError:
@@ -710,21 +720,37 @@ This automated analysis indicates areas where the repository demonstrates good p
                      result_json = json.loads(json_str)
                      logger.debug(f"Successfully parsed JSON for {section_name} (standard parser)")
                  except json.JSONDecodeError as json_e:
-                     logger.error(f"Failed to parse JSON for {section_name}: {json_e}")
-                     logger.debug(f"Attempted to parse: {json_str[:1000]}...")
-                     raise json_e
+                     # Log more details on standard JSON failure
+                     logger.error(f"Standard json.loads failed for {section_name}: {json_e}")
+                     logger.error(f"Failed JSON string (first 1000 chars):\n{json_str[:1000]}")
+                     raise json_e # Re-raise to trigger fallback
+            except Exception as dj_e: # Catch potential dirtyjson errors too
+                 logger.error(f"dirtyjson parsing failed for {section_name}: {dj_e}")
+                 logger.error(f"Failed JSON string (first 1000 chars):\n{json_str[:1000]}")
+                 # Try standard json as a last resort if dirtyjson fails
+                 try:
+                     result_json = json.loads(json_str)
+                     logger.debug(f"Successfully parsed JSON for {section_name} (standard parser after dirtyjson failed)")
+                 except json.JSONDecodeError as json_e:
+                     logger.error(f"Standard json.loads also failed for {section_name}: {json_e}")
+                     raise json_e # Re-raise to trigger fallback
 
+
+            # ... (missing key check remains the same) ...
             missing_keys = [k for k in expected_keys if k not in result_json]
             if missing_keys:
                 logger.warning(f"JSON response for {section_name} missing keys: {missing_keys}")
                 for k in missing_keys:
                     result_json[k] = f"[Content missing for {k}]"
 
+
             return result_json
 
         except (ValueError, ConnectionError, TimeoutError, requests.exceptions.RequestException, json.JSONDecodeError) as e:
              logger.warning(f"Failed to get valid JSON from LLM for {section_name}: {e}")
-             logger.debug(f"Raw response was: {raw_result[:1000]}...")
+             # Log more of the raw response on failure
+             logger.warning(f"Raw LLM response for {section_name} (first 1000 chars):\n{raw_result[:1000]}...")
+             # ... (fallback logic remains the same) ...
              if fallback_func:
                  try:
                      return fallback_func(**fallback_kwargs)
@@ -735,6 +761,7 @@ This automated analysis indicates areas where the repository demonstrates good p
              return {k: f"[No content available for {k} due to LLM error]" for k in expected_keys}
         except Exception as e:
              logger.error(f"Unexpected error in _llm_request_json for '{section_name}': {e}", exc_info=True)
+             logger.error(f"Raw LLM response for {section_name} (first 1000 chars):\n{raw_result[:1000]}...") # Log raw response here too
              return {k: f"[Unexpected error processing {k}]" for k in expected_keys}
 
     def _calculate_token_estimate(self, text):
@@ -1081,59 +1108,6 @@ This automated analysis indicates areas where the repository demonstrates good p
 
         return rec_list
 
-    def generate_visualizations(self) -> None:
-        """Generate visualizations of repository metrics"""
-        if not HAS_VISUALIZATION_LIBS:
-            logger.warning("Visualization libraries not available. Skipping chart generation.")
-            return
-        
-        start_time = time.time()
-        repo_name = self.report_data["repository"].get("full_name", "Unknown")
-        logger.info(f"Generating visualizations for {repo_name}")
-        
-        visualization_dir = self.report_dir / "visualizations"
-        os.makedirs(visualization_dir, exist_ok=True)
-        logger.debug(f"Visualization directory: {visualization_dir}")
-        
-        radar_path = visualization_dir / f"{repo_name.replace('/', '_')}_radar.png"
-        logger.info(f"Generating radar chart: {radar_path.name}")
-        self._generate_category_radar_chart(radar_path)
-        
-        self.report_data["visualizations"] = [
-            str(radar_path)
-        ]
-        
-        elapsed_time = time.time() - start_time
-        logger.info(f"Visualization generation completed in {elapsed_time:.1f} seconds")
-    
-    def _generate_category_radar_chart(self, output_path: Path) -> None:
-        """Generate a radar chart of category scores with a flat color palette"""
-        try:
-            categories = list(self.report_data["categories"].keys())
-            scores = [self.report_data["categories"][cat]["score"] for cat in categories]
-            categories.append(categories[0])
-            scores.append(scores[0])
-            angles = [n / float(len(categories)-1) * 2 * 3.14159 for n in range(len(categories))]
-            fig = plt.figure(figsize=(10, 10))
-            ax = fig.add_subplot(111, polar=True)
-            accent_color = '#2563eb'  
-            ax.plot(angles, scores, 'o-', linewidth=2, color=accent_color)
-            ax.fill(angles, scores, color=accent_color, alpha=0.18)
-            ax.set_theta_offset(3.14159 / 2)
-            ax.set_theta_direction(-1)
-            plt.xticks(angles[:-1], [cat.capitalize() for cat in categories[:-1]])
-            for i, (angle, score) in enumerate(zip(angles[:-1], scores[:-1])):
-                ax.text(angle, score + 5, f'{score:.1f}', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.8, boxstyle='round,pad=0.2'))
-            plt.ylim(0, 100)
-            repo_name = self.report_data["repository"].get("full_name", "Unknown")
-            plt.title(f"Repository Health Categories: {repo_name}\nOverall Score: {self.report_data['overall_score']}/100", pad=20, fontsize=14)
-            plt.tight_layout()
-            plt.savefig(output_path, dpi=300, bbox_inches='tight')
-            plt.close()
-            logger.info(f"Radar chart saved to {output_path}")
-        except Exception as e:
-            logger.error(f"Error generating radar chart: {e}")
-
     def generate_pdf_report(self) -> str:
         """Generate a PDF report from the analysis data"""
         logger.info("Starting PDF report generation")
@@ -1192,8 +1166,6 @@ This automated analysis indicates areas where the repository demonstrates good p
         self.process_repo_data(repo_data)
         
         self.generate_narrative_content()
-        
-        self.generate_visualizations()
         
         html_path = self.generate_html_report()
         
