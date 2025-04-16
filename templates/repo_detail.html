@@ -251,7 +251,7 @@
                     <h2 class="text-2xl font-bold text-gray-800">
                         <a href="{{ repo.repository.html_url }}" target="_blank" class="hover:text-blue-600 transition-colors">
                             {{ repo.repository.full_name }}
-                        </a> - Analysis Details
+                        </a>
                     </h2>
                     <p class="text-gray-600 mt-1">{{ repo.repository.description or 'No description available' }}</p>
                     <p class="text-sm text-gray-500 mt-2">
@@ -259,7 +259,7 @@
                             Analysis performed on: {{ repo.timestamp | replace('T', ' ') | replace('Z', '') | truncate(19, true, '') }}
                         {% endif %}
                         {% if repo.engine_version %}
-                            (Engine v{{ repo.engine_version }})
+                            (Repolizer v{{ repo.engine_version }})
                         {% endif %}
                     </p>
                 </div>
@@ -273,7 +273,7 @@
                     </a>
                     <!-- Paid Report Button - Using a temporary href to avoid BuildError -->
                     <a href="#" onclick="alert('Paid reports coming soon!'); return false;" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm transition-colors">
-                        <i class="fas fa-credit-card mr-2"></i> Paid Report
+                        <i class="fas fa-credit-card mr-2"></i> FULL REPORT
                     </a>
                 </div>
             </div>
