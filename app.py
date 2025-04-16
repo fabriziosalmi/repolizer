@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_from_directory, jsonify, request, Response, stream_with_context, redirect, url_for, flash # Added redirect, url_for, flash
+from flask import Flask, render_template, send_from_directory, jsonify, request, Response, stream_with_context, redirect, url_for, flash, make_response # Added redirect, url_for, flash, make_response
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user # Added Flask-Login imports
 from jinja2.ext import do # Import the DoExtension
 import os
@@ -17,6 +17,7 @@ import requests # Add requests import
 from app_utils import enqueue_output, run_analyzer, get_results_file_info # Import moved functions
 from collections import defaultdict
 from caching_middleware import timed_cache, clear_cache, clear_cache_pattern  # Import our caching middleware
+from email.utils import formatdate, parsedate_to_datetime # Import for Last-Modified and If-Modified-Since support
 
 app = Flask(__name__)
 
@@ -535,20 +536,58 @@ def get_results_jsonl_content():
 
 @app.route('/repositories.jsonl')
 def serve_repos_file():
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
+    if not os.path.exists(file_path):
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_repositories.jsonl')
+        if not os.path.exists(file_path):
+            return jsonify({"error": "Repositories file not found"}), 404
+    # Get file mtime
+    mtime = os.path.getmtime(file_path)
+    last_modified = formatdate(mtime, usegmt=True)
+    # Check If-Modified-Since header
+    ims = request.headers.get('If-Modified-Since')
+    if ims:
+        try:
+            ims_dt = parsedate_to_datetime(ims)
+            file_dt = parsedate_to_datetime(last_modified)
+            if ims_dt >= file_dt:
+                resp = make_response('', 304)
+                resp.headers['Last-Modified'] = last_modified
+                resp.headers['Cache-Control'] = 'public, max-age=300'
+                return resp
+        except Exception:
+            pass
     content = get_repositories_jsonl_content()
-    if content is None:
-        return jsonify({"error": "Repositories file not found"}), 404
     response = Response(content, mimetype='application/json')
-    response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
+    response.headers['Cache-Control'] = 'public, max-age=300'
+    response.headers['Last-Modified'] = last_modified
     return response
 
 @app.route('/results.jsonl')
 def serve_results_file():
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+    if not os.path.exists(file_path):
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
+        if not os.path.exists(file_path):
+            return jsonify({"error": "Results file not found"}), 404
+    mtime = os.path.getmtime(file_path)
+    last_modified = formatdate(mtime, usegmt=True)
+    ims = request.headers.get('If-Modified-Since')
+    if ims:
+        try:
+            ims_dt = parsedate_to_datetime(ims)
+            file_dt = parsedate_to_datetime(last_modified)
+            if ims_dt >= file_dt:
+                resp = make_response('', 304)
+                resp.headers['Last-Modified'] = last_modified
+                resp.headers['Cache-Control'] = 'public, max-age=300'
+                return resp
+        except Exception:
+            pass
     content = get_results_jsonl_content()
-    if content is None:
-        return jsonify({"error": "Results file not found"}), 404
     response = Response(content, mimetype='application/json')
-    response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
+    response.headers['Cache-Control'] = 'public, max-age=300'
+    response.headers['Last-Modified'] = last_modified
     return response
 
 @app.route('/results/<filename>')
