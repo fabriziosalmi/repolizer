@@ -874,8 +874,8 @@
         const heightPercentage = Math.max(5, score);
         categoryBarChartHtml += `
           <div class="flex flex-col items-center group" title="${name}: ${score.toFixed(1)}">
-            <div class="relative w-5 h-20 bg-gray-200 rounded-t overflow-hidden" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; width: 1rem;">
-              <div class="${colorClass} ${gradientClass} absolute bottom-0 w-full rounded-t transition-all duration-300" style="height: ${heightPercentage}%;"></div>
+            <div class="relative w-5 h-20 bg-gray-200 rounded-t overflow-hidden" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; width: 0.8rem;">
+              <div class="${colorClass} ${gradientClass} absolute bottom-0 w-full rounded-t transition-all duration-300" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; height: ${heightPercentage}%;"></div>
             </div>
             <span class="text-xs mt-1 text-gray-600">${Math.round(score)}</span>
             <i class="fas ${icon} text-gray-500 mt-1 group-hover:text-blue-500 transition-colors"></i>

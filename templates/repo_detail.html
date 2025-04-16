@@ -9,9 +9,10 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Score bar styling */
         .score-bar {
             height: 8px;
-            border-radius: 10px;
+            border-radius: 9999px;
             position: relative;
             overflow: hidden;
             background-color: #e5e7eb;
@@ -21,7 +22,7 @@
             top: 0;
             left: 0;
             height: 100%;
-            border-radius: 10px;
+            border-radius: 9999px;
             transition: width 0.5s ease;
         }
         /* Score color gradients */
@@ -37,6 +38,7 @@
             background-color: #f87171;
             background-image: linear-gradient(to right, #fb7185, #f87171, #fb7185);
         }
+        
         /* Category badge styles */
         .category-badge {
             font-size: 0.75rem;
@@ -68,6 +70,7 @@
                 linear-gradient(#fff 0 0);
             pointer-events: none;
         }
+        
         .border-left-gradient {
             position: relative;
         }
@@ -79,6 +82,127 @@
             left: 0;
             width: 4px;
             background: linear-gradient(to bottom, transparent, currentColor 50%, transparent);
+        }
+        
+        /* Card style consistent with repo-card from viewer */
+        .detail-card {
+            transition: all 0.3s ease;
+            position: relative;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .detail-card:hover {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Category card animations */
+        .category-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .category-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Animated gradient borders for category cards */
+        .category-card-high {
+            position: relative;
+            border: none;
+            outline: 2px solid transparent;
+        }
+        
+        .category-card-high:hover {
+            outline: 2px solid #4ade80;
+            outline-offset: 0px;
+            animation: outlineGradientGreen 2s linear infinite;
+            -webkit-animation: outlineGradientGreen 2s linear infinite;
+        }
+        
+        .category-card-medium:hover {
+            outline: 2px solid #fbbf24;
+            outline-offset: 0px;
+            animation: outlineGradientYellow 2s linear infinite;
+            -webkit-animation: outlineGradientYellow 2s linear infinite;
+        }
+        
+        .category-card-low:hover {
+            outline: 2px solid #f87171;
+            outline-offset: 0px;
+            animation: outlineGradientRed 2s linear infinite;
+            -webkit-animation: outlineGradientRed 2s linear infinite;
+        }
+        
+        @keyframes outlineGradientGreen {
+            0% { outline-color: #4ade80; }
+            50% { outline-color: #10b981; }
+            100% { outline-color: #4ade80; }
+        }
+        
+        @keyframes outlineGradientYellow {
+            0% { outline-color: #fcd34d; }
+            50% { outline-color: #f59e0b; }
+            100% { outline-color: #fcd34d; }
+        }
+        
+        @keyframes outlineGradientRed {
+            0% { outline-color: #fb7185; }
+            50% { outline-color: #ef4444; }
+            100% { outline-color: #fb7185; }
+        }
+        
+        /* Score circle animation */
+        .score-circle {
+            transition: all 0.5s ease;
+            position: relative;
+        }
+        
+        .score-circle::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0) 60%, rgba(255,255,255,0.7) 100%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .score-circle:hover::after {
+            opacity: 1;
+        }
+        
+        /* Improved mini progress bars for checks */
+        .check-progress {
+            height: 0.5rem;
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .check-progress-fill {
+            height: 100%;
+            border-radius: 9999px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: width 0.5s ease;
+        }
+        
+        /* Check row hover effect */
+        .check-row {
+            transition: background-color 0.2s ease;
+            border-radius: 0.25rem;
+        }
+        
+        .check-row:hover {
+            background-color: rgba(0, 0, 0, 0.03);
         }
     </style>
 </head>
@@ -121,11 +245,11 @@
 
     <main class="container mx-auto p-4 flex-grow">
         {% if repo %}
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="detail-card bg-white rounded-lg shadow-md p-6 mb-6">
             <div class="flex flex-col md:flex-row justify-between items-start mb-6">
                 <div class="mb-4 md:mb-0 md:max-w-3xl">
                     <h2 class="text-2xl font-bold text-gray-800">
-                        <a href="{{ repo.repository.html_url }}" target="_blank" class="hover:text-blue-600">
+                        <a href="{{ repo.repository.html_url }}" target="_blank" class="hover:text-blue-600 transition-colors">
                             {{ repo.repository.full_name }}
                         </a> - Analysis Details
                     </h2>
@@ -140,15 +264,15 @@
                     </p>
                 </div>
                 <div class="flex space-x-2">
-                    <a href="/" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm">
+                    <a href="/" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm transition-colors">
                         <i class="fas fa-arrow-left mr-2"></i> Back
                     </a>
                     <!-- History Button -->
-                    <a href="{{ url_for('repo_history', repo_id=repo.repository.id) }}" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm">
+                    <a href="{{ url_for('repo_history', repo_id=repo.repository.id) }}" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm transition-colors">
                         <i class="fas fa-history mr-2"></i> History
                     </a>
                     <!-- Paid Report Button - Using a temporary href to avoid BuildError -->
-                    <a href="#" onclick="alert('Paid reports coming soon!'); return false;" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm">
+                    <a href="#" onclick="alert('Paid reports coming soon!'); return false;" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm transition-colors">
                         <i class="fas fa-credit-card mr-2"></i> Paid Report
                     </a>
                 </div>
@@ -157,13 +281,13 @@
             <!-- Repository stats and overall score in a single row -->
             <div class="flex flex-col md:flex-row gap-4 mb-6">
                 <!-- Left side: Larger overall score card -->
-                <div class="bg-white rounded-lg shadow p-6 md:w-1/2">
+                <div class="detail-card bg-white rounded-lg shadow p-6 md:w-1/2 border border-gray-100">
                     <div class="flex flex-col items-center">
-                        <div class="text-sm text-gray-500 mb-2">Overall Health Score</div>
-                        <div class="text-5xl font-bold {% if repo.overall_score >= 70 %}text-green-600{% elif repo.overall_score >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                            {{ repo.overall_score|round(1) }}/100
+                        <div class="text-sm text-gray-500 mb-2 font-medium">Overall Health Score</div>
+                        <div class="score-circle text-5xl font-bold relative inline-flex items-center justify-center w-32 h-32 rounded-full mb-2 {% if repo.overall_score >= 70 %}bg-green-50 text-green-600{% elif repo.overall_score >= 40 %}bg-yellow-50 text-yellow-600{% else %}bg-red-50 text-red-600{% endif %}">
+                            {{ repo.overall_score|round(1) }}
                         </div>
-                        <div class="mt-4 w-full max-w-xs">
+                        <div class="mt-2 w-full max-w-xs">
                             <div class="score-bar h-3">
                                 <div class="score-bar-fill {{ 'score-high' if repo.overall_score >= 70 else ('score-medium' if repo.overall_score >= 40 else 'score-low') }}"
                                      style="width: {{ repo.overall_score }}%"></div>
@@ -171,15 +295,15 @@
                         </div>
                         <div class="mt-3 text-sm text-gray-600">
                             {% if repo.overall_score >= 70 %}
-                                <span class="inline-flex items-center text-green-700">
+                                <span class="inline-flex items-center text-green-700 bg-green-50 px-3 py-1 rounded-full">
                                     <i class="fas fa-check-circle mr-1"></i> Good health
                                 </span>
                             {% elif repo.overall_score >= 40 %}
-                                <span class="inline-flex items-center text-yellow-700">
+                                <span class="inline-flex items-center text-yellow-700 bg-yellow-50 px-3 py-1 rounded-full">
                                     <i class="fas fa-exclamation-circle mr-1"></i> Needs improvement
                                 </span>
                             {% else %}
-                                <span class="inline-flex items-center text-red-700">
+                                <span class="inline-flex items-center text-red-700 bg-red-50 px-3 py-1 rounded-full">
                                     <i class="fas fa-exclamation-triangle mr-1"></i> Critical issues
                                 </span>
                             {% endif %}
@@ -188,31 +312,31 @@
                 </div>
                 
                 <!-- Right side: Repository stats card -->
-                <div class="bg-white rounded-lg shadow p-6 md:w-1/2">
+                <div class="detail-card bg-white rounded-lg shadow p-6 md:w-1/2 border border-gray-100">
                     <h3 class="text-lg font-semibold text-gray-800 mb-3">Repository Stats</h3>
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="flex items-center border-left-gradient text-blue-400 pl-3 py-2">
+                        <div class="flex items-center border-left-gradient text-blue-400 pl-3 py-2 transition-all hover:bg-blue-50">
                             <i class="fas fa-star text-yellow-500 mr-3 text-xl"></i>
                             <div>
                                 <div class="text-xl font-bold text-gray-800">{{ repo.repository.stargazers_count or 0 }}</div>
                                 <div class="text-xs text-gray-500">Stars</div>
                             </div>
                         </div>
-                        <div class="flex items-center border-left-gradient text-green-400 pl-3 py-2">
+                        <div class="flex items-center border-left-gradient text-green-400 pl-3 py-2 transition-all hover:bg-green-50">
                             <i class="fas fa-code-fork text-green-600 mr-3 text-xl"></i>
                             <div>
                                 <div class="text-xl font-bold text-gray-800">{{ repo.repository.forks_count or 0 }}</div>
                                 <div class="text-xs text-gray-500">Forks</div>
                             </div>
                         </div>
-                        <div class="flex items-center border-left-gradient text-purple-400 pl-3 py-2">
+                        <div class="flex items-center border-left-gradient text-purple-400 pl-3 py-2 transition-all hover:bg-purple-50">
                             <i class="fas fa-code text-purple-600 mr-3 text-xl"></i>
                             <div>
                                 <div class="text-xl font-bold text-gray-800">{{ repo.repository.language or 'Unknown' }}</div>
                                 <div class="text-xs text-gray-500">Language</div>
                             </div>
                         </div>
-                        <div class="flex items-center border-left-gradient text-gray-400 pl-3 py-2">
+                        <div class="flex items-center border-left-gradient text-gray-400 pl-3 py-2 transition-all hover:bg-gray-50">
                             <i class="fas fa-clock text-gray-600 mr-3 text-xl"></i>
                             <div>
                                 <div class="text-xl font-bold text-gray-800">
@@ -256,44 +380,49 @@
                         {% endfor %}
                         
                         {% set category_score = (temp_data.total / temp_data.count) if temp_data.count > 0 else 0 %}
-                        {% set score_class = "bg-green-50 border-green-200" if category_score >= 70 else ("bg-yellow-50 border-yellow-200" if category_score >= 40 else "bg-red-50 border-red-200") %}
+                        {% set card_class = "category-card-high" if category_score >= 70 else ("category-card-medium" if category_score >= 40 else "category-card-low") %}
+                        {% set bg_class = "bg-green-50 border-green-200" if category_score >= 70 else ("bg-yellow-50 border-yellow-200" if category_score >= 40 else "bg-red-50 border-red-200") %}
                         {% set text_class = "text-green-600" if category_score >= 70 else ("text-yellow-600" if category_score >= 40 else "text-red-600") %}
                         {% set fill_class = "score-high" if category_score >= 70 else ("score-medium" if category_score >= 40 else "score-low") %}
                         
-                        <div class="p-4 rounded-lg {{ score_class }} border">
+                        <div class="category-card p-4 rounded-lg {{ bg_class }} border shadow-sm {{ card_class }}">
                             <div class="flex justify-between items-center mb-2">
                                 <div class="flex items-center">
-                                    <i class="fas {{ cat_info.icon }} text-gray-600 mr-2"></i>
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center {{ text_class }} bg-white shadow-sm mr-3">
+                                        <i class="fas {{ cat_info.icon }}"></i>
+                                    </div>
                                     <span class="font-medium">{{ cat_info.name }}</span>
                                 </div>
-                                <span class="text-sm font-bold {{ text_class }}">
-                                    {{ category_score|round(1) }}/100
+                                <span class="text-lg font-bold {{ text_class }}">
+                                    {{ category_score|round(1) }}
                                 </span>
                             </div>
-                            <div class="score-bar">
+                            <div class="score-bar mb-2">
                                 <div class="score-bar-fill {{ fill_class }}"
                                      style="width: {{ category_score }}%"></div>
                             </div>
-                            <div class="mt-2 text-xs text-gray-500">
-                                Based on {{ temp_data.count }} checks in this category
+                            <div class="mb-2 text-xs text-gray-500 flex items-center">
+                                <i class="fas fa-info-circle mr-1"></i> 
+                                Based on {{ temp_data.count }} checks
                             </div>
                             
                             <!-- Individual check scores -->
                             <div class="mt-3 pt-2 border-t border-gray-200">
-                                <div class="grid grid-cols-1 gap-2">
+                                <div class="grid grid-cols-1 gap-1">
                                     {% for check_name, check in repo[cat_id].items() %}
                                         {% if check.score is defined and check.score is not none %}
                                             {% set check_score = check.score|float %}
-                                            {% set check_score_class = "bg-green-200" if check_score >= 70 else ("bg-yellow-200" if check_score >= 40 else "bg-red-200") %}
+                                            {% set check_bg_class = "bg-green-100" if check_score >= 70 else ("bg-yellow-100" if check_score >= 40 else "bg-red-100") %}
+                                            {% set check_fill_class = "bg-green-400" if check_score >= 70 else ("bg-yellow-400" if check_score >= 40 else "bg-red-400") %}
                                             {% set check_text_class = "text-green-800" if check_score >= 70 else ("text-yellow-800" if check_score >= 40 else "text-red-800") %}
                                             
-                                            <div class="flex items-center text-xs">
-                                                <div class="w-1/2 truncate pr-2" title="{{ check_name|replace('_', ' ')|title }}">
+                                            <div class="check-row flex items-center text-xs py-1 px-1">
+                                                <div class="w-1/2 truncate pr-2 check-name-label" title="{{ check_name|replace('_', ' ')|title }}">
                                                     {{ check_name|replace('_', ' ')|title }}
                                                 </div>
                                                 <div class="w-1/2 flex items-center">
-                                                    <div class="w-3/4 bg-gray-100 rounded-full h-2 mr-2">
-                                                        <div class="h-2 rounded-full {{ check_score_class }}" 
+                                                    <div class="w-3/4 check-progress {{ check_bg_class }} mr-2">
+                                                        <div class="check-progress-fill {{ check_fill_class }}" 
                                                              style="width: {{ check_score }}%; 
                                                                     {% if check_score >= 70 %}
                                                                     background-image: linear-gradient(to right, rgba(167, 243, 208, 0.8), rgba(52, 211, 153, 1), rgba(167, 243, 208, 0.8));
@@ -304,7 +433,7 @@
                                                                     {% endif %}">
                                                         </div>
                                                     </div>
-                                                    <span class="w-1/4 font-medium {{ check_text_class }}">{{ check_score|round(1) }}</span>
+                                                    <span class="w-1/4 font-medium {{ check_text_class }}">{{ check_score|round(0) }}</span>
                                                 </div>
                                             </div>
                                         {% endif %}
@@ -326,24 +455,44 @@
                     checkLabels.forEach(label => {
                         if (label.title) {
                             label.style.cursor = 'help';
+                            
+                            // Add a subtle hover effect to show it's interactive
+                            label.addEventListener('mouseenter', function() {
+                                this.classList.add('text-blue-600');
+                            });
+                            
+                            label.addEventListener('mouseleave', function() {
+                                this.classList.remove('text-blue-600');
+                            });
                         }
                     });
+                    
+                    // Add animation to the score circle when the page loads
+                    const scoreCircle = document.querySelector('.score-circle');
+                    if (scoreCircle) {
+                        setTimeout(() => {
+                            scoreCircle.classList.add('animate-pulse');
+                            setTimeout(() => {
+                                scoreCircle.classList.remove('animate-pulse');
+                            }, 1000);
+                        }, 500);
+                    }
                 });
             </script>
         </div> {# End of main white card #}
 
         {# Back to Repository List button #}
         <div class="flex justify-center mb-6">
-            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center">
+            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md flex items-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
                 <i class="fas fa-arrow-left mr-2"></i> Back to Repository List
             </a>
         </div>
         {% else %}
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6 text-center">
+        <div class="detail-card bg-white rounded-lg shadow-md p-6 mb-6 text-center">
             <i class="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
             <h2 class="text-2xl font-bold text-gray-800 mb-2">Repository Not Found</h2>
             <p class="text-gray-600 mb-6">The repository you're looking for could not be found.</p>
-            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md inline-flex items-center">
+            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md inline-flex items-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
                 <i class="fas fa-home mr-2"></i> Go to Homepage
             </a>
         </div>
@@ -352,7 +501,7 @@
 
     <footer class="bg-gray-800 text-white mt-auto py-6">
         <div class="container mx-auto px-4 text-center">
-            <p>Repolizer - GitHub Repository Health Analyzer</p>
+            <p>&copy; {{ current_year if current_year else '2025' }} Repolizer - GitHub Repository Health Analyzer</p>
         </div>
     </footer>
 </body>
