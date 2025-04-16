@@ -353,15 +353,8 @@
             border-bottom: none; /* Remove border from h2 */
             flex-grow: 1; /* Allow title to take up space */
             min-width: 150px; /* Prevent title from becoming too small */
+            margin-right: auto; /* Push score elements to the right */
         }
-        .category-header .category-score-text { /* Style for the "Overall Score: XX.XX" text */
-            font-weight: bold;
-            white-space: nowrap; /* Prevent score text wrapping */
-            font-size: 1.1em;
-        }
-        .category-header .category-score-text.score-high { color: var(--success); }
-        .category-header .category-score-text.score-medium { color: var(--warning); }
-        .category-header .category-score-text.score-low { color: var(--danger); }
         .category-overall-score-bar-container { /* Container for the overall category score bar */
             flex-basis: 200px; /* Give the bar a base width */
             flex-grow: 2; /* Allow it to grow */
@@ -370,22 +363,30 @@
             border-radius: 5px;
             overflow: hidden;
             border: 1px solid var(--border);
+            order: 2; /* Order after title */
         }
-        .dark-mode .category-overall-score-bar-container {
-             background-color: #374151;
-             border-color: #4b5563;
+        .category-header .category-score-text { /* Style for the "Overall Score: XX.XX" text */
+            font-weight: bold;
+            white-space: nowrap; /* Prevent score text wrapping */
+            font-size: 1.1em;
+            order: 3; /* Order after bar */
+            margin-left: 5px; /* Add space before score text */
         }
+        .category-header .health-indicator { /* Style for the dot */
+             order: 4; /* Order after score text */
+             margin-left: -2px; /* Adjust spacing near score text */
+             margin-right: 5px; /* Add some space at the end */
+        }
+        /* Apply score colors to the overall bar */
         .category-overall-score-bar-inner { /* Inner part of the overall category score bar */
             height: 100%;
             border-radius: 4px 0 0 4px;
             transition: width 0.5s ease-in-out;
             box-shadow: inset -2px 0 4px rgba(0,0,0,0.1);
         }
-        /* Apply score colors to the overall bar */
         .category-overall-score-bar-inner.score-high { background-color: var(--success); }
         .category-overall-score-bar-inner.score-medium { background-color: var(--warning); }
         .category-overall-score-bar-inner.score-low { background-color: var(--danger); }
-
 
         /* Check Details */
         .check-details {
@@ -403,7 +404,7 @@
         .check-name {
             flex: 1 1 200px;
             font-weight: 500;
-            margin-right: auto;
+            margin-right: auto; /* Push score display/bar to the right */
         }
         .check-score-display { /* Container for dot and score value - Match category score text */
             display: flex;
@@ -412,6 +413,13 @@
             font-weight: bold;
             font-size: 1.1em; /* Match category score text size */
             white-space: nowrap;
+            order: 3; /* Match category header order */
+            margin-left: 5px; /* Match category header margin */
+        }
+        .check-score-display .health-indicator { /* Dot within check score display */
+             order: 2; /* Put dot after score number */
+             margin-left: 0px; /* Reset margin */
+             margin-right: 0; /* Reset margin */
         }
         .check-score-display.score-high { color: var(--success); }
         .check-score-display.score-medium { color: var(--warning); }
@@ -426,6 +434,7 @@
             overflow: hidden;
             border: 1px solid var(--border);
             min-width: 100px; /* Keep min-width */
+            order: 2; /* Match category header order */
         }
         .dark-mode .score-bar-container {
              background-color: #374151; /* Darker background for dark mode */
@@ -445,22 +454,46 @@
 
         @media (max-width: 600px) {
              /* ... existing media queries ... */
+            .category-header h2 {
+                margin-right: 0; /* Remove auto margin on small screens */
+                flex-basis: 100%; /* Title takes full width */
+                margin-bottom: 8px; /* Add space below title */
+            }
+            .category-overall-score-bar-container {
+                order: 1; /* Bar first */
+                flex-basis: 150px; /* Adjust basis */
+                height: 22px; /* Adjust height */
+            }
+            .category-header .category-score-text {
+                order: 2; /* Score text second */
+                margin-left: 0; /* Reset margin */
+            }
+            .category-header .health-indicator {
+                order: 3; /* Dot third */
+                margin-left: -2px;
+                margin-right: 0;
+            }
+
             .check-item {
-                gap: 10px; /* Adjusted gap */
+                gap: 10px;
             }
             .check-name {
-                flex-basis: 100%; /* Check name takes full width */
-                margin-bottom: 5px; /* Add space below name */
-                margin-right: 0; /* Reset margin */
-            }
-            .check-score-display {
-                order: 1;
-                font-size: 1em; /* Slightly smaller on mobile */
+                flex-basis: 100%;
+                margin-bottom: 5px;
+                margin-right: 0;
             }
             .score-bar-container {
-                order: 2;
-                flex-basis: 150px; /* Adjust basis for mobile */
-                height: 22px; /* Slightly smaller bar on mobile */
+                order: 1; /* Bar first */
+                flex-basis: 150px;
+                height: 22px;
+            }
+             .check-score-display {
+                order: 2; /* Score display second */
+                font-size: 1em;
+                margin-left: 0; /* Reset margin */
+            }
+            .check-score-display .health-indicator {
+                 order: 2; /* Keep dot after score */
             }
         }
     </style>
@@ -559,7 +592,7 @@
                 {% if visualizations %}
                 <div class="visualization">
                     <img src="{{ visualizations[0] }}" alt="Repository Health Radar Chart">
-                    <div class="viz-caption">
+                    <div class="viz-caption"></div>
                         Radar chart showing the distribution of scores across different categories
                     </div>
                 </div>
@@ -570,31 +603,31 @@
             <h2 id="category-analysis">Category Analysis</h2>
             {% for insight in insights %}
             <div id="analysis-{{ insight.category }}" class="category-analysis {{ 'high-score' if insight.score >= 70 else 'medium-score' if insight.score >= 40 else 'low-score' }}">
-                {# New Category Header Layout #}
+                {# Updated Category Header Layout #}
                 <div class="category-header">
-                    <h2 style="font-size: 1.6em;"> {# Adjusted font size slightly #}
-                        {% if insight.category == 'code_quality' %}
-                            Code
-                        {% elif insight.category == 'ci_cd' %}
-                            CI/CD
-                        {% else %}
-                            {{ insight.category.capitalize() }}
+                    <h2 style="font-size: 1.6em;">
+                        {% if insight.category == 'code_quality' %} Code
+                        {% elif insight.category == 'ci_cd' %} CI/CD
+                        {% else %} {{ insight.category.capitalize() }}
                         {% endif %}
                     </h2>
-                    <div class="category-score-text {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
-                        <span class="health-indicator {{ 'health-good' if insight.score >= 70 else 'health-medium' if insight.score >= 40 else 'health-poor' }}"></span>
-                        {{ "%.1f"|format(insight.score) }}  {# Simplified score text #}
-                    </div>
+                    {# Bar moved before score text #}
                     <div class="category-overall-score-bar-container">
                         <div class="category-overall-score-bar-inner {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}"
                              style="width: {{ insight.score }}%;"
                              title="Overall Score: {{ "%.1f"|format(insight.score) }}/100">
                         </div>
                     </div>
+                    {# Score text moved after bar #}
+                    <div class="category-score-text {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
+                        {{ "%.1f"|format(insight.score) }}
+                    </div>
+                    {# Dot moved after score text #}
+                    <span class="health-indicator {{ 'health-good' if insight.score >= 70 else 'health-medium' if insight.score >= 40 else 'health-poor' }}"></span>
                 </div>
 
                 {# Display the overall category narrative #}
-                <div class="markdown" style="margin-top: 5px; margin-bottom: 20px;"> {# Adjusted margins #}
+                <div class="markdown" style="margin-top: 5px; margin-bottom: 20px;">
                     {{ insight.narrative|markdown_to_html|safe }}
                 </div>
 
@@ -606,16 +639,17 @@
                     {# Updated Check Item Layout #}
                     <div class="check-item">
                         <div class="check-name">{{ check.name }}</div>
-                        {# Added score display with dot and value #}
-                        <div class="check-score-display {{ 'score-high' if check.score >= 70 else 'score-medium' if check.score >= 40 else 'score-low' }}">
-                            <span class="health-indicator {{ 'health-good' if check.score >= 70 else 'health-medium' if check.score >= 40 else 'health-poor' }}"></span>
-                            {{ "%.1f"|format(check.score) }}
-                        </div>
+                        {# Bar moved before score display #}
                         <div class="score-bar-container">
                             <div class="score-bar-inner {{ 'score-high' if check.score >= 70 else 'score-medium' if check.score >= 40 else 'score-low' }}"
                                  style="width: {{ check.score }}%;"
                                  title="Score: {{ "%.1f"|format(check.score) }}/100">
                             </div>
+                        </div>
+                        {# Score display moved after bar, dot moved within #}
+                        <div class="check-score-display {{ 'score-high' if check.score >= 70 else 'score-medium' if check.score >= 40 else 'score-low' }}">
+                            {{ "%.1f"|format(check.score) }}
+                            <span class="health-indicator {{ 'health-good' if check.score >= 70 else 'health-medium' if check.score >= 40 else 'health-poor' }}"></span>
                         </div>
                     </div>
                     {% endfor %}

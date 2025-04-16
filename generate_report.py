@@ -176,6 +176,8 @@ class ReportGenerator:
     Generates comprehensive reports from repository analysis data
     """
     
+    LLM_MAX_TOKEN_ESTIMATE = 14000  # Lowered threshold for safety
+
     def __init__(self, llm_host="http://localhost:1234", llm_model="meta-llama-3.1-8b-instruct", timeout=120):
         """Initialize report generator"""
         self.llm_host = llm_host
@@ -358,95 +360,105 @@ class ReportGenerator:
         if not self.llm_available:
             logger.debug("LLM unavailable, using fallback text generation")
             return self._generate_fallback_text(messages)
-            
+
         try:
-            # Get a short description of the query for logging
             query_type = "unknown"
-            if "executive summary" in messages[-1]["content"].lower():
-                query_type = "executive summary"
-            elif "technical insights" in messages[-1]["content"].lower():
-                # Extract category name if available
-                category = "unknown"
-                if "'" in messages[-1]["content"]:
-                    category = messages[-1]["content"].split("'")[1]
-                query_type = f"{category} insights"
-            elif "recommendations" in messages[-1]["content"].lower():
-                query_type = "recommendations"
-            
+            if messages and messages[-1]["role"] == "user":
+                content_lower = messages[-1]["content"].lower()
+                if "executive summary" in content_lower: query_type = "executive summary"
+                elif "technical insights" in content_lower: query_type = f"{messages[-1]['content'].split("'")[1] if len(messages[-1]['content'].split("'")) > 1 else 'unknown'} insights"
+                elif "recommendations" in content_lower: query_type = "recommendations"
+                elif "key opportunities" in content_lower: query_type = "key opportunities"
+                elif "strengths & risks" in content_lower: query_type = "strengths and risks"
+                elif "next steps" in content_lower: query_type = "next steps"
+                elif "resources" in content_lower: query_type = "resources"
+                elif "narrative insight" in content_lower: query_type = f"{messages[-1]['content'].split(',')[0].split(':')[1].strip() if ':' in messages[-1]['content'] else 'category'} narrative"
+
+
             logger.info(f"Querying LLM for {query_type} (attempt {retry_count+1}/{max_retries+1})")
-            
-            # Calculate token count estimate for logging
-            total_chars = sum(len(m["content"]) for m in messages)
-            estimated_tokens = total_chars / 4  # Rough estimate
-            
-            logger.debug(f"Estimated input tokens: {estimated_tokens:.0f} (from {total_chars} characters)")
-            if estimated_tokens > 8000:
-                logger.warning(f"Large prompt size detected ({estimated_tokens:.0f} estimated tokens)")
-            
+
+            # Estimate token count before sending
+            estimated_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in messages)
+            logger.debug(f"Estimated input tokens: {estimated_tokens:.0f}")
+            if estimated_tokens > self.LLM_MAX_TOKEN_ESTIMATE * 1.1: # Check against a slightly higher limit before warning/erroring
+                 logger.error(f"Prompt size ({estimated_tokens} tokens) likely exceeds model limit. Request may fail.")
+                 # Optionally raise an error here to prevent sending
+                 # raise ValueError(f"Prompt too large: {estimated_tokens} estimated tokens")
+
             start_time = time.time()
-            
+
             payload = {
                 "model": self.llm_model,
                 "messages": messages,
                 "temperature": 0.7,
-                "max_tokens": -1,
+                "max_tokens": 4096, # Set a reasonable max_tokens for the response itself
                 "stream": False
             }
-            
+
             response = requests.post(
                 f"{self.llm_host}/v1/chat/completions",
                 headers={"Content-Type": "application/json"},
                 json=payload,
                 timeout=self.llm_timeout
             )
-            
+
             elapsed_time = time.time() - start_time
             logger.debug(f"LLM request completed in {elapsed_time:.2f} seconds")
-            
+
             if response.status_code == 200:
                 result = response.json()
                 if "choices" in result and len(result["choices"]) > 0:
                     completion_tokens = result.get("usage", {}).get("completion_tokens", 0)
                     total_tokens = result.get("usage", {}).get("total_tokens", 0)
-                    
+
                     logger.debug(f"LLM response: {completion_tokens} completion tokens, {total_tokens} total tokens")
                     response_text = result["choices"][0]["message"]["content"]
-                    
+
                     # Log a short preview of the response
-                    preview = response_text[:100] + "..." if len(response_text) > 100 else response_text
+                    preview = response_text[:100].replace('\n', ' ') + "..." if len(response_text) > 100 else response_text.replace('\n', ' ')
                     logger.debug(f"LLM response preview: {preview}")
-                    
+
                     return response_text
                 else:
                     logger.error(f"Unexpected response structure from LLM: {result}")
+            # Handle 400 Bad Request specifically - likely prompt size issue
+            elif response.status_code == 400:
+                 logger.error(f"LLM API returned 400 Bad Request. This often indicates the prompt exceeded the model's token limit (estimated: {estimated_tokens}).")
+                 logger.debug(f"Response text: {response.text[:500]}...")
+                 # Raise a specific error or return an indicator to trigger fallback immediately
+                 raise ValueError("Prompt likely too large (400 Bad Request)")
             else:
                 logger.error(f"Error from LLM API: Status {response.status_code}")
-                logger.debug(f"Response text: {response.text[:200]}...")
-        
+                logger.debug(f"Response text: {response.text[:500]}...")
+                # Raise generic error for other non-200 codes
+                response.raise_for_status() # Raise HTTPError for other bad statuses
+
         except requests.exceptions.Timeout:
             logger.warning(f"LLM request timed out after {self.llm_timeout}s")
             if retry_count < max_retries:
                 new_timeout = int(self.llm_timeout * 1.5)
                 logger.info(f"Retrying with longer timeout: {new_timeout}s")
-                # Increase timeout for retry
                 self.llm_timeout = new_timeout
                 return self.query_llm(messages, retry_count + 1, max_retries)
             else:
                 logger.error(f"LLM request timed out after {max_retries+1} attempts")
                 self.llm_available = False
-                return self._generate_fallback_text(messages)
-                
+                raise TimeoutError("LLM request timed out after multiple retries")
+
         except Exception as e:
-            logger.error(f"Error querying LLM: {str(e)}", exc_info=True)
+            if "Prompt likely too large" in str(e):
+                 raise e
+            logger.error(f"Error querying LLM: {str(e)}", exc_info=False) # exc_info=False to reduce noise unless debugging
+            logger.debug(traceback.format_exc()) # Log full traceback at debug level
             if retry_count < max_retries:
                 logger.warning(f"Retrying LLM request after error (attempt {retry_count+2}/{max_retries+1})...")
-                time.sleep(2)  # Brief pause before retry
+                time.sleep(2)
                 return self.query_llm(messages, retry_count + 1, max_retries)
             else:
                 logger.error("Maximum retry attempts reached, using fallback text generation")
                 self.llm_available = False
-                return self._generate_fallback_text(messages)
-        
+                raise ConnectionError("LLM query failed after multiple retries")
+
         return self._generate_fallback_text(messages)
     
     def _generate_fallback_text(self, messages: List[Dict]) -> str:
@@ -565,130 +577,165 @@ This automated analysis indicates areas where the repository demonstrates good p
         
         return recommendations.strip()
 
-    def _llm_chunked_query(self, base_prompt, items, item_label, max_tokens=16384, max_chunks=2):
-        """Split items into chunks that fit max_tokens and query LLM for each chunk, limiting to max_chunks."""
-        results = []
-        # Estimate chars per token (1 token ≈ 4 chars)
-        max_chars = max_tokens * 4
-        
-        # If items is small enough, just process it in one go
-        items_json = json.dumps(items)
-        if len(items_json) <= max_chars:
-            prompt = base_prompt.copy()
-            prompt[-1]["content"] += f"\n{item_label}: {items_json}"
-            return self.query_llm(prompt)
-            
-        # Otherwise, we need to chunk the items
-        chunk_size = max(1, len(items) // max_chunks)
-        logger.info(f"Chunking {len(items)} items into ~{max_chunks} chunks of ~{chunk_size} items each")
-        
-        # Create chunks of roughly equal size
-        chunks = []
-        for i in range(0, len(items), chunk_size):
-            chunk = items[i:i + chunk_size]
-            chunks.append(chunk)
-        
-        # Limit to max_chunks if needed
-        if len(chunks) > max_chunks:
-            logger.warning(f"Too many chunks ({len(chunks)}), limiting to {max_chunks}")
-            # Prioritize first and last chunks as they often contain most relevant items
-            chunks = [chunks[0], chunks[-1]]
-        
-        # Process each chunk
-        for i, chunk in enumerate(chunks):
-            prompt = base_prompt.copy()
-            chunk_json = json.dumps(chunk)
-            prompt[-1]["content"] += f"\n{item_label} (part {i+1}/{len(chunks)}): {chunk_json}"
-            
-            # Estimate token count for logging
-            estimated_tokens = len(prompt[-1]["content"]) // 4
-            logger.info(f"Processing chunk {i+1}/{len(chunks)} with ~{estimated_tokens} tokens")
-            
-            results.append(self.query_llm(prompt))
-            
-        return "\n\n".join(results)
-
-    def _llm_complete_until_stop(self, messages, section_name, max_retries=4):
-        """Query LLM, auto-continue if output is truncated, and concatenate results."""
+    def _llm_complete_until_stop(self, messages, section_name, max_retries=2):
+        """Query LLM, auto-continue if output seems truncated, and concatenate results."""
         all_content = ""
         retries = 0
         last_content = ""
+        current_messages = messages.copy() # Work with a copy
+
         while retries < max_retries:
+            # Estimate size before sending continuation request
+            estimated_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in current_messages)
+            if estimated_tokens > self.LLM_MAX_TOKEN_ESTIMATE * 1.1:
+                logger.warning(f"Continuation prompt for '{section_name}' too large ({estimated_tokens} tokens), stopping continuation.")
+                all_content += "\n\n[... response likely truncated due to size limits ...]"
+                break
+
             try:
-                result = self.query_llm(messages)
+                result = self.query_llm(current_messages) # Use the main query function with its error handling
                 if not result or not result.strip():
+                    logger.warning(f"Empty response during continuation for '{section_name}', stopping.")
                     break
+
                 # Check for repeat content to avoid infinite loop
                 if result.strip() == last_content.strip():
+                    logger.warning(f"Repeated content detected during continuation for '{section_name}', stopping.")
                     break
+
                 all_content += ("\n" if all_content else "") + result.strip()
                 last_content = result
-                # Improved heuristic for completeness check
-                if result.strip().endswith(('.', '"', "'", ']', '}', '”', '’', '•', '—', '–', '…', '>', ')', '!', '?', '\n')) and len(result.strip()) > 100:
+
+                # Improved heuristic for completeness check (check end punctuation and length)
+                ends_complete = result.strip().endswith(('.', '"', "'", ']', '}', '”', '’', '•', '—', '–', '…', '>', ')', '!', '?', '\n', ';'))
+                is_long_enough = len(result.strip()) > 50 # Avoid stopping on very short responses
+
+                if ends_complete and is_long_enough:
+                    logger.debug(f"Response for '{section_name}' appears complete.")
                     break
+
                 # Request continuation
                 logger.warning(f"LLM output for '{section_name}' may be truncated, requesting continuation (retry {retries+1})")
-                messages = messages + [{"role": "user", "content": f"Continue the previous answer for the {section_name} section."}]
+                # Add the assistant's response and the user's continuation request
+                current_messages.append({"role": "assistant", "content": result})
+                current_messages.append({"role": "user", "content": f"Continue the previous answer for the {section_name} section. Ensure you finish the thought or JSON structure."})
                 retries += 1
+
+            except (ValueError, ConnectionError, TimeoutError, requests.exceptions.RequestException) as e:
+                 # Catch errors from query_llm (like 400 or timeout)
+                 logger.error(f"Error during LLM continuation for {section_name}: {e}. Stopping continuation.")
+                 all_content += "\n\n[... response incomplete due to LLM error ...]"
+                 break
             except Exception as e:
-                logger.error(f"Error in LLM continuation for {section_name}: {e}")
-                break
-        return all_content if all_content else "[Content unavailable due to LLM error.]"
+                 logger.error(f"Unexpected error during LLM continuation for {section_name}: {e}")
+                 all_content += "\n\n[... response incomplete due to unexpected error ...]"
+                 break
+
+        return all_content if all_content else f"[Content unavailable for {section_name} due to LLM error.]"
 
     def _safe_llm_query(self, messages, fallback_func=None, section_name="section", **fallback_kwargs):
-        """Query LLM with retries, fallback, and always return non-empty output. Handles truncation."""
+        """Query LLM with retries, fallback, and always return non-empty output. Handles truncation and size errors."""
         try:
+            # Estimate size before first call
+            estimated_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in messages)
+            if estimated_tokens > self.LLM_MAX_TOKEN_ESTIMATE:
+                 logger.warning(f"Initial prompt for '{section_name}' is large ({estimated_tokens} tokens). Attempting anyway, but may fail or use fallback.")
+                 # Future enhancement: Implement chunking here if needed for non-JSON text
+
             result = self._llm_complete_until_stop(messages, section_name)
-            if not result or not result.strip():
-                raise ValueError("LLM returned empty response")
+            if not result or not result.strip() or "[Content unavailable" in result or "[... response incomplete" in result:
+                 raise ValueError(f"LLM returned empty or error state for {section_name}")
             return result
+        except (ValueError, ConnectionError, TimeoutError, requests.exceptions.RequestException) as e:
+             # Catch errors from query_llm or _llm_complete_until_stop
+             logger.warning(f"LLM query failed for '{section_name}', using fallback: {e}")
+             if fallback_func:
+                 try:
+                     return fallback_func(**fallback_kwargs)
+                 except Exception as fb_e:
+                     logger.error(f"Fallback function failed for '{section_name}': {fb_e}")
+                     return f"[Content unavailable for {section_name}. Fallback also failed.]"
+             return f"[Content unavailable for {section_name} due to LLM error: {e}]"
         except Exception as e:
-            logger.warning(f"LLM failed, using fallback: {e}")
-            if fallback_func:
-                return fallback_func(**fallback_kwargs)
-            return "[Content unavailable due to LLM error.]"
+             logger.error(f"Unexpected error in _safe_llm_query for '{section_name}': {e}", exc_info=True)
+             return f"[Content unavailable for {section_name} due to unexpected error.]"
 
     def _llm_request_json(self, messages, expected_keys, fallback_func=None, section_name="section", **fallback_kwargs):
         """Request JSON-formatted output from LLM, parse it, and handle errors gracefully."""
         # Modify the system prompt to request JSON output
+        json_format_instruction = (
+            "Output your response STRICTLY in JSON format with the following structure: "
+            f"{{{', '.join([f'\"{k}\": \"[content for {k}]\"' for k in expected_keys])}}}.\n"
+            "Ensure valid JSON syntax: use double quotes for keys and string values, escape internal quotes (\\\"), and ensure all brackets/braces are closed.\n"
+            "Do NOT include any introductory text, explanations, or markdown formatting like ```json before or after the JSON object."
+        )
         if messages and len(messages) > 0 and messages[0]["role"] == "system":
-            json_format_instruction = (
-                "Output your response in JSON format with the following structure: "
-                f"{{{', '.join([f'\"{k}\": \"[content for {k}]\"' for k in expected_keys])}}}\n"
-                "Ensure valid JSON syntax - wrap all content in quotes with proper escaping, and close all braces.\n"
-                "Keep your response within 16000 tokens (about 64000 characters total)."
-            )
-            messages[0]["content"] = messages[0]["content"] + "\n\n" + json_format_instruction
-        
+            if "STRICTLY in JSON format" not in messages[0]["content"]:
+                 messages[0]["content"] = messages[0]["content"] + "\n\n" + json_format_instruction
+        else:
+             messages.insert(0, {"role": "system", "content": json_format_instruction})
+
+        raw_result = ""
         try:
-            # Get the raw response with proper continuation handling
+            estimated_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in messages)
+            if estimated_tokens > self.LLM_MAX_TOKEN_ESTIMATE:
+                 logger.warning(f"Initial JSON prompt for '{section_name}' is large ({estimated_tokens} tokens). Attempting anyway, but may fail or use fallback.")
+
             raw_result = self._llm_complete_until_stop(messages, section_name)
-            
-            # Try to extract JSON from the response - sometimes LLM adds explanatory text
-            import re
-            json_match = re.search(r'({[\s\S]*})', raw_result)
-            json_str = json_match.group(1) if json_match else raw_result
-            
-            # Parse the JSON
-            import json
-            result_json = json.loads(json_str)
-            
-            # Validate that all expected keys are present
+
+            json_str = None
+            match = re.search(r'```json\s*({[\s\S]*?})\s*```', raw_result, re.IGNORECASE)
+            if match:
+                json_str = match.group(1)
+            else:
+                start = raw_result.find('{')
+                end = raw_result.rfind('}')
+                if start != -1 and end != -1 and end > start:
+                    json_str = raw_result[start : end + 1]
+                else:
+                    if raw_result.strip().startswith('{') and raw_result.strip().endswith('}'):
+                         json_str = raw_result.strip()
+
+            if not json_str:
+                 logger.warning(f"Could not find JSON structure in LLM response for {section_name}. Response:\n{raw_result[:500]}...")
+                 raise json.JSONDecodeError("No JSON object found", raw_result, 0)
+
+            try:
+                import dirtyjson
+                result_json = dirtyjson.loads(json_str)
+                logger.debug(f"Successfully parsed JSON for {section_name} (using dirtyjson)")
+            except ImportError:
+                 logger.debug("dirtyjson not installed, using standard json parser.")
+                 try:
+                     result_json = json.loads(json_str)
+                     logger.debug(f"Successfully parsed JSON for {section_name} (standard parser)")
+                 except json.JSONDecodeError as json_e:
+                     logger.error(f"Failed to parse JSON for {section_name}: {json_e}")
+                     logger.debug(f"Attempted to parse: {json_str[:1000]}...")
+                     raise json_e
+
             missing_keys = [k for k in expected_keys if k not in result_json]
             if missing_keys:
-                logger.warning(f"JSON response missing keys: {missing_keys}")
-                if fallback_func:
-                    return fallback_func(**fallback_kwargs)
-            
+                logger.warning(f"JSON response for {section_name} missing keys: {missing_keys}")
+                for k in missing_keys:
+                    result_json[k] = f"[Content missing for {k}]"
+
             return result_json
-            
+
+        except (ValueError, ConnectionError, TimeoutError, requests.exceptions.RequestException, json.JSONDecodeError) as e:
+             logger.warning(f"Failed to get valid JSON from LLM for {section_name}: {e}")
+             logger.debug(f"Raw response was: {raw_result[:1000]}...")
+             if fallback_func:
+                 try:
+                     return fallback_func(**fallback_kwargs)
+                 except Exception as fb_e:
+                     logger.error(f"Fallback function failed for '{section_name}': {fb_e}")
+                     return {k: f"[Fallback failed for {k}]" for k in expected_keys}
+
+             return {k: f"[No content available for {k} due to LLM error]" for k in expected_keys}
         except Exception as e:
-            logger.warning(f"Failed to get valid JSON from LLM for {section_name}: {e}")
-            if fallback_func:
-                return fallback_func(**fallback_kwargs)
-            
-            # Return a dictionary with empty strings for each expected key
-            return {k: f"[No content available for {k}]" for k in expected_keys}
+             logger.error(f"Unexpected error in _llm_request_json for '{section_name}': {e}", exc_info=True)
+             return {k: f"[Unexpected error processing {k}]" for k in expected_keys}
 
     def _calculate_token_estimate(self, text):
         """Estimate token count for a string using a simple 4 chars/token ratio."""
@@ -698,30 +745,23 @@ This automated analysis indicates areas where the repository demonstrates good p
 
     def _trim_messages_to_token_limit(self, messages, max_tokens=16000):
         """Trim messages to ensure they don't exceed token limit."""
-        # First calculate total tokens
         total_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in messages)
         
-        # If we're under the limit, no need to trim
         if total_tokens <= max_tokens:
             return messages, False
             
         logger.warning(f"Messages exceed token limit ({total_tokens} > {max_tokens}), trimming")
         
-        # Keep the system message and trim the user message
         result = messages.copy()
         if len(result) >= 2 and result[-1]["role"] == "user":
             user_content = result[-1]["content"]
-            # Estimate tokens in user message
             user_tokens = self._calculate_token_estimate(user_content)
-            if user_tokens > max_tokens * 0.9:  # If user message alone is too big
-                # Find a safe place to trim (JSON data)
+            if user_tokens > max_tokens * 0.9:
                 import re
-                # Try to preserve the beginning instructions and trim the data portion
                 match = re.search(r'^(.*?)(Data:|Checks:|Categories:)', user_content, re.DOTALL)
                 if match:
                     prefix = match.group(1) + match.group(2)
                     data_portion = user_content[len(prefix):]
-                    # Calculate how much we need to trim
                     available_tokens = max_tokens * 0.8 - self._calculate_token_estimate(prefix)
                     available_chars = int(available_tokens * 4)
                     if available_chars > 100:
@@ -729,200 +769,61 @@ This automated analysis indicates areas where the repository demonstrates good p
                         result[-1]["content"] = prefix + trimmed_data
                         return result, True
                 
-                # If we couldn't do smart trimming, do simple trimming
                 available_chars = int(max_tokens * 0.8 * 4)
                 result[-1]["content"] = user_content[:available_chars] + "... [truncated due to token limits]"
                 return result, True
                 
         return result, True
 
-    def _llm_chunked_query(self, base_prompt, items, item_label, max_tokens=14000, max_chunks=5):
-        """Split items into chunks that fit max_tokens and query LLM for each chunk.
-        
-        Args:
-            base_prompt: Base prompt messages to use for each chunk
-            items: List of items to chunk
-            item_label: Label to use for the items in the prompt
-            max_tokens: Maximum tokens per chunk
-            max_chunks: Maximum number of chunks to process
-            
-        Returns:
-            Combined LLM responses
-        """
-        # Early return for empty items
+    def _llm_chunked_query(self, base_prompt, items, item_label, max_tokens_per_chunk=12000):
+        """Split items into chunks that fit max_tokens and query LLM for each chunk. Returns combined text."""
         if not items:
-            logger.warning(f"No {item_label} to process")
-            prompt = base_prompt.copy()
-            prompt[-1]["content"] += f"\n{item_label}: []"
-            return self.query_llm(prompt)
-            
-        results = []
-        
-        # Estimate token size of base prompt
-        base_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in base_prompt)
-        available_tokens = max_tokens - base_tokens - 200  # Reserve some tokens for formatting
-        available_chars = available_tokens * 4
-        
-        # Handle small data specially
-        if isinstance(items, list) and len(items) <= 5:
-            # For small lists, try to handle each item individually
-            for i, item in enumerate(items):
-                item_json = json.dumps(item)
-                if len(item_json) <= available_chars:
-                    # This item fits in one chunk
-                    prompt = base_prompt.copy()
-                    prompt[-1]["content"] += f"\n{item_label} [{i+1}/{len(items)}]: {item_json}"
-                    
-                    # Ensure we're within token limits
-                    prompt, was_trimmed = self._trim_messages_to_token_limit(prompt, max_tokens)
-                    if was_trimmed:
-                        logger.warning(f"Item {i+1} was trimmed to fit token limit")
-                        
-                    results.append(self.query_llm(prompt))
-                else:
-                    # This single item is too large, split it further if possible
-                    logger.warning(f"Item {i+1} is very large ({len(item_json)} chars), extracting key data")
-                    if isinstance(item, dict):
-                        # For dict items, extract most important fields
-                        reduced_item = {}
-                        # Prioritize certain fields
-                        priority_fields = ["name", "score", "details", "title", "description"]
-                        # First add priority fields
-                        for field in priority_fields:
-                            if field in item and len(json.dumps(item[field])) < available_chars // 2:
-                                reduced_item[field] = item[field]
-                        # Then add other fields until we approach the limit
-                        for k, v in item.items():
-                            if k not in reduced_item and len(json.dumps(v)) < available_chars // 4:
-                                reduced_item[k] = v
-                                if len(json.dumps(reduced_item)) > available_chars * 0.8:
-                                    break
-                        prompt = base_prompt.copy()
-                        prompt[-1]["content"] += f"\n{item_label} [{i+1}/{len(items)}] (reduced): {json.dumps(reduced_item)}"
-                        prompt, _ = self._trim_messages_to_token_limit(prompt, max_tokens)
-                        results.append(self.query_llm(prompt))
-                    else:
-                        # For non-dict items, slice it
-                        item_str = str(item_json)
-                        slice_size = int(available_chars * 0.9)
-                        prompt = base_prompt.copy()
-                        prompt[-1]["content"] += f"\n{item_label} [{i+1}/{len(items)}] (truncated): {item_str[:slice_size]}"
-                        prompt, _ = self._trim_messages_to_token_limit(prompt, max_tokens)
-                        results.append(self.query_llm(prompt))
-            
-            return "\n\n".join(results)
-            
-        # Calculate how many items we can fit in each chunk
-        total_items = len(items)
-        
-        # If we have too many items or they're too large, use adaptive chunking
-        item_json_total_size = len(json.dumps(items))
-        if item_json_total_size > available_chars:
-            # We'll need multiple chunks
-            chunk_count = min(max_chunks, max(2, item_json_total_size // available_chars + 1))
-            items_per_chunk = max(1, total_items // chunk_count)
-            
-            logger.info(f"Using adaptive chunking: {chunk_count} chunks with ~{items_per_chunk} items each")
-            
-            # Create chunks
-            chunks = []
-            for i in range(0, total_items, items_per_chunk):
-                end = min(i + items_per_chunk, total_items)
-                chunk = items[i:end]
-                chunks.append(chunk)
-                
-            # Limit number of chunks if needed
-            if len(chunks) > max_chunks:
-                logger.warning(f"Too many chunks ({len(chunks)}), limiting to {max_chunks}")
-                # Keep evenly distributed chunks
-                step = len(chunks) // max_chunks
-                chunks = [chunks[i] for i in range(0, len(chunks), step)][:max_chunks]
-                
-            # Process each chunk with clear indicators
-            for i, chunk in enumerate(chunks):
-                prompt = base_prompt.copy()
-                chunk_json = json.dumps(chunk)
-                
-                # Add context about what part of the data this is
-                if len(chunks) > 1:
-                    progress_info = f"\n{item_label} (Part {i+1} of {len(chunks)}, items {i*items_per_chunk+1}-{min((i+1)*items_per_chunk, total_items)} of {total_items}): "
-                else:
-                    progress_info = f"\n{item_label}: "
-                    
-                prompt[-1]["content"] += progress_info + chunk_json
-                
-                # Ensure we're within token limits
-                prompt, was_trimmed = self._trim_messages_to_token_limit(prompt, max_tokens)
-                
-                # Log detailed info for debugging
-                chars_in_prompt = sum(len(msg["content"]) for msg in prompt)
-                estimated_tokens = chars_in_prompt // 4
-                logger.info(f"Chunk {i+1}/{len(chunks)}: ~{estimated_tokens} tokens, {len(chunk)} items")
-                if was_trimmed:
-                    logger.warning(f"Chunk {i+1} was trimmed to fit token limit")
-                
-                # Process this chunk
-                try:
-                    chunk_result = self.query_llm(prompt)
-                    if chunk_result and chunk_result.strip():
-                        results.append(chunk_result)
-                    else:
-                        logger.warning(f"Empty result for chunk {i+1}, skipping")
-                except Exception as e:
-                    logger.error(f"Error processing chunk {i+1}: {e}")
-                    # Continue with other chunks
-                
-                # Add slight delay between chunks
-                if i < len(chunks) - 1:
-                    time.sleep(1.0)
-                    
-            return "\n\n".join(results)
-        else:
-            # Data fits in one chunk
-            prompt = base_prompt.copy()
-            prompt[-1]["content"] += f"\n{item_label}: {json.dumps(items)}"
-            return self.query_llm(prompt)
+            logger.warning(f"No {item_label} to process in chunked query")
+            return "" 
 
-    def _llm_json_chunked_query(self, base_prompt, items, item_label, expected_keys, section_name="section", fallback_func=None, **fallback_kwargs):
-        """Request JSON-formatted output from LLM, chunking data if needed."""
-        # Add JSON output instruction to system prompt
-        if base_prompt and len(base_prompt) > 0 and base_prompt[0]["role"] == "system":
-            json_format_instruction = (
-                "Output your response in JSON format with the following structure: "
-                f"{{{', '.join([f'\"{k}\": \"[content for {k}]\"' for k in expected_keys])}}}\n"
-                "Ensure valid JSON syntax - wrap all content in quotes with proper escaping, and close all braces.\n"
-                "Keep your response concise and within 14000 tokens."
-            )
-            base_prompt[0]["content"] = base_prompt[0]["content"] + "\n\n" + json_format_instruction
-        
-        # Get raw results with chunking
-        try:
-            # Use chunked query for items
-            raw_result = self._llm_chunked_query(base_prompt, items, item_label)
-            
-            # Parse JSON from response
-            import re
-            json_match = re.search(r'({[\s\S]*})', raw_result)
-            json_str = json_match.group(1) if json_match else raw_result
-            
-            # Parse the JSON
-            result_json = json.loads(json_str)
-            
-            # Validate that all expected keys are present
-            missing_keys = [k for k in expected_keys if k not in result_json]
-            if missing_keys:
-                logger.warning(f"JSON response missing keys: {missing_keys}")
-                if fallback_func:
-                    return fallback_func(**fallback_kwargs)
-            
-            return result_json
-        except Exception as e:
-            logger.warning(f"Failed to get valid JSON from LLM for {section_name}: {e}")
-            if fallback_func:
-                return fallback_func(**fallback_kwargs)
-            
-            # Return a dictionary with empty strings for each expected key
-            return {k: f"[No content available for {k}]" for k in expected_keys}
+        results = []
+        base_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in base_prompt)
+        available_tokens = max_tokens_per_chunk - base_tokens - 200 
+        available_chars = available_tokens * 4
+
+        current_chunk = []
+        current_chunk_chars = 0
+
+        for i, item in enumerate(items):
+            item_json = json.dumps(item)
+            item_chars = len(item_json)
+
+            if not current_chunk or (current_chunk_chars + item_chars + 2) <= available_chars: 
+                current_chunk.append(item)
+                current_chunk_chars += item_chars + 2
+            else:
+                if current_chunk:
+                    prompt = base_prompt.copy()
+                    chunk_json = json.dumps(current_chunk)
+                    prompt[-1]["content"] += f"\n{item_label} (part): {chunk_json}"
+                    prompt, _ = self._trim_messages_to_token_limit(prompt, max_tokens_per_chunk + 500) 
+                    try:
+                        chunk_result = self._safe_llm_query(prompt, section_name=f"{item_label}_chunk") 
+                        if chunk_result and "[Content unavailable" not in chunk_result:
+                            results.append(chunk_result)
+                    except Exception as e:
+                        logger.error(f"Error processing chunk for {item_label}: {e}")
+                current_chunk = [item]
+                current_chunk_chars = item_chars
+
+        if current_chunk:
+            prompt = base_prompt.copy()
+            chunk_json = json.dumps(current_chunk)
+            prompt[-1]["content"] += f"\n{item_label} (part): {chunk_json}"
+            prompt, _ = self._trim_messages_to_token_limit(prompt, max_tokens_per_chunk + 500)
+            try:
+                chunk_result = self._safe_llm_query(prompt, section_name=f"{item_label}_chunk")
+                if chunk_result and "[Content unavailable" not in chunk_result:
+                    results.append(chunk_result)
+            except Exception as e:
+                logger.error(f"Error processing final chunk for {item_label}: {e}")
+
+        return "\n\n".join(results)
 
     def generate_narrative_content(self) -> None:
         """Generate detailed, premium narrative content using the LLM in JSON format"""
@@ -939,91 +840,104 @@ This automated analysis indicates areas where the repository demonstrates good p
         summary_result = self._llm_request_json(
             summary_prompt, 
             ["overview", "health_metrics", "strengths", "weaknesses", "opportunities", "conclusion"],
-            fallback_func=lambda: {
-                "overview": self._generate_fallback_summary(),
-                "health_metrics": f"Overall Score: {self.report_data['overall_score']}/100",
-                "strengths": "No strength data available.",
-                "weaknesses": "No weakness data available.",
-                "opportunities": "No opportunities data available.",
-                "conclusion": "No conclusion available."
+            fallback_func=lambda: { 
+                "overview": self._generate_fallback_summary(), "health_metrics": f"Overall Score: {self.report_data['overall_score']}/100",
+                "strengths": "[Fallback: No strength data available.]", "weaknesses": "[Fallback: No weakness data available.]",
+                "opportunities": "[Fallback: No opportunities data available.]", "conclusion": "[Fallback: No conclusion available.]"
             },
             section_name="executive summary"
         )
         
-        # Format the summary as a cohesive text with headings for each section
         summary_text = f"""# Executive Summary: {repo_name}
 
 ## Overview
-{summary_result.get('overview', '')}
+{summary_result.get('overview', '[No overview content]')}
 
 ## Repository Health Metrics
-{summary_result.get('health_metrics', '')}
+{summary_result.get('health_metrics', '[No health metrics content]')}
 
 ## Key Strengths
-{summary_result.get('strengths', '')}
+{summary_result.get('strengths', '[No strengths content]')}
 
 ## Critical Weaknesses
-{summary_result.get('weaknesses', '')}
+{summary_result.get('weaknesses', '[No weaknesses content]')}
 
 ## Improvement Opportunities
-{summary_result.get('opportunities', '')}
+{summary_result.get('opportunities', '[No opportunities content]')}
 
 ## Conclusion
-{summary_result.get('conclusion', '')}
+{summary_result.get('conclusion', '[No conclusion content]')}
 """
         self.report_data["summary"] = summary_text
 
         # Key Opportunities section (JSON format)
+        category_data_for_prompt = self.report_data['categories']
+        category_data_json = json.dumps(category_data_for_prompt)
+        if self._calculate_token_estimate(category_data_json) > self.LLM_MAX_TOKEN_ESTIMATE * 0.8:
+             logger.warning("Category data for opportunities prompt is large, trimming checks details.")
+             trimmed_categories = {}
+             for cat, data in category_data_for_prompt.items():
+                 trimmed_categories[cat] = {"score": data["score"], "num_checks": len(data.get("checks", []))} 
+             category_data_for_prompt = trimmed_categories
+
         opportunities_prompt = [
-            {"role": "system", "content": "You are a software engineering consultant. Summarize the top most impactful, actionable opportunities for improvement in this repository, based on the analysis data. Each opportunity should be specific, actionable, and include a brief rationale."},
-            {"role": "user", "content": f"Based on the following category scores and checks, list the top 3-5 key opportunities for improvement. For each, provide a title, a 2-3 sentence explanation, and why it matters. Data: {json.dumps(self.report_data['categories'])}"}
+            {"role": "system", "content": "You are a software engineering consultant. Summarize the top 3-5 most impactful, actionable opportunities for improvement in this repository, based on the analysis data. Each opportunity should be specific, actionable, and include a brief rationale."},
+            {"role": "user", "content": f"Based on the following category scores and check summaries, list the top 3-5 key opportunities for improvement. For each, provide a title, a 2-3 sentence explanation, and why it matters. Data: {json.dumps(category_data_for_prompt)}"}
         ]
         
         opportunity_result = self._llm_request_json(
             opportunities_prompt,
             ["opportunity1", "opportunity2", "opportunity3", "opportunity4", "opportunity5"],
-            fallback_func=lambda: {"opportunity1": "No key opportunities available."},
+            fallback_func=lambda: {"opportunity1": "[Fallback: No key opportunities available.]"},
             section_name="key opportunities"
         )
         
-        # Combine opportunities into a single markdown section
         opportunities_text = "# Key Opportunities for Improvement\n\n"
+        found_opp = False
         for i in range(1, 6):
             key = f"opportunity{i}"
-            if key in opportunity_result and opportunity_result[key]:
-                opportunities_text += f"## {i}. {opportunity_result[key]}\n\n"
-        
+            content = opportunity_result.get(key)
+            if content and "[No content available" not in content and "[Fallback:" not in content:
+                opportunities_text += f"## {i}. {content}\n\n"
+                found_opp = True
+        if not found_opp: opportunities_text += opportunity_result.get("opportunity1", "[No opportunities identified]") 
         self.report_data["key_opportunities"] = opportunities_text
 
         # Strengths & Risks section (JSON format)
         strengths_risks_prompt = [
             {"role": "system", "content": "You are a code review expert. Write a section highlighting the repository's greatest strengths (with examples) and any critical risks or weaknesses that could impact users or maintainers. Be specific and practical."},
-            {"role": "user", "content": f"For this repository, summarize unique strengths and critical risks or weaknesses, using evidence from the analysis. Repository: {repo_name}, Data: {json.dumps(self.report_data['categories'])}"}
+            {"role": "user", "content": f"For this repository, summarize unique strengths and critical risks or weaknesses, using evidence from the analysis. Repository: {repo_name}, Data: {json.dumps(category_data_for_prompt)}"} 
         ]
         
         strengths_risks_result = self._llm_request_json(
             strengths_risks_prompt,
             ["strength1", "strength2", "strength3", "risk1", "risk2", "risk3"],
             fallback_func=lambda: {
-                "strength1": "No strengths data available.",
-                "risk1": "No risks data available."
+                "strength1": "[Fallback: No strengths data available.]",
+                "risk1": "[Fallback: No risks data available.]"
             },
             section_name="strengths and risks"
         )
         
-        # Combine into a single markdown section
         sr_text = "# Strengths & Risks Analysis\n\n## Repository Strengths\n\n"
+        found_strength = False
         for i in range(1, 4):
             key = f"strength{i}"
-            if key in strengths_risks_result and strengths_risks_result[key]:
-                sr_text += f"### {strengths_risks_result[key]}\n\n"
-        
+            content = strengths_risks_result.get(key)
+            if content and "[No content available" not in content and "[Fallback:" not in content:
+                sr_text += f"### {content}\n\n"
+                found_strength = True
+        if not found_strength: sr_text += strengths_risks_result.get("strength1", "[No strengths identified]") + "\n\n"
+
         sr_text += "\n## Critical Risks\n\n"
+        found_risk = False
         for i in range(1, 4):
             key = f"risk{i}"
-            if key in strengths_risks_result and strengths_risks_result[key]:
-                sr_text += f"### {strengths_risks_result[key]}\n\n"
-        
+            content = strengths_risks_result.get(key)
+            if content and "[No content available" not in content and "[Fallback:" not in content:
+                sr_text += f"### {content}\n\n"
+                found_risk = True
+        if not found_risk: sr_text += strengths_risks_result.get("risk1", "[No risks identified]") + "\n\n"
         self.report_data["strengths_risks"] = sr_text
 
         # Category insights with JSON structure - MODIFIED
@@ -1032,16 +946,15 @@ This automated analysis indicates areas where the repository demonstrates good p
         sorted_categories = sorted(
             self.report_data["categories"].items(),
             key=lambda x: x[1]["score"],
-            reverse=True # Keep sorting as is, or change if needed
+            reverse=True 
         )
         
         for category, cat_data in sorted_categories:
             checks = cat_data["checks"]
             category_score = cat_data["score"]
-            category_narrative = "" # Initialize narrative text
+            category_narrative = "" 
 
             if self.llm_available:
-                # Generate overall narrative for the category using LLM
                 narrative_prompt = [
                     {"role": "system", "content": f"You are a senior software engineering consultant. Write a concise (2-4 sentences) narrative summary for the '{category}' category based on its overall score. Explain what the score generally indicates about this aspect of the repository."},
                     {"role": "user", "content": f"Category: {category}, Overall Score: {category_score}/100. Provide a brief narrative insight."}
@@ -1050,126 +963,122 @@ This automated analysis indicates areas where the repository demonstrates good p
                 narrative_result = self._llm_request_json(
                     narrative_prompt,
                     ["narrative"],
-                    fallback_func=lambda: {"narrative": f"The score of {category_score}/100 for {category} indicates its current standing. Further details are in the checks below."},
+                    fallback_func=lambda cat=category, score=category_score: {"narrative": f"[Fallback] The score of {score}/100 for {cat} indicates its current standing. Further details are in the checks below."},
                     section_name=f"{category} narrative"
                 )
-                category_narrative = narrative_result.get('narrative', '')
+                category_narrative = narrative_result.get('narrative', f'[Narrative generation failed for {category}]')
             else:
-                # Fallback narrative if LLM is not available
                 score_level = "strong" if category_score >= 70 else "moderate" if category_score >= 40 else "needs improvement"
                 category_narrative = f"The {category} category received a score of {category_score}/100, indicating a {score_level} level. See individual check scores below for details."
 
-            # Add structured insight data including checks
             insights.append({
                 "category": category,
                 "score": category_score,
-                "narrative": category_narrative, # Store the narrative text
-                "checks": checks # Pass the raw checks data
+                "narrative": category_narrative,
+                "checks": checks
             })
-            
+
         self.report_data["insights"] = insights
 
         # Recommendations in JSON format
         recommendations_prompt = [
-            {"role": "system", "content": "You are a senior software consultant. Write a prioritized list of highly actionable, specific recommendations for this repository. For each, include: 1) a clear title, 2) a rationale, and 3) the potential impact if implemented."},
-            {"role": "user", "content": f"Repository: {repo_name}, Overall score: {self.report_data['overall_score']}/100, Category scores: {json.dumps([(k, v['score']) for k, v in self.report_data['categories'].items()])}."}
+            {"role": "system", "content": "You are a senior software consultant. Write a prioritized list of the top 5-7 highly actionable, specific recommendations for this repository based on the provided data. For each, include: 1) a clear title, 2) a rationale, and 3) the potential impact if implemented."},
+            {"role": "user", "content": f"Repository: {repo_name}, Overall score: {self.report_data['overall_score']}/100, Category scores: {json.dumps(category_data_for_prompt)}."} 
         ]
-        
-        # Handle large prompts with chunking if needed
-        cat_items = list(self.report_data['categories'].items())
-        cat_json = json.dumps(cat_items)
-        
-        if len(cat_json) > 32000:
-            # For large category data, fall back to non-JSON output
-            chunked_recs = self._llm_chunked_query(recommendations_prompt, cat_items, "Categories")
-            rec_list = self._parse_recommendations_text(chunked_recs)
-        else:
-            # For normal sized data, use JSON output
-            rec_keys = [f"recommendation{i}" for i in range(1, 11)]  # up to 10 recommendations
-            rec_result = self._llm_request_json(
-                recommendations_prompt,
-                rec_keys,
-                fallback_func=self._generate_fallback_recommendations,
-                section_name="recommendations"
-            )
-            
-            # Convert from JSON to list format
-            rec_list = []
-            for key in rec_keys:
-                if key in rec_result and rec_result[key]:
-                    rec_list.append(rec_result[key])
-        
-        if not rec_list:
-            rec_list = ["No recommendations available."]
-            
-        self.report_data["recommendations"] = rec_list
+        rec_keys = [f"recommendation{i}" for i in range(1, 8)] 
+        rec_result = self._llm_request_json(
+            recommendations_prompt,
+            rec_keys,
+            fallback_func=self._generate_fallback_recommendations, 
+            section_name="recommendations"
+        )
+
+        rec_list = []
+        if isinstance(rec_result, dict):
+             for key in rec_keys:
+                 content = rec_result.get(key)
+                 if content and "[No content available" not in content and "[Fallback:" not in content:
+                     rec_list.append(content)
+        elif isinstance(rec_result, str): 
+             rec_list = self._parse_recommendations_text(rec_result)
+
+        if not rec_list or all("[No content available" in r or "[Fallback:" in r for r in rec_list):
+             rec_list = ["[No recommendations available.]"]
+
+        self.report_data.pop("recommendations", None) 
 
         # Next Steps checklist (JSON format)
         next_steps_prompt = [
-            {"role": "system", "content": "You are a technical project manager. Write a short, practical 'Next Steps' checklist for the repository owner to quickly improve their repo based on this analysis."},
-            {"role": "user", "content": f"Repository: {repo_name}, Data: {json.dumps(self.report_data['categories'])}"}
+            {"role": "system", "content": "You are a technical project manager. Write a short, practical 'Next Steps' checklist (5-7 items) for the repository owner to quickly improve their repo based on this analysis."},
+            {"role": "user", "content": f"Repository: {repo_name}, Data: {json.dumps(category_data_for_prompt)}"} 
         ]
         
         next_steps_result = self._llm_request_json(
             next_steps_prompt,
             ["step1", "step2", "step3", "step4", "step5", "step6", "step7"],
-            fallback_func=lambda: {"step1": "No next steps available."},
+            fallback_func=lambda: {"step1": "[Fallback: No next steps available.]"},
             section_name="next steps"
         )
         
-        # Format as a markdown checklist
         next_steps_text = "# Next Steps Checklist\n\n"
-        for i in range(1, 8):  # Up to 7 steps
+        found_step = False
+        for i in range(1, 8):
             key = f"step{i}"
-            if key in next_steps_result and next_steps_result[key]:
-                next_steps_text += f"- [ ] {next_steps_result[key]}\n"
-                
+            content = next_steps_result.get(key)
+            if content and "[No content available" not in content and "[Fallback:" not in content:
+                next_steps_text += f"- [ ] {content}\n"
+                found_step = True
+        if not found_step: next_steps_text += next_steps_result.get("step1", "[No next steps identified]")
         self.report_data["next_steps"] = next_steps_text
 
         # Resources section (JSON format)
+        weakest_categories_data = {cat: data["score"] for cat, data in sorted_categories[-3:]} 
+
         resources_prompt = [
-            {"role": "system", "content": "You are a developer advocate. Suggest high-quality online resources (articles, guides, or tools) relevant to the main improvement areas for this repository. List each with a title and a short description."},
-            {"role": "user", "content": f"Repository: {repo_name}, Weakest categories: {json.dumps(sorted_categories[-3:])}"}
+            {"role": "system", "content": "You are a developer advocate. Suggest 3-5 high-quality online resources (articles, guides, or tools) relevant to the main improvement areas for this repository. List each with a title and a short description."},
+            {"role": "user", "content": f"Repository: {repo_name}, Weakest categories needing resources: {json.dumps(weakest_categories_data)}"}
         ]
         
         resources_result = self._llm_request_json(
             resources_prompt,
             ["resource1", "resource2", "resource3", "resource4", "resource5"],
-            fallback_func=lambda: {"resource1": "No resources available."},
+            fallback_func=lambda: {"resource1": "[Fallback: No resources available.]"},
             section_name="resources"
         )
         
-        # Format as a markdown list
         resources_text = "# Recommended Resources\n\n"
-        for i in range(1, 6):  # Up to 5 resources
+        found_res = False
+        for i in range(1, 6):
             key = f"resource{i}"
-            if key in resources_result and resources_result[key]:
-                resources_text += f"- {resources_result[key]}\n\n"
-                
+            content = resources_result.get(key)
+            if content and "[No content available" not in content and "[Fallback:" not in content:
+                resources_text += f"- {content}\n\n"
+                found_res = True
+        if not found_res: resources_text += resources_result.get("resource1", "[No resources identified]")
         self.report_data["resources"] = resources_text
 
         elapsed_time = time.time() - start_time
         logger.info(f"Premium narrative content generation completed in {elapsed_time:.1f} seconds")
-        logger.info(f"Generated: summary, key opportunities, strengths/risks, {len(insights)} category insights, recommendations, next steps, resources")
-    
+        logger.info(f"Generated: summary, key opportunities, strengths/risks, {len(insights)} category insights, next steps, resources") 
+
     def _parse_recommendations_text(self, recommendations_text):
         """Parse recommendations from text format when we can't use JSON output"""
-        if not recommendations_text:
-            return ["No recommendations available."]
-            
+        if not recommendations_text or "[Fallback:" in recommendations_text:
+            return [recommendations_text or "[No recommendations available.]"]
+
         import re
-        # Try to split on numbered bullets, asterisks, or dashes
-        rec_list = re.split(r'\n\s*(?:\d+\.|\*|\-)\s*', recommendations_text)
+        rec_list = re.split(r'\n\s*(?:\d+\.|\*|\-)\s+', recommendations_text)
+        if rec_list and ":" in rec_list[0] and len(rec_list[0]) < 100:
+             rec_list = rec_list[1:]
         rec_list = [item.strip() for item in rec_list if item.strip()]
-        
-        # If we couldn't split it, try paragraphs
+
         if len(rec_list) <= 1 and len(recommendations_text) > 100:
             rec_list = re.split(r'\n\n+', recommendations_text)
-            rec_list = [item.strip() for item in rec_list if item.strip() and len(item) > 50]
-            
+            rec_list = [item.strip() for item in rec_list if item.strip() and len(item) > 30] 
+
         if not rec_list:
-            return ["No recommendations available."]
-            
+            return ["[No recommendations parsed from fallback text.]"]
+
         return rec_list
 
     def generate_visualizations(self) -> None:
@@ -1186,17 +1095,12 @@ This automated analysis indicates areas where the repository demonstrates good p
         os.makedirs(visualization_dir, exist_ok=True)
         logger.debug(f"Visualization directory: {visualization_dir}")
         
-        # Generate category scores radar chart
         radar_path = visualization_dir / f"{repo_name.replace('/', '_')}_radar.png"
         logger.info(f"Generating radar chart: {radar_path.name}")
         self._generate_category_radar_chart(radar_path)
         
-        # Removed bar chart generation call
-        
-        # Store paths to visualizations (only radar chart now)
         self.report_data["visualizations"] = [
             str(radar_path)
-            # Removed bar_path
         ]
         
         elapsed_time = time.time() - start_time
@@ -1212,8 +1116,7 @@ This automated analysis indicates areas where the repository demonstrates good p
             angles = [n / float(len(categories)-1) * 2 * 3.14159 for n in range(len(categories))]
             fig = plt.figure(figsize=(10, 10))
             ax = fig.add_subplot(111, polar=True)
-            # Use a flat accent color for the radar line and fill
-            accent_color = '#2563eb'  # Flat blue
+            accent_color = '#2563eb'  
             ax.plot(angles, scores, 'o-', linewidth=2, color=accent_color)
             ax.fill(angles, scores, color=accent_color, alpha=0.18)
             ax.set_theta_offset(3.14159 / 2)
@@ -1236,16 +1139,12 @@ This automated analysis indicates areas where the repository demonstrates good p
         logger.info("Starting PDF report generation")
         
         if HAS_REPORT_GENERATORS and self.pdf_generator:
-            # Use the modular PDF generator
             return self.pdf_generator.generate_pdf_report(self.report_data)
         else:
             logger.warning("Modular PDF generator not available, using fallback method")
-            # Fallback to built-in method
             return self._generate_pdf_report_fallback()
     
     def _generate_pdf_report_fallback(self) -> str:
-        """Fallback method for PDF report generation if the module is not available"""
-        # Import required libraries here to avoid dependency issues
         try:
             from reportlab.lib.pagesizes import letter
             from reportlab.lib import colors
@@ -1256,7 +1155,6 @@ This automated analysis indicates areas where the repository demonstrates good p
             logger.error("Cannot generate PDF report. ReportLab libraries not available.")
             return ""
             
-        # ... (include the original PDF generation code here) ...
         logger.error("PDF fallback generation not implemented")
         return ""
     
@@ -1265,23 +1163,18 @@ This automated analysis indicates areas where the repository demonstrates good p
         logger.info("Starting HTML report generation")
         
         if HAS_REPORT_GENERATORS and self.html_generator:
-            # Use the modular HTML generator
             return self.html_generator.generate_html_report(self.report_data)
         else:
             logger.warning("Modular HTML generator not available, using fallback method")
-            # Fallback to built-in method
             return self._generate_html_report_fallback()
     
     def _generate_html_report_fallback(self) -> str:
-        """Fallback method for HTML report generation if the module is not available"""
-        # Import required libraries here to avoid dependency issues
         try:
             from jinja2 import Template
         except ImportError:
             logger.error("Cannot generate HTML report. Jinja2 library not available.")
             return ""
             
-        # ... (include the original HTML generation code here) ...
         logger.error("HTML fallback generation not implemented")
         return ""
     
@@ -1290,26 +1183,20 @@ This automated analysis indicates areas where the repository demonstrates good p
         logger.info(f"Starting report generation process for repository: {repo_id}")
         start_time = time.time()
         
-        # Find repository data
         repo_data = self.find_repo_data(repo_id)
         
         if not repo_data:
             logger.error(f"Could not find data for repository ID: {repo_id}")
             return ""
         
-        # Process the data
         self.process_repo_data(repo_data)
         
-        # Generate narrative content
         self.generate_narrative_content()
         
-        # Generate visualizations
         self.generate_visualizations()
         
-        # Generate HTML report
         html_path = self.generate_html_report()
         
-        # Log completion
         elapsed_time = time.time() - start_time
         repo_name = self.report_data["repository"].get("full_name", repo_id)
         
@@ -1334,7 +1221,6 @@ def main():
     
     args = parser.parse_args()
     
-    # Configure logging level based on verbosity
     log_level = logging.DEBUG if args.verbose else logging.INFO
     global logger
     logger = setup_logging(log_level=log_level, enable_console=not args.quiet)
@@ -1344,7 +1230,6 @@ def main():
     logger.info(f"Generating report for repository: {args.repo_id}")
     logger.info(f"LLM host: {args.llm_host}, Model: {args.llm_model}, Timeout: {args.timeout}s")
     
-    # Use Rich to show configuration summary if available
     if HAS_RICH and console and not args.quiet:
         panel = Panel(
             f"Repository: [bold cyan]{args.repo_id}[/bold cyan]\n"
@@ -1360,7 +1245,6 @@ def main():
     start_time = time.time()
     generator = ReportGenerator(llm_host=args.llm_host, llm_model=args.llm_model, timeout=args.timeout)
     
-    # Skip LLM if requested
     if args.no_llm:
         generator.llm_available = False
         logger.info("Using fallback text generation (LLM disabled via --no-llm flag)")
@@ -1375,9 +1259,7 @@ def main():
         
         if HAS_RICH and console and not args.quiet:
             console.print("\n[bold green]Reports generated successfully:[/bold green]")
-            # Use plain text for log messages to avoid markup errors
             logger.info(f"HTML report: {html_path}")
-            # Use Rich's console.print for formatted output with proper escaping
             console.print(f"HTML report: {html_path}")
         else:
             print(f"\nReports generated successfully:")

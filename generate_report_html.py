@@ -98,11 +98,29 @@ class HTMLReportGenerator:
         return []
 
     def _safe_section(self, value, default_msg):
-        """Return value if non-empty, else a user-friendly placeholder."""
+        """Return value if non-empty and not an error placeholder, else a user-friendly placeholder."""
+        error_indicators = ["[Content unavailable", "[Fallback:", "[No content available", "[Unexpected error", "[Narrative generation failed", "[No recommendations parsed"]
         if isinstance(value, str):
-            return value.strip() if value and value.strip() else f'<em>{default_msg}</em>'
+            stripped_value = value.strip()
+            # Check if it's empty or contains an error indicator
+            if stripped_value and not any(indicator in stripped_value for indicator in error_indicators):
+                return stripped_value
+            else:
+                # Log the original error value if it exists
+                if stripped_value and any(indicator in stripped_value for indicator in error_indicators):
+                     logger.debug(f"Replacing error placeholder with default message: '{stripped_value[:100]}...' -> '{default_msg}'")
+                return f'<em>{default_msg}</em>'
         if isinstance(value, list):
-            return value if value and any(str(v).strip() for v in value) else [f'<em>{default_msg}</em>']
+            # Filter out empty strings and error placeholders from lists
+            safe_list = [str(v) for v in value if str(v).strip() and not any(indicator in str(v) for indicator in error_indicators)]
+            if safe_list:
+                 return safe_list
+            else:
+                 # Log if the original list contained only errors/empty strings
+                 if value and not safe_list:
+                      logger.debug(f"Replacing list containing only errors/empty strings with default message.")
+                 return [f'<em>{default_msg}</em>']
+        # Fallback for other types or None
         return f'<em>{default_msg}</em>'
 
     def generate_html_report(self, report_data: Dict) -> str:
@@ -114,22 +132,15 @@ class HTMLReportGenerator:
         
         logger.info(f"Generating HTML report for {repo_name}")
         
-        # Process recommendations (if they exist - currently removed in previous step, but keeping logic just in case)
-        # if "recommendations" in report_data and report_data["recommendations"]:
-        #     recs = self._normalize_recommendations(report_data["recommendations"])
-        #     report_data["recommendations"] = [self._markdown_to_html(r) for r in recs]
-        # else:
-        #     report_data["recommendations"] = [self._safe_section(None, "No recommendations available.")]
-
         # Remove the recommendations key from the report data if it exists
         report_data.pop("recommendations", None)
 
-        # Ensure all narrative sections are robust
+        # Ensure all narrative sections are robust using the updated _safe_section
         report_data["summary"] = self._safe_section(report_data.get("summary"), "No executive summary available.")
-        report_data["key_opportunities"] = self._safe_section(report_data.get("key_opportunities"), "No key opportunities available.")
-        report_data["strengths_risks"] = self._safe_section(report_data.get("strengths_risks"), "No strengths/risks available.")
-        report_data["next_steps"] = self._safe_section(report_data.get("next_steps"), "No next steps available.")
-        report_data["resources"] = self._safe_section(report_data.get("resources"), "No resources available.")
+        report_data["key_opportunities"] = self._safe_section(report_data.get("key_opportunities"), "No key opportunities identified.")
+        report_data["strengths_risks"] = self._safe_section(report_data.get("strengths_risks"), "No strengths or risks analysis available.")
+        report_data["next_steps"] = self._safe_section(report_data.get("next_steps"), "No next steps identified.")
+        report_data["resources"] = self._safe_section(report_data.get("resources"), "No resources identified.")
         
         # Insights: ensure each category has narrative content
         if "insights" in report_data and report_data["insights"]:
@@ -147,18 +158,25 @@ class HTMLReportGenerator:
         template = self.env.get_template('report.html')
         
         # Convert visualization paths to data URIs if they exist
-        for i, viz_path in enumerate(report_data.get("visualizations", [])):
+        embedded_visualizations = []
+        for viz_path in report_data.get("visualizations", []):
             if os.path.exists(viz_path):
                 try:
                     with open(viz_path, 'rb') as f:
                         img_data = f.read()
-                        img_type = viz_path.split('.')[-1].lower()  # Ensure lowercase
-                        if img_type == 'png':
-                            data_uri = f"data:image/{img_type};base64,{base64.b64encode(img_data).decode()}"
-                            report_data["visualizations"][i] = data_uri
+                        img_type = viz_path.split('.')[-1].lower()
+                        if img_type in ['png', 'jpg', 'jpeg', 'gif', 'svg']: # Support more types
+                            mime_type = f"image/{'svg+xml' if img_type == 'svg' else img_type}"
+                            data_uri = f"data:{mime_type};base64,{base64.b64encode(img_data).decode()}"
+                            embedded_visualizations.append(data_uri)
+                        else:
+                             logger.warning(f"Unsupported image type for embedding: {img_type}")
                 except Exception as e:
-                    logger.error(f"Failed to embed visualization: {e}")
-        
+                    logger.error(f"Failed to embed visualization '{viz_path}': {e}")
+            else:
+                 logger.warning(f"Visualization file not found: {viz_path}")
+        report_data["visualizations"] = embedded_visualizations # Update with embedded data URIs
+
         # Add additional context data
         context = {
             **report_data,
