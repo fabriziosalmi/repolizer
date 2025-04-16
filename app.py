@@ -504,63 +504,53 @@ def index():
 def scraper():
     return render_template('repo_scraper.html')
 
-@app.route('/repositories.jsonl')
-@timed_cache(seconds=60*5)  # Cache for 5 minutes
-def serve_repos_file():
-    # Serve the repositories.jsonl file directly
+# --- Helper functions for robust file caching ---
+@timed_cache(seconds=60*5)
+def get_repositories_jsonl_content():
+    """Read and cache the content of repositories.jsonl or sample_repositories.jsonl as a string."""
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
-    
-    # If repositories.jsonl doesn't exist but we have sample data, use it
     if not os.path.exists(file_path):
-        # Try to use sample data if available
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_repositories.jsonl')
         if os.path.exists(sample_path):
-            # Instead of streaming the file directly, read it into memory and return it as a response
             with open(sample_path, 'r') as file:
-                content = file.read()
-            response = Response(content, mimetype='application/json')
-            response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
-            return response
+                return file.read()
         else:
-            # No sample file exists either, return 404
-            return jsonify({"error": "Repositories file not found"}), 404
-    
-    # Instead of streaming the file directly, read it into memory and return it as a response
+            return None
     with open(file_path, 'r') as file:
-        content = file.read()
+        return file.read()
+
+@timed_cache(seconds=60*5)
+def get_results_jsonl_content():
+    """Read and cache the content of results.jsonl or sample_results.jsonl as a string."""
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+    if not os.path.exists(file_path):
+        sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
+        if os.path.exists(sample_path):
+            with open(sample_path, 'r') as file:
+                return file.read()
+        else:
+            return None
+    with open(file_path, 'r') as file:
+        return file.read()
+
+@app.route('/repositories.jsonl')
+def serve_repos_file():
+    content = get_repositories_jsonl_content()
+    if content is None:
+        return jsonify({"error": "Repositories file not found"}), 404
     response = Response(content, mimetype='application/json')
     response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
     return response
 
 @app.route('/results.jsonl')
-@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def serve_results_file():
-    # Serve the results.jsonl file directly - this is for analyzed repos
-    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
-    
-    # If results.jsonl doesn't exist but we have sample data, use it
-    if not os.path.exists(file_path):
-        # Try to use sample data if available
-        sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
-        if os.path.exists(sample_path):
-            # Instead of streaming the file directly, read it into memory and return it as a response
-            with open(sample_path, 'r') as file:
-                content = file.read()
-            response = Response(content, mimetype='application/json')
-            response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
-            return response
-        else:
-            # No sample file exists either, return 404
-            return jsonify({"error": "Results file not found"}), 404
-    
-    # Instead of streaming the file directly, read it into memory and return it as a response
-    with open(file_path, 'r') as file:
-        content = file.read()
+    content = get_results_jsonl_content()
+    if content is None:
+        return jsonify({"error": "Results file not found"}), 404
     response = Response(content, mimetype='application/json')
     response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
     return response
 
-# Add endpoint to serve any result file
 @app.route('/results/<filename>')
 def serve_result_file(filename):
     # Security check - only allow specific file extensions
