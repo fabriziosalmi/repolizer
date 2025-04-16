@@ -643,7 +643,7 @@ class CheckOrchestrator:
         :param repo_id: ID of the repository to process. If None, processes the first repository.
         :param force: If True, process the repository even if it has been processed before
         :param categories: Optional list of categories to include (all if None)
-        :param checks: Optional list of specific check names to include (all if None)
+        :param checks: Optional list of specific checks to include (all if None)
         :param output_path: Path to save results (default: results.jsonl)
         :return: Results of the checks
         """
@@ -865,10 +865,12 @@ class CheckOrchestrator:
                     # Check for large repositories (quick pre-check)
                     try:
                         # Check size from API if available
-                        if 'size' in repository and repository['size'] and int(repository['size']) > 200000:  # >200MB
-                            self.logger.warning(f"Skipping large repo: {repo_name} ({repository['size']}KB)") # Shorten log
+                        # Define a threshold for large repositories (e.g., 500MB)
+                        large_repo_threshold_kb = 500 * 1024 # 500MB in KB
+                        if 'size' in repository and repository['size'] and int(repository['size']) > large_repo_threshold_kb:
+                            self.logger.warning(f"Skipping large repo: {repo_name} ({repository['size']}KB > {large_repo_threshold_kb}KB)") # Shorten log
                             repo_result = {
-                                "error": f"Repository is too large to process ({repository['size']}KB)",
+                                "error": f"Repository size ({repository['size']}KB) exceeds threshold ({large_repo_threshold_kb}KB)",
                                 "repository": {
                                     "id": repo_id,
                                     "name": repository.get('name', 'Unknown'),
@@ -876,8 +878,9 @@ class CheckOrchestrator:
                                 },
                                 "timestamp": datetime.now().isoformat()
                             }
-                            self._save_results_to_jsonl(repo_result, output_path)
-                            all_results.append(repo_result)
+                            # Do not save this error result to the file
+                            # self._save_results_to_jsonl(repo_result, output_path) # Removed saving
+                            all_results.append(repo_result) # Keep track internally if needed
                             batch_results.append(repo_result)
                             progress.advance(process_task)
                             continue
@@ -941,11 +944,13 @@ class CheckOrchestrator:
                             executor.shutdown(wait=False)
                     # --- End Timeout wrapper ---
 
-                    # Always save result (even if error/timeout)
-                    self._save_results_to_jsonl(repo_result, output_path)
+                    # Save result only if it's not an error
                     if repo_result and "error" not in repo_result:
+                        self._save_results_to_jsonl(repo_result, output_path)
                         self.processed_repos.add(repo_id)
                         self.processed_repos.add(repo_name)
+                    elif repo_result and "error" in repo_result:
+                         self.logger.warning(f"Skipping saving error result for {repo_name}: {repo_result['error']}")
 
                     all_results.append(repo_result)
                     batch_results.append(repo_result)
@@ -1110,32 +1115,40 @@ class CheckOrchestrator:
 
     def _save_results_to_jsonl(self, results: Dict, output_path: Optional[str] = None) -> bool:
         """
-        Save check results to results.jsonl or a custom output path
+        Save check results to results.jsonl or a custom output path, skipping pure error messages.
 
         :param results: Check results to save
         :param output_path: Custom output path (if None, uses default results.jsonl)
-        :return: True if successful, False otherwise
+        :return: True if successful, False otherwise (including skipped errors)
         """
+        # Return immediately if results is None or represents only an error state
+        if not results or (isinstance(results, dict) and "error" in results and
+                           not any(k in results for k in ["documentation", "security", "code_quality", "performance", "testing", "ci_cd", "maintainability", "licensing", "community", "accessibility", "overall_score"])):
+            error_msg = results.get('error', 'Unknown error') if isinstance(results, dict) else 'Invalid results object'
+            repo_name = results.get("repository", {}).get("full_name", "unknown repo") if isinstance(results, dict) else "unknown repo"
+            self.logger.warning(f"Skipping saving error-only result for {repo_name} to {output_path or 'results.jsonl'}: {error_msg}")
+            return False
+
         # Use the default path if no custom path is provided
         if not output_path:
             output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
 
         # Ensure results has the needed metadata
-        if results and 'engine_version' not in results: # Check if results is not None
+        if 'engine_version' not in results:
             results['engine_version'] = self.VERSION
 
-        if results and 'timestamp' not in results: # Check if results is not None
+        if 'timestamp' not in results:
             results['timestamp'] = datetime.now().isoformat()
 
-        if results and 'overall_score' not in results: # Check if results is not None
+        if 'overall_score' not in results:
             # Calculate overall score if not already present
             total_score = 0.0
             total_checks = 0
 
             for category, checks in results.items():
-                if category not in ["repository", "timestamp", "engine_version", "overall_score", "total_checks", "total_processing_time", "error"] and isinstance(checks, dict): # Add "error"
+                # Exclude metadata keys and error key
+                if category not in ["repository", "timestamp", "engine_version", "overall_score", "total_checks", "total_processing_time", "error"] and isinstance(checks, dict):
                     for check_name, check_result in checks.items():
-                        # Ensure check_result is a dictionary before accessing 'score'
                         if isinstance(check_result, dict):
                             score = check_result.get('score', 0)
                             if isinstance(score, (int, float)):
@@ -1143,7 +1156,6 @@ class CheckOrchestrator:
                                 total_checks += 1
                         else:
                              self.logger.warning(f"Unexpected check result format for {category}/{check_name}: {check_result}")
-
 
             results['overall_score'] = round(total_score / max(total_checks, 1), 3)
             results['total_checks'] = total_checks
@@ -1157,33 +1169,24 @@ class CheckOrchestrator:
                     try:
                         with open(output_path, 'r', encoding='utf-8') as f:
                             existing_data = json.load(f)
-                            # If it's not a list, make it a list with the existing item
                             if not isinstance(existing_data, list):
                                 existing_data = [existing_data]
                     except json.JSONDecodeError:
                         self.logger.warning(f"Existing file {output_path} is not valid JSON. Creating new file.")
                         existing_data = []
 
-                # Append the new results and save
-                if results: # Only append if results is not None
-                    existing_data.append(results)
+                existing_data.append(results)
                 with open(output_path, 'w', encoding='utf-8') as f:
                     json.dump(existing_data, f, indent=2)
 
-                # Log saving only if results were actually saved
-                if results:
-                    self.logger.info(f"💾 Results saved to {output_path}")
+                self.logger.info(f"💾 Results saved to {output_path}")
                 return True
             except Exception as e:
                 self.logger.error(f"⚠️ Error saving data to {output_path}: {e}")
                 return False
         else:
             # Save to JSONL file using utility function
-            if results: # Only save if results is not None
-                return save_to_jsonl(results, output_path)
-            else:
-                self.logger.warning("Attempted to save None results. Skipping.")
-                return False # Indicate that nothing was saved
+            return save_to_jsonl(results, output_path)
 
     def _force_cleanup_repository(self, repo_id: str, repo_name: str) -> None:
         """
@@ -1385,10 +1388,11 @@ def process_repository_worker(repository, results_queue, check_timeout, resilien
     """
     Worker function to process a single repository in a separate process.
     Logs are directed to a file specific to the worker process.
+    Errors are logged but not sent back to the main process via the queue.
 
     Args:
         repository: Repository data dictionary
-        results_queue: Queue to send results back to the main process
+        results_queue: Queue to send *successful* results back to the main process
         check_timeout: Timeout for individual checks
         resilient_mode: Whether to use resilient mode
         resilient_timeout: Timeout for repository processing in resilient mode
@@ -1453,34 +1457,27 @@ def process_repository_worker(repository, results_queue, check_timeout, resilien
             results = orchestrator.run_checks(repository, categories=categories, checks=checks)
             worker_logger.info(f"Checks completed for {repo_name}")
 
-            # Send results to the main process
-            results_queue.put(results)
-            worker_logger.info(f"Results sent for {repo_name}")
+            # Send results to the main process ONLY if successful (no 'error' key)
+            if results and "error" not in results:
+                results_queue.put(results)
+                worker_logger.info(f"Successful results sent for {repo_name}")
+            elif results and "error" in results:
+                 worker_logger.error(f"Error during check execution for {repo_name}: {results['error']}. Results not sent.")
+            else:
+                 worker_logger.warning(f"No valid results generated for {repo_name}. Nothing sent.")
+
         else:
-            # Handle cloning failure
+            # Handle cloning failure - Log error, do not send to queue
             error_msg = f"Failed to clone repository {repo_name}"
             worker_logger.error(error_msg)
-            results_queue.put({
-                "error": error_msg,
-                "repository": { # Include basic repo info in error
-                    "id": repository.get("id"),
-                    "full_name": repo_name
-                },
-                "timestamp": datetime.now().isoformat()
-            })
+            # Do not put error on queue:
+            # results_queue.put({ ... error dict ... }) # Removed
 
     except Exception as e:
         worker_logger.error(f"Unhandled error in worker {pid} processing {repo_name}: {e}",
                           exc_info=True) # Log traceback to worker file
-        # Send error result to the main process
-        results_queue.put({
-            "error": f"Worker error: {str(e)}", # Prefix error message
-            "repository": { # Include basic repo info in error
-                 "id": repository.get("id"),
-                 "full_name": repo_name
-            },
-            "timestamp": datetime.now().isoformat()
-        })
+        # Do not send error result to the main process:
+        # results_queue.put({ ... error dict ... }) # Removed
 
     finally:
         # Clean up temporary directory
@@ -1504,7 +1501,7 @@ def process_repository_worker(repository, results_queue, check_timeout, resilien
 def writer_process(results_queue, output_path="results.jsonl"):
     """
     Process that reads from the results queue and writes to the output file.
-    This ensures that only one process is writing to the file at a time.
+    Relies on _save_results_to_jsonl to filter potential errors.
 
     Args:
         results_queue: Queue (created with spawn context) to read results from
@@ -1534,21 +1531,21 @@ def writer_process(results_queue, output_path="results.jsonl"):
         writer_logger.info(f"Writer process started. Writing results to {output_path}")
 
         while True:
-            # Get next result from queue
             result = results_queue.get()
 
-            # None is the signal to terminate
             if result is None:
                 writer_logger.info("Received termination signal. Shutting down writer process.")
                 break
 
-            # Save result to file using the orchestrator instance
-            orchestrator._save_results_to_jsonl(result, output_path)
-            # results_queue.task_done() # task_done is for JoinableQueue, not needed here
+            # Attempt to save result; _save_results_to_jsonl handles error filtering
+            saved = orchestrator._save_results_to_jsonl(result, output_path)
 
-            # Log repository name
             repo_name = result.get("repository", {}).get("full_name", "unknown") if isinstance(result, dict) else "unknown"
-            writer_logger.info(f"Wrote results for {repo_name}")
+            if saved:
+                writer_logger.info(f"Wrote results for {repo_name}")
+            else:
+                # Logging for skipped save is handled within _save_results_to_jsonl
+                pass # No additional logging needed here unless desired
 
     except Exception as e:
         writer_logger.error(f"Error in writer process: {e}", exc_info=True)
@@ -1583,7 +1580,7 @@ if __name__ == "__main__":
     file_handler = logging.FileHandler(log_file, mode='a')
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s' # Corrected levellevel to levelname
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     ))
 
     # Rich Console handler for main process INFO level, using the shared console
