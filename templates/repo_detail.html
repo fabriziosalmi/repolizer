@@ -196,235 +196,47 @@
                             <div class="mt-2 text-xs text-gray-500">
                                 Based on {{ temp_data.count }} checks in this category
                             </div>
+                            
+                            <!-- Individual check scores -->
+                            <div class="mt-3 pt-2 border-t border-gray-200">
+                                <div class="grid grid-cols-1 gap-2">
+                                    {% for check_name, check in repo[cat_id].items() %}
+                                        {% if check.score is defined and check.score is not none %}
+                                            {% set check_score = check.score|float %}
+                                            {% set check_score_class = "bg-green-200" if check_score >= 70 else ("bg-yellow-200" if check_score >= 40 else "bg-red-200") %}
+                                            {% set check_text_class = "text-green-800" if check_score >= 70 else ("text-yellow-800" if check_score >= 40 else "text-red-800") %}
+                                            
+                                            <div class="flex items-center text-xs">
+                                                <div class="w-1/2 truncate pr-2" title="{{ check_name|replace('_', ' ')|title }}">
+                                                    {{ check_name|replace('_', ' ')|title }}
+                                                </div>
+                                                <div class="w-1/2 flex items-center">
+                                                    <div class="w-3/4 bg-gray-100 rounded-full h-2 mr-2">
+                                                        <div class="h-2 rounded-full {{ check_score_class }}" style="width: {{ check_score }}%"></div>
+                                                    </div>
+                                                    <span class="w-1/4 font-medium {{ check_text_class }}">{{ check_score|round(1) }}</span>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
                     {% endif %}
                 {% endfor %}
             </div>
 
-            <!-- Detailed Check Results Section -->
-            <div class="mt-8 border-t pt-6">
-                {# Button to toggle visibility #}
-                <button id="toggleChecksButton" class="w-full flex justify-between items-center text-left text-lg font-semibold text-gray-700 hover:text-gray-900 focus:outline-none mb-4" aria-expanded="false" aria-controls="detailedChecksContent">
-                    <span>Detailed Check Results</span>
-                    {# Icon starts as 'right' (collapsed) #}
-                    <i id="toggleChecksIcon" class="fas fa-chevron-right transition-transform duration-200"></i>
-                </button>
-
-                {# Content Div - Initially hidden #}
-                <div id="detailedChecksContent" class="hidden">
-                    {% set categories = {
-                        'documentation': {'name': 'Documentation', 'icon': 'fa-file-lines'},
-                        'security': {'name': 'Security', 'icon': 'fa-shield-alt'},
-                        'code_quality': {'name': 'Code Quality', 'icon': 'fa-code'},
-                        'performance': {'name': 'Performance', 'icon': 'fa-tachometer-alt'},
-                        'accessibility': {'name': 'Accessibility', 'icon': 'fa-universal-access'},
-                        'ci_cd': {'name': 'CI/CD', 'icon': 'fa-sync'},
-                        'maintainability': {'name': 'Maintainability', 'icon': 'fa-wrench'},
-                        'testing': {'name': 'Testing', 'icon': 'fa-vial'},
-                        'licensing': {'name': 'Licensing', 'icon': 'fa-balance-scale'},
-                        'community': {'name': 'Community', 'icon': 'fa-users'}
-                    } %}
-                    
-                    <div class="space-y-4">
-                        {% for cat_id, cat_info in categories.items() %}
-                            {% if repo[cat_id] is defined and repo[cat_id]|length > 0 %}
-                                <div class="bg-white rounded-lg shadow border">
-                                    <!-- Category Header -->
-                                    <div class="flex items-center bg-gray-50 p-4 border-b rounded-t-lg">
-                                        <i class="fas {{ cat_info.icon }} text-gray-600 mr-3 text-lg"></i>
-                                        <h3 class="text-lg font-semibold text-gray-800">{{ cat_info.name }}</h3>
-                                    </div>
-                                    
-                                    <!-- Category Checks -->
-                                    <div class="divide-y divide-gray-200">
-                                        {% for check_name, check_details in repo[cat_id].items() %}
-                                            {% set check_display = check_name.replace('_', ' ')|title %}
-                                            {% set score = check_details.score if check_details.score is defined else 'N/A' %}
-                                            {% set details = check_details.details if check_details.details is defined else 'No details provided.' %}
-                                            {% set suggestions = check_details.suggestions if check_details.suggestions is defined else [] %}
-
-                                            {% set score_class = "" %}
-                                            {% set badge_class = "" %}
-                                            {% if score is number and score >= 70 %}
-                                                {% set score_class = "text-green-600" %}
-                                                {% set badge_class = "bg-green-100 text-green-800" %}
-                                            {% elif score is number and score >= 40 %}
-                                                {% set score_class = "text-yellow-600" %}
-                                                {% set badge_class = "bg-yellow-100 text-yellow-800" %}
-                                            {% elif score is number %}
-                                                {% set score_class = "text-red-600" %}
-                                                {% set badge_class = "bg-red-100 text-red-800" %}
-                                            {% else %}
-                                                {% set score_class = "text-gray-500" %}
-                                                {% set badge_class = "bg-gray-100 text-gray-800" %}
-                                            {% endif %}
-
-                                            <div class="p-4">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <div class="font-medium">{{ check_display }}</div>
-                                                    <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full {{ badge_class }}">
-                                                        {% if score is number %}{{ score|round(1) }}{% else %}{{ score }}{% endif %}
-                                                    </span>
-                                                </div>
-                                                
-                                                <!-- Improved JSON visualization -->
-                                                <div class="text-sm text-gray-600 mb-2">
-                                                    {% if details is mapping %}
-                                                        <div class="bg-gray-50 p-3 rounded-md border border-gray-200 overflow-auto">
-                                                            <div class="json-explorer">
-                                                                {% for key, value in details.items() %}
-                                                                    <div class="mb-2">
-                                                                        <span class="font-semibold text-blue-700">{{ key }}:</span>
-                                                                        {% if value is mapping %}
-                                                                            <div class="ml-4 pl-2 border-l-2 border-gray-300">
-                                                                                {% for k, v in value.items() %}
-                                                                                    <div class="my-1">
-                                                                                        <span class="font-medium text-blue-600">{{ k }}:</span>
-                                                                                        {% if v is mapping or v is iterable and v is not string %}
-                                                                                            <button class="toggle-btn ml-1 text-xs bg-gray-200 hover:bg-gray-300 px-1 rounded" data-target="nested-{{ check_name|replace(' ', '-') }}-{{ key }}-{{ k }}">
-                                                                                                <i class="fas fa-chevron-right"></i>
-                                                                                            </button>
-                                                                                            <div id="nested-{{ check_name|replace(' ', '-') }}-{{ key }}-{{ k }}" class="ml-4 pl-2 border-l-2 border-gray-300 hidden">
-                                                                                                <pre class="text-xs overflow-auto whitespace-pre-wrap break-words">{{ v|pprint }}</pre>
-                                                                                            </div>
-                                                                                        {% else %}
-                                                                                            <span class="text-gray-700">{{ v }}</span>
-                                                                                        {% endif %}
-                                                                                    </div>
-                                                                                {% endfor %}
-                                                                            </div>
-                                                                        {% elif value is iterable and value is not string %}
-                                                                            {% if value|length > 0 %}
-                                                                                <button class="toggle-btn ml-1 text-xs bg-gray-200 hover:bg-gray-300 px-1 rounded" data-target="list-{{ check_name|replace(' ', '-') }}-{{ key }}">
-                                                                                    <i class="fas fa-chevron-right"></i> {{ value|length }} items
-                                                                                </button>
-                                                                                <div id="list-{{ check_name|replace(' ', '-') }}-{{ key }}" class="ml-4 pl-2 border-l-2 border-gray-300 hidden">
-                                                                                    <ul class="list-disc list-inside">
-                                                                                        {% for item in value %}
-                                                                                            <li class="text-gray-700">
-                                                                                                {% if item is mapping %}
-                                                                                                    <pre class="text-xs overflow-auto whitespace-pre-wrap break-words">{{ item|pprint }}</pre>
-                                                                                                {% else %}
-                                                                                                    {{ item }}
-                                                                                                {% endif %}
-                                                                                            </li>
-                                                                                        {% endfor %}
-                                                                                    </ul>
-                                                                                </div>
-                                                                            {% else %}
-                                                                                <span class="text-gray-500 italic">(empty list)</span>
-                                                                            {% endif %}
-                                                                        {% else %}
-                                                                            {% if value is number %}
-                                                                                <span class="text-purple-600 font-mono">{{ value }}</span>
-                                                                            {% elif value is boolean %}
-                                                                                <span class="text-green-600 font-mono">{{ value|string|lower }}</span>
-                                                                            {% elif value is none %}
-                                                                                <span class="text-gray-500 italic">null</span>
-                                                                            {% else %}
-                                                                                <span class="text-gray-700">{{ value }}</span>
-                                                                            {% endif %}
-                                                                        {% endif %}
-                                                                    </div>
-                                                                {% endfor %}
-                                                            </div>
-                                                        </div>
-                                                    {% elif details is iterable and details is not string %}
-                                                        <div class="bg-gray-50 p-3 rounded-md border border-gray-200 overflow-auto">
-                                                            <ul class="list-disc list-inside">
-                                                                {% for item in details %}
-                                                                    <li class="text-gray-700">{{ item }}</li>
-                                                                {% endfor %}
-                                                            </ul>
-                                                        </div>
-                                                    {% else %}
-                                                        {{ details }}
-                                                    {% endif %}
-                                                </div>
-                                                
-                                                {% if suggestions %}
-                                                    <div class="mt-2 bg-blue-50 p-2 rounded-md border border-blue-100">
-                                                        <div class="text-xs font-medium text-blue-700 mb-1">Suggestions:</div>
-                                                        <ul class="list-disc list-inside text-xs text-blue-800 space-y-1">
-                                                            {% for suggestion in suggestions %}
-                                                            <li>{{ suggestion }}</li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
+            <!-- JavaScript for improving interactivity -->
             <script>
-                const toggleButton = document.getElementById('toggleChecksButton');
-                const contentDiv = document.getElementById('detailedChecksContent');
-                const toggleIcon = document.getElementById('toggleChecksIcon');
-
-                // Ensure elements exist before adding listeners
-                if (toggleButton && contentDiv && toggleIcon) {
-                    toggleButton.addEventListener('click', () => {
-                        // Toggle visibility by toggling the 'hidden' class
-                        const isHidden = contentDiv.classList.toggle('hidden');
-
-                        // Update ARIA attribute and icon
-                        if (isHidden) {
-                            toggleButton.setAttribute('aria-expanded', 'false');
-                            toggleIcon.classList.remove('fa-chevron-down');
-                            toggleIcon.classList.add('fa-chevron-right');
-                        } else {
-                            toggleButton.setAttribute('aria-expanded', 'true');
-                            toggleIcon.classList.remove('fa-chevron-right');
-                            toggleIcon.classList.add('fa-chevron-down');
-                        }
-                    });
-
-                    // Keyboard accessibility
-                    toggleButton.addEventListener('keydown', (event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            toggleButton.click();
-                        }
-                    });
-                } else {
-                    // Log an error if elements aren't found (for debugging)
-                    console.error("Could not find elements for detailed checks toggle.");
-                }
-            </script>
-            <!-- Add Javascript for JSON toggles after the existing script tag -->
-            <script>
-                // Initialize toggle functionality for JSON elements
                 document.addEventListener('DOMContentLoaded', function() {
-                    const toggleButtons = document.querySelectorAll('.toggle-btn');
+                    // Add tooltips or any other JavaScript enhancement here if needed
                     
-                    toggleButtons.forEach(button => {
-                        button.addEventListener('click', function() {
-                            const targetId = this.getAttribute('data-target');
-                            const targetElement = document.getElementById(targetId);
-                            
-                            if (targetElement) {
-                                // Toggle visibility
-                                targetElement.classList.toggle('hidden');
-                                
-                                // Toggle icon
-                                const icon = this.querySelector('i');
-                                if (icon) {
-                                    if (targetElement.classList.contains('hidden')) {
-                                        icon.classList.remove('fa-chevron-down');
-                                        icon.classList.add('fa-chevron-right');
-                                    } else {
-                                        icon.classList.remove('fa-chevron-right');
-                                        icon.classList.add('fa-chevron-down');
-                                    }
-                                }
-                            }
-                        });
+                    // Make check name labels clickable to show detailed description
+                    const checkLabels = document.querySelectorAll('.check-name-label');
+                    checkLabels.forEach(label => {
+                        if (label.title) {
+                            label.style.cursor = 'help';
+                        }
                     });
                 });
             </script>

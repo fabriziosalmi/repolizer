@@ -40,6 +40,46 @@ class HTMLReportGenerator:
         html = markdown.markdown(text, extensions=['extra'])
         return html
     
+    def _preprocess_recommendations(self, recommendations: List[str]) -> List[str]:
+        """Process recommendations to add proper formatting and structure"""
+        processed_recs = []
+        
+        for rec in recommendations:
+            # Check if recommendation already has a priority marker or header
+            priority_class = ""
+            
+            # Try to determine priority based on content
+            lower_rec = rec.lower()
+            if any(term in lower_rec for term in ["critical", "severe", "high priority", "security vulnerability"]):
+                priority_class = "recommendation-priority-high"
+            elif any(term in lower_rec for term in ["moderate", "medium priority", "should", "improve"]):
+                priority_class = "recommendation-priority-medium"
+            elif any(term in lower_rec for term in ["consider", "low priority", "minor", "suggestion"]):
+                priority_class = "recommendation-priority-low"
+            
+            # Format scores
+            rec = re.sub(r'(\bScore:\s*\d+\s*/\s*100\b)', r'<span>\1</span>', rec)
+            
+            # Highlight reason sections
+            rec = re.sub(r'(Reason:.*?)(?=\n\n|\n\d\.|\n\*|\n\-|$)', r'<p>\1</p>', rec, flags=re.DOTALL)
+            
+            # Format headers (if not already formatted)
+            if not rec.startswith('#') and not re.match(r'^\d+\.', rec.strip()):
+                # Extract first line or sentence as title
+                title_match = re.match(r'^([^\.!\?\n]+)', rec.strip())
+                if title_match:
+                    title = title_match.group(1).strip()
+                    content = rec[len(title):].strip()
+                    rec = f"**{title}**\n\n{content}"
+            
+            # Add wrapper div with priority class if determined
+            if priority_class:
+                processed_recs.append(f'<div class="{priority_class}">\n{rec}\n</div>')
+            else:
+                processed_recs.append(rec)
+                
+        return processed_recs
+    
     def generate_html_report(self, report_data: Dict) -> str:
         """Generate an HTML report from the analysis data"""
         repo_name = report_data["repository"].get("full_name", "Unknown repository")
@@ -48,6 +88,10 @@ class HTMLReportGenerator:
         output_path = self.report_dir / f"{safe_name}_report_{report_date}.html"
         
         logger.info(f"Generating HTML report for {repo_name}")
+        
+        # Process recommendations for better formatting
+        if "recommendations" in report_data and report_data["recommendations"]:
+            report_data["recommendations"] = self._preprocess_recommendations(report_data["recommendations"])
         
         # Load template
         template = self.env.get_template('report.html')
