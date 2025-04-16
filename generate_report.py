@@ -100,8 +100,14 @@ def setup_logging(log_level=logging.INFO, enable_console=True):
     
     # Remove existing handlers to avoid duplicates on re-initialization
     if logger.handlers:
-        for handler in logger.handlers:
+        for handler in logger.handlers[:]:
             logger.removeHandler(handler)
+    
+    # Also check and clear root logger handlers to prevent duplicates
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
     
     # Create logs directory if it doesn't exist
     log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')

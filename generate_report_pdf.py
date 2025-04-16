@@ -92,7 +92,7 @@ class PDFReportGenerator:
         
         # Overall score
         story.append(Paragraph("Overall Health Score", heading1_style))
-        story.append(Paragraph(f"{report_data['overall_score']}/100", score_style))
+        story.append(Paragraph(f"{report_data['overall_score']:.2f}/100", score_style))
         story.append(Spacer(1, 24))
         
         # Executive summary
@@ -131,7 +131,7 @@ class PDFReportGenerator:
         for insight in sorted_insights:
             category = insight["category"].capitalize()
             score = insight["score"]
-            score_text = f"{category} Score: {score}/100"
+            score_text = f"{category} Score: {score:.2f}/100"
             
             story.append(Paragraph(category, heading2_style))
             story.append(Paragraph(score_text, ParagraphStyle(

@@ -12,6 +12,14 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .report-container {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 30px;
+            margin-bottom: 30px;
         }
         header {
             text-align: center;
@@ -22,26 +30,51 @@
         h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
+            color: #2c3e50;
         }
         h2 {
             font-size: 1.8em;
             margin-top: 30px;
             border-bottom: 1px solid #eee;
             padding-bottom: 5px;
+            color: #2c3e50;
         }
         h3 {
             font-size: 1.3em;
             margin-top: 25px;
+            color: #2c3e50;
         }
         .subtitle {
             color: #666;
             font-size: 1.2em;
         }
+        .repo-meta {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .meta-item {
+            padding: 8px 16px;
+            background-color: #f1f8ff;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .score-container {
+            text-align: center;
+            background: linear-gradient(145deg, #f8f9fa, #ffffff);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin: 20px 0;
+            position: relative;
+        }
         .score {
-            font-size: 2.5em;
+            font-size: 3em;
             font-weight: bold;
             text-align: center;
-            margin: 20px 0;
+            margin: 10px 0;
         }
         .score-high {
             color: #4caf50;
@@ -51,6 +84,11 @@
         }
         .score-low {
             color: #f44336;
+        }
+        .score-label {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 10px;
         }
         .category-grid {
             display: grid;
@@ -63,6 +101,11 @@
             border-radius: 8px;
             padding: 15px;
             background-color: #f9f9f9;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .category-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
         }
         .category-name {
             font-weight: bold;
@@ -79,22 +122,89 @@
             align-items: center;
             margin: 30px 0;
         }
-        .visualization img {
-            max-width: 100%;
-            height: auto;
-            margin-bottom: 20px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        .visualization {
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 30px;
         }
-        .recommendations {
-            background-color: #f5f5f5;
+        .visualization img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .viz-caption {
+            text-align: center;
+            margin-top: 8px;
+            color: #666;
+            font-style: italic;
+        }
+        .category-analysis {
+            margin-bottom: 40px;
             padding: 20px;
             border-radius: 8px;
-            margin: 30px 0;
+            background-color: #f9f9fa;
+            border-left: 4px solid #ddd;
         }
-        .recommendations li {
+        .category-analysis.high-score {
+            border-left-color: #4caf50;
+            background-color: rgba(76, 175, 80, 0.05);
+        }
+        .category-analysis.medium-score {
+            border-left-color: #ff9800;
+            background-color: rgba(255, 152, 0, 0.05);
+        }
+        .category-analysis.low-score {
+            border-left-color: #f44336;
+            background-color: rgba(244, 67, 54, 0.05);
+        }
+        .recommendations {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .recommendation-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 0.9em;
+        }
+        .markdown p {
             margin-bottom: 15px;
+        }
+        .markdown ul, .markdown ol {
+            padding-left: 25px;
+            margin-bottom: 15px;
+        }
+        .markdown li {
+            margin-bottom: 5px;
+        }
+        .health-indicator {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .health-good {
+            background-color: #4caf50;
+        }
+        .health-medium {
+            background-color: #ff9800;
+        }
+        .health-poor {
+            background-color: #f44336;
         }
         footer {
             text-align: center;
@@ -109,78 +219,145 @@
             .category-grid {
                 grid-template-columns: 1fr;
             }
+            .repo-meta {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Repository Health Report</h1>
-        <div class="subtitle">{{ repo.full_name }}</div>
-        <div class="subtitle">Generated on {{ timestamp }}</div>
-    </header>
-    
-    <main>
-        <h2>Overall Health Score</h2>
-        <div class="score {{ 'score-high' if overall_score >= 70 else 'score-medium' if overall_score >= 40 else 'score-low' }}">
-            {{ "%.1f"|format(overall_score) }}/100
-        </div>
+    <div class="report-container">
+        <header>
+            <h1>Repository Health Report</h1>
+            <div class="subtitle">{{ repo.full_name }}</div>
+            <div class="subtitle">Generated on {{ timestamp }}</div>
+            
+            <div class="repo-meta">
+                {% if repo.language %}
+                <div class="meta-item">
+                    <i class="fa fa-code"></i> {{ repo.language }}
+                </div>
+                {% endif %}
+                
+                {% if repo.stargazers_count is defined %}
+                <div class="meta-item">
+                    <i class="fa fa-star"></i> {{ repo.stargazers_count }} stars
+                </div>
+                {% endif %}
+                
+                {% if repo.forks_count is defined %}
+                <div class="meta-item">
+                    <i class="fa fa-code-fork"></i> {{ repo.forks_count }} forks
+                </div>
+                {% endif %}
+                
+                {% if repo.license and repo.license.name %}
+                <div class="meta-item">
+                    <i class="fa fa-balance-scale"></i> {{ repo.license.name }}
+                </div>
+                {% endif %}
+                
+                {% if repo.created_at is defined %}
+                <div class="meta-item">
+                    <i class="fa fa-calendar"></i> Created: {{ repo.created_at[:10] }}
+                </div>
+                {% endif %}
+                
+                {% if repo.updated_at is defined %}
+                <div class="meta-item">
+                    <i class="fa fa-refresh"></i> Last updated: {{ repo.updated_at[:10] }}
+                </div>
+                {% endif %}
+            </div>
+        </header>
         
-        <h2>Executive Summary</h2>
-        {% for paragraph in summary.split('\n\n') %}
-            {% if paragraph.strip() %}
-                <p>{{ paragraph }}</p>
-            {% endif %}
-        {% endfor %}
-        
-        <h2>Category Scores</h2>
-        <div class="category-grid">
-            {% for category, data in categories.items() %}
-            <div class="category-card">
-                <div class="category-name">{{ category.capitalize() }}</div>
-                <div class="category-score {{ 'score-high' if data.score >= 70 else 'score-medium' if data.score >= 40 else 'score-low' }}">
-                    {{ "%.1f"|format(data.score) }}/100
+        <main>
+            <div class="score-container">
+                <div class="score-label">Overall Repository Health</div>
+                <div class="score {{ 'score-high' if overall_score >= 70 else 'score-medium' if overall_score >= 40 else 'score-low' }}">
+                    {{ "%.2f"|format(overall_score) }}/100
+                </div>
+                <div class="score-description">
+                    {% if overall_score >= 70 %}
+                    <span class="health-indicator health-good"></span> This repository demonstrates good adherence to software development best practices.
+                    {% elif overall_score >= 40 %}
+                    <span class="health-indicator health-medium"></span> This repository has moderate health and could benefit from targeted improvements.
+                    {% else %}
+                    <span class="health-indicator health-poor"></span> This repository needs significant improvements to meet software development best practices.
+                    {% endif %}
+                </div>
+            </div>
+            
+            <h2>Executive Summary</h2>
+            <div class="markdown">
+                {{ summary|markdown_to_html|safe }}
+            </div>
+            
+            <h2>Category Scores</h2>
+            <div class="category-grid">
+                {% for category, data in categories.items() %}
+                <div class="category-card">
+                    <div class="category-name">{{ category.capitalize() }}</div>
+                    <div class="category-score {{ 'score-high' if data.score >= 70 else 'score-medium' if data.score >= 40 else 'score-low' }}">
+                        {{ "%.2f"|format(data.score) }}/100
+                    </div>
+                    <div>
+                        <span class="health-indicator {{ 'health-good' if data.score >= 70 else 'health-medium' if data.score >= 40 else 'health-poor' }}"></span>
+                        {{ data.checks|length }} checks performed
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <h2>Visualizations</h2>
+            <div class="visualizations">
+                {% for viz in visualizations %}
+                <div class="visualization">
+                    <img src="{{ viz }}" alt="Repository Health Visualization">
+                    <div class="viz-caption">
+                        {% if loop.index == 1 %}
+                        Radar chart showing the distribution of scores across different categories
+                        {% else %}
+                        Bar chart comparing category scores
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <h2>Category Analysis</h2>
+            {% for insight in insights %}
+            <div class="category-analysis {{ 'high-score' if insight.score >= 70 else 'medium-score' if insight.score >= 40 else 'low-score' }}">
+                <h3>{{ insight.category.capitalize() }}</h3>
+                <div class="category-score {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
+                    <span class="health-indicator {{ 'health-good' if insight.score >= 70 else 'health-medium' if insight.score >= 40 else 'health-poor' }}"></span>
+                    Score: {{ "%.2f"|format(insight.score) }}/100
+                </div>
+                <div class="markdown">
+                    {{ insight.text|markdown_to_html|safe }}
                 </div>
             </div>
             {% endfor %}
-        </div>
-        
-        <h2>Visualizations</h2>
-        <div class="visualizations">
-            {% for viz in visualizations %}
-            <div class="visualization">
-                <img src="{{ viz }}" alt="Repository Health Visualization">
-            </div>
-            {% endfor %}
-        </div>
-        
-        <h2>Category Analysis</h2>
-        {% for insight in insights %}
-        <div>
-            <h3>{{ insight.category.capitalize() }}</h3>
-            <div class="category-score {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
-                Score: {{ "%.1f"|format(insight.score) }}/100
-            </div>
-            {% for paragraph in insight.text.split('\n\n') %}
-                {% if paragraph.strip() %}
-                    <p>{{ paragraph }}</p>
-                {% endif %}
-            {% endfor %}
-        </div>
-        {% endfor %}
-        
-        <h2>Recommendations</h2>
-        <div class="recommendations">
-            <ul>
+            
+            <h2>Recommendations</h2>
+            <div class="recommendations">
                 {% for rec in recommendations %}
-                <li>{{ rec }}</li>
+                <div class="recommendation-item markdown">
+                    {{ rec|markdown_to_html|safe }}
+                </div>
                 {% endfor %}
-            </ul>
-        </div>
-    </main>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Generated by Repolizer Report Generator</p>
+            <p>© {{ current_year }} Repolizer</p>
+        </footer>
+    </div>
     
-    <footer>
-        <p>Generated by Repolizer Report Generator</p>
-        <p>© {{ current_year }} Repolizer</p>
-    </footer>
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </body>
 </html>
