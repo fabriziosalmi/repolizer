@@ -554,9 +554,9 @@ def serve_result_file(filename):
 
 @app.route('/repo/<path:repo_id>') # Use <path:repo_id> to allow slashes
 # Removed protection - Publicly accessible
+@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def repo_detail(repo_id):
     print(f"--- Starting repo_detail for ID/Name: {repo_id} ---") # DEBUG
-    
     # Load results.jsonl or sample_results.jsonl
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
     if not os.path.exists(file_path):
@@ -570,16 +570,96 @@ def repo_detail(repo_id):
     else:
         print(f"Using results file: {file_path}") # DEBUG
 
-    # Use the cached function to get repository data
-    latest_valid_repo_data = get_repo_by_id_from_jsonl(repo_id, file_path)
+    latest_valid_repo_data = None # Renamed to be more specific
+    latest_valid_timestamp = None # Renamed
+    line_count = 0 # DEBUG
 
-    # Check if we found any VALID data
+    # Determine if the repo_id is numeric (GitHub ID) or a string (full_name)
+    is_numeric_id = repo_id.isdigit()
+    repo_id_int = int(repo_id) if is_numeric_id else None
+    repo_full_name = repo_id if not is_numeric_id else None
+
+    print(f"Searching by: {'Numeric ID' if is_numeric_id else 'Full Name'}: {repo_id}") # DEBUG
+
+    try:
+        with open(file_path, 'r') as f:
+            for line in f:
+                line_count += 1 # DEBUG
+                try:
+                    data = json.loads(line)
+                    # --- Check for repository info at the top level ---
+                    current_repo_info = data.get('repository', {})
+                    repo_id_in_data = current_repo_info.get('id')
+                    repo_name_in_data = current_repo_info.get('full_name')
+
+                    # Check if this entry matches the requested repo ID or Name
+                    match = False
+                    if is_numeric_id and repo_id_int is not None and repo_id_in_data == repo_id_int:
+                        match = True
+                    elif not is_numeric_id and repo_full_name is not None and repo_name_in_data == repo_full_name:
+                         match = True
+                    # Optional: Handle case where numeric ID might be stored as string
+                    elif is_numeric_id and str(repo_id_in_data) == repo_id:
+                         match = True
+
+
+                    if match:
+                        print(f"  [Line {line_count}] Match found for repo {repo_id_in_data if is_numeric_id else repo_name_in_data}") # DEBUG
+
+                        # --- Check for timestamp directly at the top level ---
+                        timestamp_str = data.get('timestamp') # Get timestamp from top level
+
+                        print(f"    Repository info exists: {'Yes' if current_repo_info else 'No'}") # DEBUG
+                        print(f"    Timestamp string: {timestamp_str}") # DEBUG
+
+                        # Only proceed if repository info and timestamp are present
+                        if current_repo_info and timestamp_str: # Check for both repo info and timestamp
+                            try:
+                                # Parse timestamp (handle potential 'Z' timezone)
+                                current_timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                                # Ensure timestamp is timezone-aware for comparison
+                                if current_timestamp.tzinfo is None:
+                                     current_timestamp = current_timestamp.replace(tzinfo=timezone.utc)
+                                print(f"    Parsed timestamp: {current_timestamp}") # DEBUG
+
+                                # If it's the first VALID match or later than the current latest VALID one, update
+                                if latest_valid_timestamp is None or current_timestamp >= latest_valid_timestamp: # Use >= to prefer later entry in case of exact same timestamp
+                                    print(f"    Updating latest_valid_repo_data (Timestamp: {current_timestamp})") # DEBUG
+                                    latest_valid_timestamp = current_timestamp
+                                    latest_valid_repo_data = data # Store the whole data object for this entry
+                                else:
+                                    print(f"    Skipping update (Current valid timestamp {current_timestamp} < Latest valid {latest_valid_timestamp})") # DEBUG
+                            except ValueError:
+                                print(f"    Invalid timestamp format: {timestamp_str} - Skipping this entry.") # DEBUG
+                                continue # Skip entry with invalid timestamp
+                        else:
+                            print("    Skipping entry (Missing repository info or timestamp)") # DEBUG
+
+
+                except json.JSONDecodeError as json_err:
+                    print(f"Warning: Skipping invalid JSON line {line_count} in repo_detail: {json_err}") # DEBUG
+                    continue
+                except Exception as line_err:
+                    print(f"Warning: Error processing line {line_count} in repo_detail: {line_err}") # DEBUG
+                    continue
+
+    except Exception as e:
+        print(f"Error loading repository data: {e}") # DEBUG
+        return render_template('error.html', error=f"Error loading repository data: {e}"), 500
+
+    # Now, check if we found any VALID data
     if not latest_valid_repo_data:
-        print(f"Error: Repository with ID/Name {repo_id} found, but no valid analysis data available.") # DEBUG
+        print(f"Error: Repository with ID/Name {repo_id} found, but no valid analysis data available after checking {line_count} lines.") # DEBUG
         # Return a specific error or the standard not found
         return render_template('error.html',
                               error=f"Repository '{repo_id}' found, but no analysis results are available.",
                               suggestion="The repository might not have been analyzed yet, or the analysis data is missing/invalid in results.jsonl."), 404
+
+    # Log final selected data before rendering
+    # Check if the selected data has a 'repository' key for the debug message
+    has_repo_key = 'repository' in latest_valid_repo_data if latest_valid_repo_data else False
+    print(f"--- Final selected data for ID/Name {repo_id} (has repository key: {'Yes' if has_repo_key else 'No'}) ---") # DEBUG
+    # print(json.dumps(latest_valid_repo_data, indent=2)) # Optional: print full selected data
 
     # Pass the latest valid data object to the template
     return render_template('repo_detail.html', repo=latest_valid_repo_data)
