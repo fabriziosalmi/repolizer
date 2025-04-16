@@ -16,6 +16,7 @@ from datetime import datetime, timezone # Import datetime and timezone for sorti
 import requests # Add requests import
 from app_utils import enqueue_output, run_analyzer, get_results_file_info # Import moved functions
 from collections import defaultdict
+from caching_middleware import timed_cache, clear_cache, clear_cache_pattern  # Import our caching middleware
 
 app = Flask(__name__)
 
@@ -553,6 +554,7 @@ def serve_result_file(filename):
 
 @app.route('/repo/<path:repo_id>') # Use <path:repo_id> to allow slashes
 # Removed protection - Publicly accessible
+@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def repo_detail(repo_id):
     print(f"--- Starting repo_detail for ID/Name: {repo_id} ---") # DEBUG
     # Load results.jsonl or sample_results.jsonl
@@ -664,6 +666,7 @@ def repo_detail(repo_id):
 
 @app.route('/repo/<path:repo_id>/history')
 # Removed protection - Publicly accessible
+@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def repo_history(repo_id):
     """Render the analysis history page for a specific repository"""
     print(f"--- Starting repo_history for ID/Name: {repo_id} ---") # DEBUG
