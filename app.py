@@ -543,16 +543,20 @@ def serve_results_file():
         # Try to use sample data if available
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
         if os.path.exists(sample_path):
-            response = send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
-            # Add cache control headers
+            # Instead of streaming the file directly, read it into memory and return it as a response
+            with open(sample_path, 'r') as file:
+                content = file.read()
+            response = Response(content, mimetype='application/json')
             response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
             return response
         else:
             # No sample file exists either, return 404
             return jsonify({"error": "Results file not found"}), 404
     
-    response = send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
-    # Add cache control headers
+    # Instead of streaming the file directly, read it into memory and return it as a response
+    with open(file_path, 'r') as file:
+        content = file.read()
+    response = Response(content, mimetype='application/json')
     response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutes
     return response
 
