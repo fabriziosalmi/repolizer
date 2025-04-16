@@ -195,6 +195,67 @@
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
+    <!-- Share Modal - Added for better share UI -->
+    <div id="share-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden transform transition-all">
+            <div class="bg-purple-600 text-white px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-share-alt mr-3"></i> Share Repository Report
+                    </h3>
+                    <button id="close-share-modal" class="text-white focus:outline-none hover:text-purple-200">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-5">
+                    <p class="text-gray-700 mb-2">Share this free report with others:</p>
+                    <p id="share-repo-name" class="font-bold text-lg text-gray-800"></p>
+                </div>
+                <div class="mb-6">
+                    <label for="share-url" class="block text-sm font-medium text-gray-700 mb-1">Report Link</label>
+                    <div class="relative rounded-md shadow-sm">
+                        <input type="text" id="share-url" readonly 
+                            class="border border-gray-300 focus:ring-purple-500 focus:border-purple-500 block w-full pr-10 py-3 px-4 rounded-md text-gray-900"
+                            value="">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <button id="copy-share-url" class="text-purple-600 hover:text-purple-800 focus:outline-none">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col space-y-3">
+                    <button id="copy-button" class="w-full inline-flex justify-center items-center px-4 py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+                        <i class="far fa-copy mr-2"></i> Copy Link to Clipboard
+                    </button>
+                    
+                    <button id="email-share-button" class="w-full inline-flex justify-center items-center px-4 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="far fa-envelope mr-2"></i> Share via Email
+                    </button>
+                    
+                    <div class="mt-2 pt-3 border-t border-gray-200">
+                        <div class="flex justify-center space-x-4">
+                            <button class="social-share-button" data-platform="linkedin">
+                                <i class="fab fa-linkedin text-blue-700 text-2xl hover:text-blue-900"></i>
+                            </button>
+                            <button class="social-share-button" data-platform="reddit">
+                                <i class="fab fa-reddit text-orange-600 text-2xl hover:text-orange-800"></i>
+                            </button>
+                            <button class="social-share-button" data-platform="whatsapp">
+                                <i class="fab fa-whatsapp text-green-600 text-2xl hover:text-green-800"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="copy-success" class="hidden bg-green-100 text-green-700 px-6 py-3 text-center font-medium">
+                <i class="fas fa-check mr-2"></i> Link copied to clipboard!
+            </div>
+        </div>
+    </div>
+    
     <header class="bg-gray-800 text-white shadow-lg" style="background-color: black">
         <div class="container mx-auto p-4 flex flex-col md:flex-row justify-between items-center">
             <div class="flex items-center mb-4 md:mb-0">
@@ -927,18 +988,18 @@ HERO
             <p class="text-center text-sm font-medium text-gray-700 mb-2" style="font-size: 1rem; font-weight: bold; padding-bottom: 10px; color: #575757;">VIEW REPORT</p>
             <div class="flex justify-center space-x-3">
               <a href="/repo/${repoId}" title="Free Report"
-                 class="inline-flex items-center justify-center px-4 py-2 font-bold rounded-lg shadow-sm text-sm transition-all duration-200 hover:bg-gray-300" style="width: 30%; height: 4rem; font-size: 1.1rem; font-weight: normal; background: #ececec; color: #717171;">
+                 class="inline-flex items-center justify-center px-4 py-2 font-bold rounded-lg shadow-sm text-sm transition-all duration-200 bg-gray-100 hover:bg-gray-200" style="width: 30%; height: 4rem; font-size: 1.1rem; font-weight: normal; color: #717171;">
                 <i class="fas fa-chart-bar mr-2"></i>
                 FREE
               </a>
               <button type="button" title="Full Report (Paid)"
-                      class="open-modal-button inline-flex items-center justify-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem; font-weight: bold;"
+                      class="open-modal-button inline-flex items-center justify-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
                       data-repo-id="${repoId}">
                 <i class="fas fa-credit-card mr-2"></i>
                 FULL
               </button>
               <button type="button" title="Share Repository Report"
-                      class="share-button inline-flex items-center justify-center px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem; font-weight: bold;"
+                      class="share-button inline-flex items-center justify-center px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
                       data-repo-id="${repoId}" data-repo-name="${repoData.full_name || ''}">
                 <i class="fas fa-share-alt mr-2"></i>
                 SHARE
@@ -976,40 +1037,8 @@ HERO
               const repoId = event.currentTarget.getAttribute('data-repo-id');
               const repoName = event.currentTarget.getAttribute('data-repo-name');
               
-              // Create full URL with current hostname
-              const fullRepoUrl = `${window.location.origin}/repo/${repoId}`;
-              
-              // Use Web Share API if available (mobile devices)
-              if (navigator.share) {
-                  navigator.share({
-                      title: `Repolizer Report for ${repoName}`,
-                      text: `Check out the health analysis for ${repoName} on Repolizer!`,
-                      url: fullRepoUrl
-                  })
-                  .then(() => console.log('Successfully shared'))
-                  .catch((error) => console.log('Error sharing:', error));
-              } else {
-                  // Fallback for desktop - copy to clipboard
-                  navigator.clipboard.writeText(fullRepoUrl)
-                  .then(() => {
-                      // Show temporary tooltip
-                      const tooltip = document.createElement('div');
-                      tooltip.className = 'bg-gray-800 text-white px-3 py-2 rounded-lg text-sm fixed z-50';
-                      tooltip.style.left = `${event.clientX}px`;
-                      tooltip.style.top = `${event.clientY - 40}px`;
-                      tooltip.textContent = 'Link copied to clipboard!';
-                      document.body.appendChild(tooltip);
-                      
-                      // Remove tooltip after 2 seconds
-                      setTimeout(() => {
-                          tooltip.remove();
-                      }, 2000);
-                  })
-                  .catch(err => {
-                      console.error('Failed to copy link: ', err);
-                      alert('Failed to copy link. Please copy this URL manually: ' + fullRepoUrl);
-                  });
-              }
+              // Open our new share modal instead of previous implementation
+              openShareModal(repoId, repoName);
           });
       }
 
@@ -1078,6 +1107,141 @@ HERO
 
       return colors[language] || '#8F8F8F';
     }
+    
+    // Share Modal Functionality
+    const shareModal = document.getElementById('share-modal');
+    const closeShareModal = document.getElementById('close-share-modal');
+    const shareRepoName = document.getElementById('share-repo-name');
+    const shareUrl = document.getElementById('share-url');
+    const copyButton = document.getElementById('copy-button');
+    const copyShareUrl = document.getElementById('copy-share-url');
+    const emailShareButton = document.getElementById('email-share-button');
+    const copySuccess = document.getElementById('copy-success');
+    const socialShareButtons = document.querySelectorAll('.social-share-button');
+    
+    // Function to open share modal
+    function openShareModal(repoId, repoName) {
+      if (!shareModal) return;
+      
+      const fullRepoUrl = `${window.location.origin}/repo/${repoId}`;
+      
+      // Set repo name and share URL
+      if (shareRepoName) shareRepoName.textContent = repoName || 'Repository Report';
+      if (shareUrl) shareUrl.value = fullRepoUrl;
+      
+      // Show the modal
+      shareModal.classList.remove('hidden');
+      
+      // Focus the share URL input for easy copying
+      if (shareUrl) setTimeout(() => shareUrl.select(), 100);
+    }
+    
+    // Function to close share modal
+    function hideShareModal() {
+      if (shareModal) {
+        shareModal.classList.add('hidden');
+        if (copySuccess) copySuccess.classList.add('hidden');
+      }
+    }
+    
+    // Function to copy the share URL to clipboard
+    function copyShareUrlToClipboard() {
+      if (!shareUrl) return;
+      
+      shareUrl.select();
+      navigator.clipboard.writeText(shareUrl.value)
+        .then(() => {
+          if (copySuccess) {
+            copySuccess.classList.remove('hidden');
+            setTimeout(() => {
+              copySuccess.classList.add('hidden');
+            }, 3000);
+          }
+        })
+        .catch(err => {
+          console.error('Error copying text: ', err);
+          alert('Failed to copy the link. Please select and copy it manually.');
+        });
+    }
+    
+    // Function to share via email
+    function shareViaEmail(url, repoName) {
+      const subject = encodeURIComponent(`Repolizer Report for ${repoName}`);
+      const body = encodeURIComponent(`Check out this repository health analysis on Repolizer: ${url}`);
+      window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    }
+    
+    // Function to share via social platforms
+    function shareViaSocial(platform, url, repoName) {
+      let shareUrl;
+      switch (platform) {
+        case 'linkedin':
+          shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+          break;
+        case 'reddit':
+          const redditTitle = encodeURIComponent(`Repolizer Health Analysis for ${repoName}`);
+          shareUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${redditTitle}`;
+          break;
+        case 'whatsapp':
+          const whatsappText = encodeURIComponent(`Check out this Repolizer health analysis for ${repoName}: ${url}`);
+          shareUrl = `https://wa.me/?text=${whatsappText}`;
+          break;
+        default:
+          return;
+      }
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+    
+    // Set up event listeners for the share modal
+    if (closeShareModal) {
+      closeShareModal.addEventListener('click', hideShareModal);
+    }
+    
+    // Close modal when clicking outside
+    if (shareModal) {
+      shareModal.addEventListener('click', (e) => {
+        if (e.target === shareModal) {
+          hideShareModal();
+        }
+      });
+    }
+    
+    // Copy button click handlers
+    if (copyButton) {
+      copyButton.addEventListener('click', copyShareUrlToClipboard);
+    }
+    
+    if (copyShareUrl) {
+      copyShareUrl.addEventListener('click', copyShareUrlToClipboard);
+    }
+    
+    // Email share button handler
+    if (emailShareButton) {
+      emailShareButton.addEventListener('click', () => {
+        if (shareUrl && shareRepoName) {
+          shareViaEmail(shareUrl.value, shareRepoName.textContent);
+        }
+      });
+    }
+    
+    // Social share button handlers
+    if (socialShareButtons) {
+      socialShareButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const platform = button.getAttribute('data-platform');
+          if (shareUrl && shareRepoName) {
+            shareViaSocial(platform, shareUrl.value, shareRepoName.textContent);
+          }
+        });
+      });
+    }
+    
+    // Escape key to close modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && shareModal && !shareModal.classList.contains('hidden')) {
+        hideShareModal();
+      }
+    });
   });
 </script>
 </body>
