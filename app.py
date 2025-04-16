@@ -521,9 +521,14 @@ def serve_repos_file():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
 
 @app.route('/results.jsonl')
-@timed_cache(seconds=300)  # Cache for 5 minutes
 def serve_results_file():
-    # Serve the results.jsonl file directly - this is for analyzed repos
+    """Serve the results.jsonl file directly - this is for analyzed repos"""
+    # Use a helper function instead of directly decorating the route
+    return _get_cached_results_file()
+
+@timed_cache(seconds=300)  # Cache for 5 minutes
+def _get_cached_results_file():
+    """Helper function that's cached but preserves Flask response headers"""
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
     
     # If results.jsonl doesn't exist but we have sample data, use it
