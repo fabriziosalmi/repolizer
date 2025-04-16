@@ -98,31 +98,37 @@ class HTMLReportGenerator:
             return [r.strip() for r in re.split(r'\n\s*(?:\d+\.|\-|\*)\s*', recommendations) if r.strip()]
         return []
 
-    def _safe_section(self, value, default_msg):
-        """Return value if non-empty and not an error placeholder, else a user-friendly placeholder."""
+    def _safe_section(self, value, section_name_for_log="section"):
+        """Return value if non-empty and not an error placeholder, else return None."""
         error_indicators = ["[Content unavailable", "[Fallback:", "[No content available", "[Unexpected error", "[Narrative generation failed", "[No recommendations parsed"]
         if isinstance(value, str):
             stripped_value = value.strip()
             # Check if it's empty or contains an error indicator
             if stripped_value and not any(indicator in stripped_value for indicator in error_indicators):
-                return stripped_value
+                return stripped_value # Return the valid string
             else:
-                # Log the original error value if it exists
+                # Log the original error value if it exists and is being replaced
                 if stripped_value and any(indicator in stripped_value for indicator in error_indicators):
-                     logger.debug(f"Replacing error placeholder with default message: '{stripped_value[:100]}...' -> '{default_msg}'")
-                return f'<em>{default_msg}</em>'
+                     logger.debug(f"Replacing error placeholder with None for section '{section_name_for_log}': '{stripped_value[:100]}...'")
+                elif not stripped_value:
+                     logger.debug(f"Replacing empty value with None for section '{section_name_for_log}'.")
+                return None # Return None for invalid/empty strings
         if isinstance(value, list):
             # Filter out empty strings and error placeholders from lists
             safe_list = [str(v) for v in value if str(v).strip() and not any(indicator in str(v) for indicator in error_indicators)]
             if safe_list:
-                 return safe_list
+                 return safe_list # Return the valid list
             else:
                  # Log if the original list contained only errors/empty strings
                  if value and not safe_list:
-                      logger.debug(f"Replacing list containing only errors/empty strings with default message.")
-                 return [f'<em>{default_msg}</em>']
+                      logger.debug(f"Replacing list containing only errors/empty strings with None for section '{section_name_for_log}'.")
+                 return None # Return None for invalid/empty lists
         # Fallback for other types or None
-        return f'<em>{default_msg}</em>'
+        if value is None:
+             logger.debug(f"Value is None for section '{section_name_for_log}'.")
+        else:
+             logger.debug(f"Value is of unexpected type ({type(value)}) for section '{section_name_for_log}', returning None.")
+        return None # Return None for None or unexpected types
 
     def generate_html_report(self, report_data: Dict) -> str:
         """Generate an HTML report from the analysis data"""
@@ -137,23 +143,25 @@ class HTMLReportGenerator:
         report_data.pop("recommendations", None)
 
         # Ensure all narrative sections are robust using the updated _safe_section
-        report_data["summary"] = self._safe_section(report_data.get("summary"), "No executive summary available.")
-        report_data["key_opportunities"] = self._safe_section(report_data.get("key_opportunities"), "No key opportunities identified.")
-        report_data["strengths_risks"] = self._safe_section(report_data.get("strengths_risks"), "No strengths or risks analysis available.")
-        report_data["next_steps"] = self._safe_section(report_data.get("next_steps"), "No next steps identified.")
-        report_data["resources"] = self._safe_section(report_data.get("resources"), "No resources identified.")
+        # Pass section names for better logging
+        report_data["summary"] = self._safe_section(report_data.get("summary"), "summary")
+        report_data["key_opportunities"] = self._safe_section(report_data.get("key_opportunities"), "key_opportunities")
+        report_data["strengths_risks"] = self._safe_section(report_data.get("strengths_risks"), "strengths_risks")
+        report_data["next_steps"] = self._safe_section(report_data.get("next_steps"), "next_steps")
+        report_data["resources"] = self._safe_section(report_data.get("resources"), "resources")
         
         # Insights: ensure each category has narrative content
         if "insights" in report_data and report_data["insights"]:
             for insight in report_data["insights"]:
+                category_name = insight.get('category', 'unknown')
                 # Ensure narrative exists and is safe
-                insight["narrative"] = self._safe_section(insight.get("narrative"), f"No narrative available for {insight.get('category', 'this category')}.")
+                insight["narrative"] = self._safe_section(insight.get("narrative"), f"insight narrative for {category_name}") or f"<em>No narrative available for {category_name}.</em>" # Provide default if None
                 # Ensure checks list exists (it should, but good practice)
                 if "checks" not in insight:
                     insight["checks"] = []
         else:
             # Provide a default structure if insights are missing entirely
-            report_data["insights"] = [{"category": "General", "score": 0, "narrative": self._safe_section(None, "No insights available."), "checks": [] }]
+            report_data["insights"] = [{"category": "General", "score": 0, "narrative": "<em>No insights available.</em>", "checks": [] }]
 
         # Load template
         template = self.env.get_template('report.html')
@@ -184,7 +192,9 @@ class HTMLReportGenerator:
         }
 
         # Render HTML
-        html_content = template.render(**context)
+        # Filter context to remove None values before rendering to avoid issues in template
+        filtered_context = {k: v for k, v in context.items() if v is not None}
+        html_content = template.render(**filtered_context)
 
         # Write to file
         with open(output_path, 'w', encoding='utf-8') as f:

@@ -484,7 +484,7 @@ The details provided in this report offer specific insights into each category's
     
     def _generate_fallback_insights(self, category: str) -> str:
         """Generate fallback insights for a specific category"""
-        if category not in self.report_data["categories"]:
+        if not category in self.report_data["categories"]:
             return f"No data available for the {category} category."
             
         cat_data = self.report_data["categories"][category]
@@ -561,6 +561,7 @@ This automated analysis indicates areas where the repository demonstrates good p
         retries = 0
         last_content = ""
         current_messages = messages.copy() # Work with a copy
+        is_json_expected = "json" in section_name.lower() or any("\"" in msg["content"] for msg in messages if msg["role"] == "system" and "JSON format" in msg["content"]) # Heuristic
 
         while retries < max_retries:
             # Estimate size before sending continuation request
@@ -581,24 +582,69 @@ This automated analysis indicates areas where the repository demonstrates good p
                     logger.warning(f"Repeated content detected during continuation for '{section_name}', stopping.")
                     break
 
-                all_content += ("\n" if all_content else "") + result.strip()
+                # Append result cautiously, especially for JSON
+                if is_json_expected:
+                    # Try to append intelligently for JSON, assuming continuation starts mid-object
+                    if all_content.endswith('}') and result.strip().startswith('{'):
+                        # Avoid appending if it looks like two separate objects
+                        logger.warning(f"Potential separate JSON objects detected during continuation for '{section_name}', stopping.")
+                        break
+                    elif all_content and not all_content.endswith((',', '[', '{', ':')) and not result.strip().startswith((',', ']', '}', ':')):
+                         # Add a newline as separator if appending raw text parts that might form JSON later
+                         all_content += "\n" + result.strip()
+                    else:
+                         all_content += result.strip() # Append directly if syntax seems compatible
+                else:
+                    all_content += ("\n" if all_content else "") + result.strip() # Standard text append
+
                 last_content = result
 
-                # Improved heuristic for completeness check (check end punctuation and length)
-                ends_complete = result.strip().endswith(('.', '"', "'", ']', '}', '”', '’', '•', '—', '–', '…', '>', ')', '!', '?', '\n', ';'))
-                is_long_enough = len(result.strip()) > 50 # Avoid stopping on very short responses
+                # --- Completeness Check ---
+                complete = False
+                if is_json_expected:
+                    # Try parsing the combined content to check for valid JSON structure
+                    temp_json_str = None
+                    # Extract potential JSON (similar logic to _llm_request_json)
+                    match = re.search(r'```json\s*({[\s\S]*?})\s*```', all_content, re.IGNORECASE | re.DOTALL)
+                    if match: temp_json_str = match.group(1).strip()
+                    else:
+                        start = all_content.find('{')
+                        end = all_content.rfind('}')
+                        if start != -1 and end != -1 and end > start: temp_json_str = all_content[start : end + 1].strip()
 
-                if ends_complete and is_long_enough:
+                    if temp_json_str:
+                        try:
+                            dirtyjson.loads(temp_json_str) # Use dirtyjson for lenient check
+                            complete = True
+                            logger.debug(f"JSON for '{section_name}' appears complete after continuation.")
+                        except Exception as parse_error:
+                            # If parsing fails, it's likely incomplete, continue requesting
+                            logger.debug(f"JSON for '{section_name}' still incomplete after continuation attempt {retries+1}: {parse_error}")
+                            complete = False
+                    else:
+                        # No JSON structure found yet, likely still incomplete
+                        logger.debug(f"No JSON structure found yet for '{section_name}' after continuation attempt {retries+1}.")
+                        complete = False
+                else:
+                    # Standard text completeness check
+                    ends_complete = result.strip().endswith(('.', '"', "'", ']', '}', '”', '’', '•', '—', '–', '…', '>', ')', '!', '?', '\n', ';'))
+                    is_long_enough = len(result.strip()) > 50
+                    complete = ends_complete and is_long_enough
+
+                if complete:
                     logger.debug(f"Response for '{section_name}' appears complete.")
                     break
+                # --- End Completeness Check ---
+
 
                 # Request continuation
-                logger.warning(f"LLM output for '{section_name}' may be truncated, requesting continuation (retry {retries+1})")
+                logger.warning(f"LLM output for '{section_name}' may be truncated or incomplete, requesting continuation (retry {retries+1})")
                 # Add the assistant's response and the user's continuation request
-                current_messages.append({"role": "assistant", "content": result})
-                current_messages.append({"role": "user", "content": f"Continue the previous answer for the {section_name} section. Ensure you finish the thought or JSON structure."})
+                current_messages.append({"role": "assistant", "content": result}) # Add the raw result from this step
+                current_messages.append({"role": "user", "content": f"Continue the previous answer for the {section_name} section. Ensure you finish the thought or complete the JSON structure."})
                 retries += 1
 
+            # ... (exception handling remains the same) ...
             except (ValueError, ConnectionError, TimeoutError, requests.exceptions.RequestException) as e:
                  # Catch errors from query_llm (like 400 or timeout)
                  logger.error(f"Error during LLM continuation for {section_name}: {e}. Stopping continuation.")
@@ -609,6 +655,16 @@ This automated analysis indicates areas where the repository demonstrates good p
                  all_content += "\n\n[... response incomplete due to unexpected error ...]"
                  break
 
+        # Final cleanup attempt for JSON before returning
+        if is_json_expected and all_content:
+             match = re.search(r'```json\s*({[\s\S]*?})\s*```', all_content, re.IGNORECASE | re.DOTALL)
+             if match: return match.group(1).strip()
+             start = all_content.find('{')
+             end = all_content.rfind('}')
+             if start != -1 and end != -1 and end > start: return all_content[start : end + 1].strip()
+             # If cleanup fails, return raw content for _llm_request_json to handle
+             return all_content
+
         return all_content if all_content else f"[Content unavailable for {section_name} due to LLM error.]"
 
     def _safe_llm_query(self, messages, fallback_func=None, section_name="section", **fallback_kwargs):
@@ -618,14 +674,12 @@ This automated analysis indicates areas where the repository demonstrates good p
             estimated_tokens = sum(self._calculate_token_estimate(msg["content"]) for msg in messages)
             if estimated_tokens > self.LLM_MAX_TOKEN_ESTIMATE:
                  logger.warning(f"Initial prompt for '{section_name}' is large ({estimated_tokens} tokens). Attempting anyway, but may fail or use fallback.")
-                 # Future enhancement: Implement chunking here if needed for non-JSON text
 
             result = self._llm_complete_until_stop(messages, section_name)
             if not result or not result.strip() or "[Content unavailable" in result or "[... response incomplete" in result:
                  raise ValueError(f"LLM returned empty or error state for {section_name}")
             return result
         except (ValueError, ConnectionError, TimeoutError, requests.exceptions.RequestException) as e:
-             # Catch errors from query_llm or _llm_complete_until_stop
              logger.warning(f"LLM query failed for '{section_name}', using fallback: {e}")
              if fallback_func:
                  try:
@@ -675,14 +729,13 @@ This automated analysis indicates areas where the repository demonstrates good p
 
 
         raw_result = ""
+        json_str = None # Define json_str outside try block
         try:
-            # ... (token estimation remains the same) ...
-
+            # Use _llm_complete_until_stop which now tries harder for JSON
             raw_result = self._llm_complete_until_stop(messages, section_name)
 
-            # Attempt to clean and extract JSON more robustly
-            json_str = None
-            # 1. Look for ```json blocks
+            # JSON extraction logic (remains largely the same, but acts on potentially completed raw_result)
+            # 1. Look for ```json blocks first (less likely now but safe)
             match = re.search(r'```json\s*({[\s\S]*?})\s*```', raw_result, re.IGNORECASE | re.DOTALL)
             if match:
                 json_str = match.group(1).strip()
@@ -693,25 +746,24 @@ This automated analysis indicates areas where the repository demonstrates good p
                 end = raw_result.rfind('}')
                 if start != -1 and end != -1 and end > start:
                     json_str = raw_result[start : end + 1].strip()
-                    # Check if the extracted string looks like JSON (basic check)
                     if not (json_str.startswith('{') and json_str.endswith('}')):
                          logger.warning(f"Extracted string for {section_name} doesn't look like JSON, might be partial.")
-                         json_str = None # Reset if extraction seems wrong
+                         json_str = None
                     else:
                          logger.debug(f"Extracted JSON using find '{{' and '}}' for {section_name}")
-                # 3. If the whole string starts/ends with braces (already checked by find)
-                # elif raw_result.strip().startswith('{') and raw_result.strip().endswith('}'):
-                #      json_str = raw_result.strip()
-                #      logger.debug(f"Using raw stripped result as JSON for {section_name}")
+                else:
+                     # If the raw result itself looks like JSON (after _llm_complete_until_stop cleanup)
+                     if raw_result.strip().startswith('{') and raw_result.strip().endswith('}'):
+                          json_str = raw_result.strip()
+                          logger.debug(f"Using potentially completed raw result as JSON for {section_name}")
 
 
             if not json_str:
-                 logger.warning(f"Could not extract a potential JSON object from LLM response for {section_name}. Response:\n{raw_result[:1000]}...")
+                 logger.warning(f"Could not extract a potential JSON object from LLM response for {section_name}. Raw Response (first 1000 chars):\n{raw_result[:1000]}...")
                  raise json.JSONDecodeError("No JSON object found or extracted", raw_result, 0)
 
             # Try parsing with dirtyjson first, then standard json
             try:
-                # import dirtyjson # Already imported at top level
                 result_json = dirtyjson.loads(json_str)
                 logger.debug(f"Successfully parsed JSON for {section_name} (using dirtyjson)")
             except ImportError:
@@ -720,12 +772,13 @@ This automated analysis indicates areas where the repository demonstrates good p
                      result_json = json.loads(json_str)
                      logger.debug(f"Successfully parsed JSON for {section_name} (standard parser)")
                  except json.JSONDecodeError as json_e:
-                     # Log more details on standard JSON failure
                      logger.error(f"Standard json.loads failed for {section_name}: {json_e}")
+                     # Log the actual string that failed parsing
                      logger.error(f"Failed JSON string (first 1000 chars):\n{json_str[:1000]}")
-                     raise json_e # Re-raise to trigger fallback
+                     raise json_e
             except Exception as dj_e: # Catch potential dirtyjson errors too
                  logger.error(f"dirtyjson parsing failed for {section_name}: {dj_e}")
+                 # Log the actual string that failed parsing
                  logger.error(f"Failed JSON string (first 1000 chars):\n{json_str[:1000]}")
                  # Try standard json as a last resort if dirtyjson fails
                  try:
@@ -733,8 +786,8 @@ This automated analysis indicates areas where the repository demonstrates good p
                      logger.debug(f"Successfully parsed JSON for {section_name} (standard parser after dirtyjson failed)")
                  except json.JSONDecodeError as json_e:
                      logger.error(f"Standard json.loads also failed for {section_name}: {json_e}")
-                     raise json_e # Re-raise to trigger fallback
-
+                     logger.error(f"Failed JSON string (first 1000 chars):\n{json_str[:1000]}")
+                     raise json_e
 
             # ... (missing key check remains the same) ...
             missing_keys = [k for k in expected_keys if k not in result_json]
@@ -743,13 +796,16 @@ This automated analysis indicates areas where the repository demonstrates good p
                 for k in missing_keys:
                     result_json[k] = f"[Content missing for {k}]"
 
-
             return result_json
 
         except (ValueError, ConnectionError, TimeoutError, requests.exceptions.RequestException, json.JSONDecodeError) as e:
              logger.warning(f"Failed to get valid JSON from LLM for {section_name}: {e}")
              # Log more of the raw response on failure
              logger.warning(f"Raw LLM response for {section_name} (first 1000 chars):\n{raw_result[:1000]}...")
+             # Log the extracted json_str if it exists and parsing failed
+             if json_str and isinstance(e, (json.JSONDecodeError, dirtyjson.error.Error)):
+                 logger.warning(f"Extracted JSON string that failed parsing (first 1000 chars):\n{json_str[:1000]}...")
+
              # ... (fallback logic remains the same) ...
              if fallback_func:
                  try:
@@ -861,7 +917,7 @@ This automated analysis indicates areas where the repository demonstrates good p
         # Executive summary (JSON format)
         summary_prompt = [
             {"role": "system", "content": "You are a senior software analysis expert creating a premium, in-depth repository health report for paying users. Your analysis should be detailed, actionable, and highly valuable."},
-            {"role": "user", "content": f"Write a comprehensive executive summary for a GitHub repository health analysis. Include: 1) an overview of the repository's purpose and context, 2) a summary of the overall health and key metrics, 3) unique strengths and best practices found, 4) critical risks or weaknesses, 5) actionable opportunities for improvement, and 6) a closing statement on the repository's future potential. Repository: {repo_name}, Overall health score: {self.report_data['overall_score']}/100. Category scores: {json.dumps([(k, v['score']) for k, v in self.report_data['categories'].items()])}."}
+            {"role": "user", "content": f"Write a comprehensive executive summary for a GitHub repository health analysis. Include: 1) an overview of the repository's purpose and context, 2) a summary of the overall health and key metrics, 3) unique strengths and best practices found, 4) critical risks or weaknesses, 5) most important actionable opportunities for improvement, and 6) a closing statement on the repository's future potential. Repository: {repo_name}, Overall health score: {self.report_data['overall_score']}/100. Category scores: {json.dumps([(k, v['score']) for k, v in self.report_data['categories'].items()])}."}
         ]
         
         summary_result = self._llm_request_json(
