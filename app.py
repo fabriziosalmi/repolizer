@@ -97,7 +97,25 @@ def login():
                  flash('User not found.', 'error') # Should not happen if users dict is correct
         else:
             flash('Invalid username or password.', 'error')
-
+    # Render login.html template (You need to create this file)
+    # Example: templates/login.html
+    # <!doctype html>
+    # <html><body>
+    #   <h2>Login</h2>
+    #   {% with messages = get_flashed_messages(with_categories=true) %}
+    #     {% if messages %}
+    #       {% if messages %}
+    #         {% for category, message in messages %}
+    #           <div class="alert alert-{{ category }}">{{ message }}</div>
+    #         {% endfor %}
+    #       {% endif %}
+    #     {% endwith %}
+    #   <form method="post">
+    #     Username: <input type="text" name="username"><br>
+    #     Password: <input type="password" name="password"><br>
+    #     <button type="submit">Login</button>
+    #   </form>
+    # </body></html>
     return render_template('login.html') # Make sure this template exists
 
 @app.route('/logout')
@@ -476,7 +494,6 @@ def stop_scraper():
         }), 500
 
 @app.route('/')
-@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def index():
     # Publicly accessible
     return render_template('repo_viewer.html')
@@ -487,7 +504,6 @@ def scraper():
     return render_template('repo_scraper.html')
 
 @app.route('/repositories.jsonl')
-@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def serve_repos_file():
     # Serve the repositories.jsonl file directly
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
@@ -505,7 +521,6 @@ def serve_repos_file():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
 
 @app.route('/results.jsonl')
-@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def serve_results_file():
     # Serve the results.jsonl file directly - this is for analyzed repos
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
@@ -524,7 +539,6 @@ def serve_results_file():
 
 # Add endpoint to serve any result file
 @app.route('/results/<filename>')
-@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def serve_result_file(filename):
     # Security check - only allow specific file extensions
     allowed_extensions = ['.jsonl', '.json']
