@@ -334,6 +334,113 @@
             .repo-meta { flex-direction: column; gap: 8px; align-items: center; }
             .dark-toggle { right: 10px; top: 10px; }
         }
+        .category-card a {
+            text-decoration: none;
+            color: inherit; /* Inherit text color from parent */
+            display: block; /* Make the link fill the card */
+        }
+
+        /* Category Analysis Header */
+        .category-header {
+            display: flex;
+            align-items: center; /* Vertically align items */
+            gap: 15px; /* Space between title, score text, and bar */
+            margin-bottom: 15px; /* Space below header */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+        .category-header h2 {
+            margin: 0; /* Remove default margins */
+            border-bottom: none; /* Remove border from h2 */
+            flex-grow: 1; /* Allow title to take up space */
+            min-width: 150px; /* Prevent title from becoming too small */
+        }
+        .category-header .category-score-text { /* Style for the "Overall Score: XX.XX" text */
+            font-weight: bold;
+            white-space: nowrap; /* Prevent score text wrapping */
+            font-size: 1.1em;
+        }
+        .category-overall-score-bar-container { /* Container for the overall category score bar */
+            flex-basis: 200px; /* Give the bar a base width */
+            flex-grow: 2; /* Allow it to grow */
+            height: 25px; /* Slightly taller bar */
+            background-color: var(--secondary);
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .dark-mode .category-overall-score-bar-container {
+             background-color: #374151;
+             border-color: #4b5563;
+        }
+        .category-overall-score-bar-inner { /* Inner part of the overall category score bar */
+            height: 100%;
+            border-radius: 4px 0 0 4px;
+            transition: width 0.5s ease-in-out;
+            box-shadow: inset -2px 0 4px rgba(0,0,0,0.1);
+        }
+        /* Apply score colors to the overall bar */
+        .category-overall-score-bar-inner.score-high { background-color: var(--success); }
+        .category-overall-score-bar-inner.score-medium { background-color: var(--warning); }
+        .category-overall-score-bar-inner.score-low { background-color: var(--danger); }
+
+
+        /* Check Details */
+        .check-details {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        .check-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 10px; /* Reduced gap */
+        }
+        .check-name {
+            flex: 1; /* Allow name to take available space */
+            font-weight: 500;
+            min-width: 150px; /* Ensure name doesn't get too squished */
+            margin-right: 5px; /* Add some space before the bar */
+        }
+        .score-bar-container {
+            flex: 2; /* Allow bar to take more space */
+            height: 18px; /* Slightly shorter bar for checks */
+            background-color: var(--secondary);
+            border-radius: 4px; /* Fully rounded */
+            overflow: hidden;
+            border: 1px solid var(--border);
+            /* Removed position relative */
+        }
+        .dark-mode .score-bar-container {
+             background-color: #374151; /* Darker background for dark mode */
+             border-color: #4b5563;
+        }
+        .score-bar-inner {
+            height: 100%;
+            border-radius: 3px 0 0 3px; /* Match container rounding */
+            /* Removed text alignment, color, padding, font-size, line-height, white-space */
+            transition: width 0.5s ease-in-out;
+            box-shadow: inset -2px 0 4px rgba(0,0,0,0.1);
+        }
+        .check-score-value { /* Style for the score value next to the bar */
+            font-weight: bold;
+            font-size: 0.9em;
+            min-width: 35px; /* Ensure space for "100.0" */
+            text-align: right;
+            color: var(--text);
+        }
+        .dark-mode .check-score-value {
+            color: var(--text);
+        }
+
+        /* Score colors applied to the inner bar */
+        .score-bar-inner.score-high { background-color: var(--success); }
+        .score-bar-inner.score-medium { background-color: var(--warning); } /* Removed text color */
+        .score-bar-inner.score-low { background-color: var(--danger); }
+
+        /* Removed dark mode text color adjustments for medium score bar */
+
+        /* ... rest of existing styles ... */
     </style>
     <script>
     // Dark mode toggle
@@ -403,60 +510,92 @@
             <h2 id="category-scores">Category Scores</h2>
             <div class="category-grid">
                 {% for category, data in categories.items() %}
-                <div class="category-card">
-                    <div class="category-name">
-                        {% if category == 'code_quality' %}
-                            Code
-                        {% elif category == 'ci_cd' %}
-                            CI/CD
-                        {% else %}
-                            {{ category.capitalize() }}
-                        {% endif %}
+                <a href="#analysis-{{ category }}" style="text-decoration: none; color: inherit;">
+                    <div class="category-card">
+                        <div class="category-name">
+                            {% if category == 'code_quality' %}
+                                Code
+                            {% elif category == 'ci_cd' %}
+                                CI/CD
+                            {% else %}
+                                {{ category.capitalize() }}
+                            {% endif %}
+                        </div>
+                        <div class="category-score {{ 'score-high' if data.score >= 70 else 'score-medium' if data.score >= 40 else 'score-low' }}">
+                            {{ "%.2f"|format(data.score) }}
+                        </div>
+                        <div>
+                            <span class="health-indicator {{ 'health-good' if data.score >= 70 else 'health-medium' if data.score >= 40 else 'health-poor' }}"></span>
+                            {{ data.checks|length }} checks performed
+                        </div>
                     </div>
-                    <div class="category-score {{ 'score-high' if data.score >= 70 else 'score-medium' if data.score >= 40 else 'score-low' }}">
-                        {{ "%.2f"|format(data.score) }}
-                    </div>
-                    <div>
-                        <span class="health-indicator {{ 'health-good' if data.score >= 70 else 'health-medium' if data.score >= 40 else 'health-poor' }}"></span>
-                        {{ data.checks|length }} checks performed
-                    </div>
-                </div>
+                </a>
                 {% endfor %}
             </div>
             <h2 id="visualizations">Visualizations</h2>
             <div class="visualizations">
-                {% for viz in visualizations %}
+                {% if visualizations %}
                 <div class="visualization">
-                    <img src="{{ viz }}" alt="Repository Health Visualization">
+                    <img src="{{ visualizations[0] }}" alt="Repository Health Radar Chart">
                     <div class="viz-caption">
-                        {% if loop.index == 1 %}
                         Radar chart showing the distribution of scores across different categories
-                        {% else %}
-                        Bar chart comparing category scores
-                        {% endif %}
                     </div>
                 </div>
-                {% endfor %}
+                {% else %}
+                <p>No visualizations available.</p>
+                {% endif %}
             </div>
             <h2 id="category-analysis">Category Analysis</h2>
             {% for insight in insights %}
-            <div class="category-analysis {{ 'high-score' if insight.score >= 70 else 'medium-score' if insight.score >= 40 else 'low-score' }}">
-                <h2 style="font-size: 1.8em; margin-top: 0;">
-                    {% if insight.category == 'code_quality' %}
-                        Code
-                    {% elif insight.category == 'ci_cd' %}
-                        CI/CD
-                    {% else %}
-                        {{ insight.category.capitalize() }}
-                    {% endif %}
-                </h2>
-                <div class="category-score {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
-                    <span class="health-indicator {{ 'health-good' if insight.score >= 70 else 'health-medium' if insight.score >= 40 else 'health-poor' }}"></span>
-                    Score: {{ "%.2f"|format(insight.score) }}
+            <div id="analysis-{{ insight.category }}" class="category-analysis {{ 'high-score' if insight.score >= 70 else 'medium-score' if insight.score >= 40 else 'low-score' }}">
+                {# New Category Header Layout #}
+                <div class="category-header">
+                    <h2 style="font-size: 1.6em;"> {# Adjusted font size slightly #}
+                        {% if insight.category == 'code_quality' %}
+                            Code
+                        {% elif insight.category == 'ci_cd' %}
+                            CI/CD
+                        {% else %}
+                            {{ insight.category.capitalize() }}
+                        {% endif %}
+                    </h2>
+                    <div class="category-score-text {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}">
+                        <span class="health-indicator {{ 'health-good' if insight.score >= 70 else 'health-medium' if insight.score >= 40 else 'health-poor' }}"></span>
+                        {{ "%.1f"|format(insight.score) }} / 100 {# Simplified score text #}
+                    </div>
+                    <div class="category-overall-score-bar-container">
+                        <div class="category-overall-score-bar-inner {{ 'score-high' if insight.score >= 70 else 'score-medium' if insight.score >= 40 else 'score-low' }}"
+                             style="width: {{ insight.score }}%;"
+                             title="Overall Score: {{ "%.1f"|format(insight.score) }}/100">
+                        </div>
+                    </div>
                 </div>
-                <div class="markdown">
-                    {{ insight.text|markdown_to_html|safe }}
+
+                {# Display the overall category narrative #}
+                <div class="markdown" style="margin-top: 5px; margin-bottom: 20px;"> {# Adjusted margins #}
+                    {{ insight.narrative|markdown_to_html|safe }}
                 </div>
+
+                {# Display individual checks with score bars #}
+                {% if insight.checks %}
+                <div class="check-details">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1em; color: var(--primary);">Check Details</h3>
+                    {% for check in insight.checks %}
+                    <div class="check-item">
+                        <div class="check-name">{{ check.name }}</div>
+                        <div class="score-bar-container">
+                            <div class="score-bar-inner {{ 'score-high' if check.score >= 70 else 'score-medium' if check.score >= 40 else 'score-low' }}"
+                                 style="width: {{ check.score }}%;"
+                                 title="Score: {{ "%.1f"|format(check.score) }}/100">
+                                {# Score value removed from here #}
+                            </div>
+                        </div>
+                        {# Score value added outside the bar #}
+                        <div class="check-score-value">{{ "%.1f"|format(check.score) }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </main>

@@ -114,14 +114,14 @@ class HTMLReportGenerator:
         
         logger.info(f"Generating HTML report for {repo_name}")
         
-        # Process recommendations for better formatting
-        if "recommendations" in report_data and report_data["recommendations"]:
-            recs = self._normalize_recommendations(report_data["recommendations"])
-            report_data["recommendations"] = [self._markdown_to_html(r) for r in recs]
-        else:
-            report_data["recommendations"] = [self._safe_section(None, "No recommendations available.")]
+        # Process recommendations (if they exist - currently removed in previous step, but keeping logic just in case)
+        # if "recommendations" in report_data and report_data["recommendations"]:
+        #     recs = self._normalize_recommendations(report_data["recommendations"])
+        #     report_data["recommendations"] = [self._markdown_to_html(r) for r in recs]
+        # else:
+        #     report_data["recommendations"] = [self._safe_section(None, "No recommendations available.")]
 
-        # Remove the recommendations key from the report data
+        # Remove the recommendations key from the report data if it exists
         report_data.pop("recommendations", None)
 
         # Ensure all narrative sections are robust
@@ -130,12 +130,18 @@ class HTMLReportGenerator:
         report_data["strengths_risks"] = self._safe_section(report_data.get("strengths_risks"), "No strengths/risks available.")
         report_data["next_steps"] = self._safe_section(report_data.get("next_steps"), "No next steps available.")
         report_data["resources"] = self._safe_section(report_data.get("resources"), "No resources available.")
-        # Insights: ensure each category has content
+        
+        # Insights: ensure each category has narrative content
         if "insights" in report_data and report_data["insights"]:
             for insight in report_data["insights"]:
-                insight["text"] = self._safe_section(insight.get("text"), f"No insight available for {insight.get('category', 'this category')}.")
+                # Ensure narrative exists and is safe
+                insight["narrative"] = self._safe_section(insight.get("narrative"), f"No narrative available for {insight.get('category', 'this category')}.")
+                # Ensure checks list exists (it should, but good practice)
+                if "checks" not in insight:
+                    insight["checks"] = []
         else:
-            report_data["insights"] = [{"category": "General", "score": 0, "text": self._safe_section(None, "No insights available.") }]
+            # Provide a default structure if insights are missing entirely
+            report_data["insights"] = [{"category": "General", "score": 0, "narrative": self._safe_section(None, "No insights available."), "checks": [] }]
 
         # Load template
         template = self.env.get_template('report.html')

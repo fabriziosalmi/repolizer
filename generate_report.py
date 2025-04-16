@@ -1026,65 +1026,45 @@ This automated analysis indicates areas where the repository demonstrates good p
         
         self.report_data["strengths_risks"] = sr_text
 
-        # Category insights with JSON structure
+        # Category insights with JSON structure - MODIFIED
         logger.info("Generating premium category insights")
         insights = []
         sorted_categories = sorted(
             self.report_data["categories"].items(),
             key=lambda x: x[1]["score"],
-            reverse=True
+            reverse=True # Keep sorting as is, or change if needed
         )
         
         for category, cat_data in sorted_categories:
             checks = cat_data["checks"]
-            insight_text = ""
-            
-            for check in checks:
-                check_name = check["name"]
-                check_score = check["score"]
-                check_status = check["status"]
-                check_details = check["details"]
-                check_suggestions = check["suggestions"]
+            category_score = cat_data["score"]
+            category_narrative = "" # Initialize narrative text
+
+            if self.llm_available:
+                # Generate overall narrative for the category using LLM
+                narrative_prompt = [
+                    {"role": "system", "content": f"You are a senior software engineering consultant. Write a concise (2-4 sentences) narrative summary for the '{category}' category based on its overall score. Explain what the score generally indicates about this aspect of the repository."},
+                    {"role": "user", "content": f"Category: {category}, Overall Score: {category_score}/100. Provide a brief narrative insight."}
+                ]
                 
-                if self.llm_available:
-                    # Use LLM to enrich check score with comment
-                    check_prompt = [
-                        {"role": "system", "content": f"You are a senior software engineering consultant. Write a detailed comment for the '{check_name}' check in the '{category}' category."},
-                        {"role": "user", "content": f"Check: {check_name}, Score: {check_score}/100, Status: {check_status}, Details: {json.dumps(check_details)}"}
-                    ]
-                    
-                    check_comment = self._llm_request_json(
-                        check_prompt,
-                        ["comment"],
-                        fallback_func=lambda: {"comment": "No comment available."},
-                        section_name=f"{check_name} comment"
-                    )
-                    
-                    insight_text += f"""### {check_name}
+                narrative_result = self._llm_request_json(
+                    narrative_prompt,
+                    ["narrative"],
+                    fallback_func=lambda: {"narrative": f"The score of {category_score}/100 for {category} indicates its current standing. Further details are in the checks below."},
+                    section_name=f"{category} narrative"
+                )
+                category_narrative = narrative_result.get('narrative', '')
+            else:
+                # Fallback narrative if LLM is not available
+                score_level = "strong" if category_score >= 70 else "moderate" if category_score >= 40 else "needs improvement"
+                category_narrative = f"The {category} category received a score of {category_score}/100, indicating a {score_level} level. See individual check scores below for details."
 
-Score: {check_score}/100
-Status: {check_status}
-
-{check_comment.get('comment', '')}
-
-"""
-                else:
-                    # Use existing suggestions or score
-                    insight_text += f"""### {check_name}
-
-Score: {check_score}/100
-Status: {check_status}
-
-"""
-                    if check_suggestions:
-                        insight_text += "Suggestions:\n"
-                        for suggestion in check_suggestions:
-                            insight_text += f"- {suggestion}\n"
-            
+            # Add structured insight data including checks
             insights.append({
                 "category": category,
-                "score": cat_data["score"],
-                "text": insight_text
+                "score": category_score,
+                "narrative": category_narrative, # Store the narrative text
+                "checks": checks # Pass the raw checks data
             })
             
         self.report_data["insights"] = insights
@@ -1211,15 +1191,12 @@ Status: {check_status}
         logger.info(f"Generating radar chart: {radar_path.name}")
         self._generate_category_radar_chart(radar_path)
         
-        # Generate category scores bar chart
-        bar_path = visualization_dir / f"{repo_name.replace('/', '_')}_categories.png"
-        logger.info(f"Generating bar chart: {bar_path.name}")
-        self._generate_category_bar_chart(bar_path)
+        # Removed bar chart generation call
         
-        # Store paths to visualizations
+        # Store paths to visualizations (only radar chart now)
         self.report_data["visualizations"] = [
-            str(radar_path),
-            str(bar_path)
+            str(radar_path)
+            # Removed bar_path
         ]
         
         elapsed_time = time.time() - start_time
@@ -1254,40 +1231,6 @@ Status: {check_status}
         except Exception as e:
             logger.error(f"Error generating radar chart: {e}")
 
-    def _generate_category_bar_chart(self, output_path: Path) -> None:
-        """Generate a bar chart of category scores with a flat color palette"""
-        try:
-            categories_sorted = sorted(
-                self.report_data["categories"].items(),
-                key=lambda x: x[1]["score"]
-            )
-            categories = [cat.capitalize() for cat, _ in categories_sorted]
-            scores = [data["score"] for _, data in categories_sorted]
-            # Use a flat color palette for bars
-            palette = ['#2563eb', '#10b981', '#f59e42', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#f97316', '#14b8a6', '#f43f5e']
-            colors = [palette[i % len(palette)] for i in range(len(scores))]
-            fig, ax = plt.subplots(figsize=(12, 8))
-            bars = ax.barh(categories, scores, color=colors)
-            for i, bar in enumerate(bars):
-                ax.text(
-                    min(bar.get_width() + 2, 98),
-                    bar.get_y() + bar.get_height()/2,
-                    f'{scores[i]:.1f}',
-                    va='center'
-                )
-            ax.set_xlim(0, 100)
-            ax.set_xlabel('Score (0-100)', fontsize=12)
-            ax.set_ylabel('Categories', fontsize=12)
-            ax.grid(True, axis='x', linestyle='--', alpha=0.7)
-            repo_name = self.report_data["repository"].get("full_name", "Unknown")
-            plt.title(f"Repository Health Category Scores: {repo_name}", fontsize=14)
-            plt.tight_layout()
-            plt.savefig(output_path, dpi=300, bbox_inches='tight')
-            plt.close()
-            logger.info(f"Category bar chart saved to {output_path}")
-        except Exception as e:
-            logger.error(f"Error generating bar chart: {e}")
-    
     def generate_pdf_report(self) -> str:
         """Generate a PDF report from the analysis data"""
         logger.info("Starting PDF report generation")
