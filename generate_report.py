@@ -292,7 +292,7 @@ class ReportGenerator:
         
         # Store basic repository information
         self.report_data["repository"] = data["repository"]
-        self.report_data["overall_score"] = data.get("overall_score", 0)
+        self.report_data["overall_score"] = round(data.get("overall_score", 0), 2)
         self.report_data["timestamp"] = data.get("timestamp", datetime.now().isoformat())
         
         logger.info(f"Overall score: {self.report_data['overall_score']}/100")
@@ -314,15 +314,17 @@ class ReportGenerator:
                     
                     for check_name, check_result in category_data.items():
                         if isinstance(check_result, dict) and "score" in check_result:
-                            scores.append(check_result["score"])
+                            # Round individual check scores
+                            check_score = round(check_result["score"], 2)
+                            scores.append(check_score)
                             check_details.append({
                                 "name": check_name,
-                                "score": check_result["score"],
+                                "score": check_score,
                                 "status": check_result.get("status", "completed"),
                                 "details": check_result.get("details", {})
                             })
                     
-                    avg_score = sum(scores) / len(scores) if scores else 0
+                    avg_score = round(sum(scores) / len(scores), 2) if scores else 0
                     
                     self.report_data["categories"][category] = {
                         "score": avg_score,
