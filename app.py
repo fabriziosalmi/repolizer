@@ -97,25 +97,7 @@ def login():
                  flash('User not found.', 'error') # Should not happen if users dict is correct
         else:
             flash('Invalid username or password.', 'error')
-    # Render login.html template (You need to create this file)
-    # Example: templates/login.html
-    # <!doctype html>
-    # <html><body>
-    #   <h2>Login</h2>
-    #   {% with messages = get_flashed_messages(with_categories=true) %}
-    #     {% if messages %}
-    #       {% if messages %}
-    #         {% for category, message in messages %}
-    #           <div class="alert alert-{{ category }}">{{ message }}</div>
-    #         {% endfor %}
-    #       {% endif %}
-    #     {% endwith %}
-    #   <form method="post">
-    #     Username: <input type="text" name="username"><br>
-    #     Password: <input type="password" name="password"><br>
-    #     <button type="submit">Login</button>
-    #   </form>
-    # </body></html>
+
     return render_template('login.html') # Make sure this template exists
 
 @app.route('/logout')
@@ -495,6 +477,7 @@ def stop_scraper():
 
 @app.route('/')
 def index():
+@timed_cache(seconds=60*5)  # Cache for 5 minutes
     # Publicly accessible
     return render_template('repo_viewer.html')
 
