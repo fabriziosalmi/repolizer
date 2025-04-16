@@ -403,7 +403,28 @@
       }
       
       // First try the specified results file
-      const response = await fetch(resultPath);
+      const fetchOptions = {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        mode: 'cors',
+        cache: 'no-store',
+        credentials: 'same-origin'
+      };
+      
+      console.log('Fetching repository data...');
+      
+      // Use a try-catch block for the fetch operation
+      let response;
+      try {
+        response = await fetch(resultPath, fetchOptions);
+      } catch (fetchError) {
+        console.error('Fetch error:', fetchError);
+        throw new Error(`Network error fetching ${resultPath}. Please check your connection and try again.`);
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
@@ -472,7 +493,7 @@
         // ... (rest of fallback logic using repositories.jsonl) ...
         // Note: Fallback currently doesn't deduplicate, might need adjustment if duplicates exist there too.
         try {
-            const fallbackResponse = await fetch('repositories.jsonl');
+            const fallbackResponse = await fetch('repositories.jsonl', fetchOptions);
             if (fallbackResponse.ok) {
                 const fallbackText = await fallbackResponse.text();
                 if (fallbackText.trim()) {
