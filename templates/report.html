@@ -457,6 +457,37 @@
             </section>
             {% endif %}
 
+            {# Share Report Section - NEW #}
+            <h2 id="share-report" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Share Report</h2>
+            <section class="mb-8 text-center">
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Share this health report with your team or network:</p>
+                <div class="flex justify-center items-center space-x-4">
+                    {# Email Share #}
+                    <a href="mailto:?subject=Repository%20Health%20Report%20for%20{{ repo.full_name | urlencode }}&body=Hi%2C%0A%0APlease%20find%20the%20attached%20repository%20health%20report%20for%20'{{ repo.full_name | urlencode }}'.%0A%0A(Note%3A%20You%20may%20need%20to%20manually%20attach%20the%20HTML%20file%20to%20the%20email.)%0A%0ARegards%2C"
+                       target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition duration-150 ease-in-out">
+                        <i class="fas fa-envelope mr-2"></i> Email
+                    </a>
+
+                    {# LinkedIn Share - Note: Requires a public URL for full functionality #}
+                    {# This link pre-fills text, user needs to add URL/file manually #}
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url="
+                       onclick="alert('LinkedIn sharing requires a public URL. Please copy the report link or share the file directly.'); return false;"
+                       target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                        <i class="fab fa-linkedin mr-2"></i> LinkedIn
+                    </a>
+
+                    {# WhatsApp Share #}
+                    <a href="https://wa.me/?text=Check%20out%20the%20Repository%20Health%20Report%20for%20'{{ repo.full_name | urlencode }}'.%20(You%20might%20need%20to%20share%20the%20file%20separately)"
+                       target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out">
+                        <i class="fab fa-whatsapp mr-2"></i> WhatsApp
+                    </a>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">(Sharing may require manually attaching the report file or providing a link if hosted.)</p>
+            </section>
+
             {# Resources Section - UPDATED: Title moved outside card #}
             {% if resources and 'No resources' not in resources %}
             <h2 id="resources" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Recommended Resources</h2>

@@ -368,8 +368,8 @@ class ReportGenerator:
             payload = {
                 "model": self.llm_model,
                 "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 4096, # Set a reasonable max_tokens for the response itself
+                "temperature": 0.1,
+                "max_tokens": 8192, # Set a reasonable max_tokens for the response itself
                 "stream": False
             }
 
