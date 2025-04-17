@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repolizer Check Analysis Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: sans-serif; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+        .details-cell { max-width: 400px; overflow-wrap: break-word; word-wrap: break-word; }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="container mx-auto bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold mb-4 text-gray-800">Repolizer Check Analysis</h1>
+        <div class="overflow-x-auto">
+            <table class="min-w-full table-auto text-sm">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-2">Category</th>
+                        <th class="px-4 py-2">Check Name</th>
+                        <th class="px-4 py-2 text-center">Status</th>
+                        <th class="px-4 py-2 text-right">Score</th>
+                        <th class="px-4 py-2 text-center">Has Feature</th>
+                        <th class="px-4 py-2 details-cell">Details Count/Items</th>
+                        <th class="px-4 py-2 text-center">Issues Found</th>
+                        <th class="px-4 py-2 text-center">Recommendation</th>
+                        <th class="px-4 py-2">Error</th>
+                    </tr>
+                </thead>
+                <tbody>
+    
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Readme Completeness</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">85.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Sections: freeCodeCamp.org&#x27;s open-source codebase and curriculum, Table of Contents, Certifications, 1. [Responsive Web Design Certification](https://</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Documentation Check</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">22.5</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Documentation Score: 22.5</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Contributing Guidelines</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">82.1</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Contributing Score: 82.1</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Code Comments</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Installation Guide</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Installation Score: 0.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Example Usage</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">29.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Examples Score: 29.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Troubleshooting</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Troubleshooting Score: 0.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Changelog</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">No</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Changelog Score: 0.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Code Of Conduct</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">50.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Coc Score: 50.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">documentation</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">License File</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">65.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">License Score: 65.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Secret Leakage</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">60.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Potential Secrets Found: 436</td>
+                        <td class="px-4 py-2 text-center text-orange-600 font-semibold">Yes (436)</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Logging</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">85.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Logging Security Score: 85.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Encryption</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">82.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 45</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Client Side</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">100.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Frameworks Detected: vue, jquery, react, angular</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Cors</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">80.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Frameworks Detected: express, flask</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Input Validation</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">100.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Validation Libraries Detected: react-hook-form, joi, zod, express-validator, class-validator, yup</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Session Management</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">50.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 235</td>
+                        <td class="px-4 py-2 text-center text-orange-600 font-semibold">Yes (98)</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Http Headers</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">80.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1074</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Authorization</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">85.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Authorization Score: 85.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Authentication</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">100.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Authentication Score: 100.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">security</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Dependency Vulnerabilities</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">100.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Dependency Vulnerability Score: 100.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Configuration</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">75.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 18</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Logging</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">86.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1067</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Error Messages</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">41.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1067</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Code Review</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">57.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 4</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Code Organization</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">10.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Organization Score: 10.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Onboarding</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">70.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 7</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Technical Documentation</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">35.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Modularity</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">52.3</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1067</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Documentation Quality</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">29.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 51</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">maintainability</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Dependency Management</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">75.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 2</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Dependency Freshness</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 21</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Code Style</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">70.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1072</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Complexity</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">90.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1067</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Documentation Coverage</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">29.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 135</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Technical Debt</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1156</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Type Safety</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">59.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 29</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Linting</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">75.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1151</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Code Smells</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">80.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 200</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">code_quality</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Code Duplication</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">40.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1111</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Documentation</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">52.2</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Doc Quality Score: 3.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Reliability</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Speed</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">50.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Test Speed Score: 50.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Coverage</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">20.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Test Coverage Score: 20.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Unittests</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">75.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Frameworks Detected: rspec, pytest, mocha, jest, jasmine</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">E2E</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">55.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">E2E Tests Score: 55.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Integration</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">49.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Integration Tests Score: 49.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Mocking</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">80.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Mocking Score: 80.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Data</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">99.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Test Data Quality Score: 99.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">testing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Snapshot</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">83.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Snapshot Test Score: 83.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">License Compliance</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Third Party Code</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">20.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Copyright Headers</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">10.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 954</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">License Updates</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">90.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Spdx Identifiers</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 247</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Attribution</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">90.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">License Compatibility</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">60.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">License File</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">100.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">License File Score: 100.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Dependency Licenses</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">59.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Dependency License Score: 59.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">licensing</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Patent Clauses</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">10.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Community Events</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Community Check</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">54.7</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Responsiveness Score: 80.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Adoption Metrics</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Adoption Score: 0.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Issue Response Time</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Community Size</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Pull Request Handling</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">75.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Pr Handling Score: 75.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Contribution Guide</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Documentation Translations</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Translation Score: 0.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Code Of Conduct</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Support Channels</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">community</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Discussion Activity</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">N/A</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Database Queries</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">90.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 747</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Response Time</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">85.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Response Time Score: 85.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Render Performance</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">100.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Render Performance Score: 100.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Concurrency</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">90.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Concurrency Score: 90.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Cpu Usage</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">100.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 747</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Memory Usage</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">80.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Memory Usage Score: 80.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Asset Optimization</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">55.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Asset Optimization Score: 55.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Caching</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">88.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Caching Score: 88.0</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Lazy Loading</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">100.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1075</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">performance</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Bundle Size</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">80.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 621</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Zoom Compatibility</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1147</td>
+                        <td class="px-4 py-2 text-center text-orange-600 font-semibold">Yes (10)</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Text Alternatives</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">63.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 12674</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Color Contrast</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Analyzed: 31</td>
+                        <td class="px-4 py-2 text-center text-orange-600 font-semibold">Yes (1763)</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Wcag Compliance</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">34.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1147</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Screen Reader</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">74.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 405</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Keyboard Navigation</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1147</td>
+                        <td class="px-4 py-2 text-center text-orange-600 font-semibold">Yes (10)</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Aria Attributes</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">57.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 328</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Focus Management</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 1079</td>
+                        <td class="px-4 py-2 text-center text-orange-600 font-semibold">Yes (1)</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Motion Reduction</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">False</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 77</td>
+                        <td class="px-4 py-2 text-center text-orange-600 font-semibold">Yes (10)</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">accessibility</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Semantic Html</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">0.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 328</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">ci_cd</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Secret Management</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">15.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 752</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">ci_cd</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Pipeline Speed</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">76.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 18</td>
+                        <td class="px-4 py-2 text-center text-orange-600 font-semibold">Yes (4)</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">ci_cd</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Deployment Frequency</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-red-700 font-bold">30.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 18</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">Available</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">ci_cd</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Monitoring Integration</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">80.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 76</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">ci_cd</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Build Status</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">80.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 18</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">ci_cd</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Infrastructure As Code</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-green-700 font-bold">85.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 14361</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">ci_cd</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Environment Parity</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">53.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">Yes</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 14361</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-600">ci_cd</td>
+                        <td class="px-4 py-2 font-medium text-gray-900">Artifact Management</td>
+                        <td class="px-4 py-2 text-center text-green-600 font-semibold">completed</td>
+                        <td class="px-4 py-2 text-right text-yellow-700 font-bold">79.0</td>
+                        <td class="px-4 py-2 text-center text-gray-700">True</td>
+                        <td class="px-4 py-2 details-cell text-gray-700">Files Checked: 21</td>
+                        <td class="px-4 py-2 text-center text-green-600">No</td>
+                        <td class="px-4 py-2 text-center text-red-600">None</td>
+                        <td class="px-4 py-2 text-gray-500">None</td>
+                    </tr>
+        
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+    
