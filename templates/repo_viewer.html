@@ -196,7 +196,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen" style="background-color: #00DBDE; background-image: linear-gradient(90deg, #00DBDE 0%, #FC00FF 100%);">
+<body class="min-h-screen flex flex-col" style="background-color: #00DBDE; background-image: linear-gradient(90deg, #00DBDE 0%, #FC00FF 100%);">
     <!-- Share Modal - Added for better share UI -->
     <div id="share-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden transform transition-all">
@@ -292,7 +292,7 @@
         </div>
     </header>
 
-    <main class="container mx-auto p-4">
+    <main class="container mx-auto p-4 flex-grow">
         <div class="mb-6 flex justify-between items-center" style="display: none;"> <!-- Simple container for title and count -->
             <div class="text-sm text-gray-600">
                 <span id="repo-count" class="font-semibold" style="color: white; font-size: large;">0</span><span class="font-semibold" style="color: white; font-size: normal;"> repositories</span>
