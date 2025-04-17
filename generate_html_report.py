@@ -2,17 +2,63 @@ import json
 import os
 import html
 from collections import defaultdict
-import math  # Import math for isnan
+import math
+import re  # Import regex module
 
 RESULTS_FILE = "results.jsonl"
 SAMPLE_RESULTS_FILE = "sample_results.jsonl"
 OUTPUT_HTML_FILE = "repolizer_report.html"
+LOG_FILE_PATH = "logs/debug.log"  # Path to the debug log file
 
 CATEGORIES = [
     'documentation', 'security', 'maintainability', 'code_quality',
     'testing', 'licensing', 'community', 'performance',
     'accessibility', 'ci_cd'
 ]
+
+def read_and_parse_log_file(log_path):
+    """Reads and parses the debug log file."""
+    log_entries = []
+    log_pattern = re.compile(r'^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})\s+-\s+([\w.-]+)\s+-\s+(\w+)\s+-\s+(.*)$')
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        full_log_path = os.path.join(script_dir, log_path)
+        if not os.path.exists(full_log_path):
+            full_log_path = log_path
+            if not os.path.exists(full_log_path):
+                print(f"Warning: Log file not found at {log_path} or {os.path.join(script_dir, log_path)}")
+                return []
+
+        line_limit = 10000
+        with open(full_log_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            start_index = max(0, len(lines) - line_limit)
+            for line in lines[start_index:]:
+                match = log_pattern.match(line.strip())
+                if match:
+                    timestamp, module, level, message = match.groups()
+                    log_entries.append({
+                        "timestamp": timestamp,
+                        "module": module,
+                        "level": level.upper(),
+                        "message": html.escape(message)
+                    })
+                elif line.strip():
+                    log_entries.append({
+                        "timestamp": "", "module": "", "level": "RAW",
+                        "message": html.escape(line.strip())
+                    })
+            if len(lines) > line_limit:
+                log_entries.insert(0, {
+                    "timestamp": "", "module": "LogViewer", "level": "INFO",
+                    "message": f"Displaying last {line_limit} lines out of {len(lines)} total."
+                })
+
+    except FileNotFoundError:
+        print(f"Warning: Log file not found at {full_log_path}")
+    except Exception as e:
+        print(f"Error reading or parsing log file {full_log_path}: {e}")
+    return log_entries
 
 def format_dict_to_html(data, level=0):
     """Recursively formats a dictionary or list into a collapsible HTML structure."""
@@ -304,6 +350,14 @@ def generate_html_report(filepath=RESULTS_FILE):
         issues = category_issues.get(cat, 0)
         summary_stats[cat] = {'avg_score': avg_score, 'issues': issues}
 
+    # Precompute overall classes to avoid nested f-string issues
+    overall_score_class = get_tailwind_color_classes('', overall_avg_score, '', '')[1]
+    overall_issues_class = get_tailwind_color_classes('', None, f'Yes ({total_issues})' if total_issues > 0 else 'No', '')[2]
+
+    print(f"Reading log file from {LOG_FILE_PATH}...")
+    log_data = read_and_parse_log_file(LOG_FILE_PATH)
+    print(f"Read {len(log_data)} log entries.")
+
     html_start = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -312,73 +366,188 @@ def generate_html_report(filepath=RESULTS_FILE):
     <title>Repolizer Check Analysis Report</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {{ font-family: sans-serif; }}
-        table {{ border-collapse: collapse; width: 100%; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }}
-        th {{ background-color: #f2f2f2; }}
-        tr:nth-child(even) {{ background-color: #f9f9f9; }}
-        .details-cell {{
-            max-width: 600px;
-            min-width: 300px;
+        body {{ 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
+            background-color: #f9fafb;
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 2rem auto;
+        }}
+        table {{ 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            width: 100%; 
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }}
+        th {{ 
+            padding: 12px 16px;
+            background-color: #f3f4f6;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+        }}
+        td {{ 
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }}
+        tbody tr:last-child td {{ border-bottom: none; }}
+        tr:hover {{ background-color: #f9fafb; }}
+        
+        /* Enhanced log styling */
+        .log-line {{
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: flex-start;
+            border-left: 3px solid transparent;
+        }}
+        .log-line:hover {{ background-color: #f1f5f9; }}
+        .log-timestamp {{ 
+            color: #64748b; 
+            width: 180px; 
+            flex-shrink: 0;
+            padding-right: 8px;
             font-size: 0.8rem;
-            line-height: 1.4;
-            overflow-wrap: break-word;
-            word-wrap: break-word;
         }}
-        .details-cell details {{ margin-left: 1rem; margin-top: 0.25rem; }}
-        .details-cell summary {{
-            cursor: pointer;
+        .log-module {{ 
+            color: #1d4ed8; 
+            width: 150px; 
+            flex-shrink: 0;
             font-weight: 500;
-            color: #4a5568;
-            padding: 0.1rem 0.25rem;
-            border-radius: 0.25rem;
-            display: inline-block;
+            padding-right: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }}
-        .details-cell summary:hover {{ background-color: #edf2f7; }}
-        .details-cell summary::marker {{
-            color: #a0aec0;
+        .log-level {{ 
+            width: 70px; 
+            flex-shrink: 0;
+            text-align: center; 
+            margin-right: 8px; 
+            padding: 0px 4px; 
+            border-radius: 4px; 
+            font-size: 0.7rem;
+            font-weight: 600;
         }}
-        .details-cell details[open] > summary {{
-             margin-bottom: 0.25rem;
+        .log-message {{
+            flex-grow: 1;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+            padding-left: 4px;
         }}
-        .details-cell ul {{
-            list-style: none;
-            padding-left: 1rem;
-            border-left: 1px solid #e2e8f0;
-            margin-top: 0.25rem;
+        .log-level-DEBUG {{ 
+            color: #4b5563; 
+            background-color: #f3f4f6; 
+            border-color: #9ca3af;
         }}
-        .details-cell ul ul {{
-             padding-left: 1rem;
-             border-left-color: #cbd5e0;
+        .log-level-INFO {{ 
+            color: #0369a1; 
+            background-color: #e0f2fe; 
+            border-color: #0ea5e9;
         }}
-         .details-cell ul li {{ margin-top: 0.1rem; }}
-        .details-cell strong {{ color: #2d3748; font-weight: 600; }}
-        .details-cell .font-mono {{ font-size: 0.75rem; }}
-        .details-cell .break-words {{ word-break: break-all; }}
-        .recommendation-cell {{ max-width: 250px; overflow-wrap: break-word; word-wrap: break-word; }}
-        .summary-table th, .summary-table td {{ border: 1px solid #eee; padding: 6px 10px; }}
-        .summary-table th {{ background-color: #e9e9f9; }}
+        .log-level-WARNING {{ 
+            color: #854d0e; 
+            background-color: #fef9c3; 
+            border-color: #eab308;
+        }}
+        .log-level-ERROR {{ 
+            color: #9f1239; 
+            background-color: #fee2e2; 
+            border-color: #ef4444;
+        }}
+        .log-level-CRITICAL {{ 
+            color: #ffffff; 
+            background-color: #991b1b; 
+            border-color: #7f1d1d;
+        }}
+        .log-level-RAW {{ 
+            color: #374151; 
+            background-color: #f3f4f6; 
+            border-color: #9ca3af;
+        }}
+        
+        /* Line highlighting based on level */
+        .log-line[data-level="ERROR"] {{
+            border-left-color: #ef4444;
+            background-color: #fef2f2;
+        }}
+        .log-line[data-level="WARNING"] {{
+            border-left-color: #f59e0b;
+            background-color: #fffbeb;
+        }}
+        .log-line[data-level="CRITICAL"] {{
+            border-left-color: #b91c1c;
+            background-color: #fee2e2;
+        }}
+        
+        /* Tab buttons */
+        .tab-button {{
+            padding: 8px 16px;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+        .tab-button.active {{
+            background-color: #3b82f6;
+            color: white;
+        }}
+        .tab-button:not(.active) {{
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }}
+        .tab-button:hover:not(.active) {{
+            background-color: #d1d5db;
+        }}
+        .tab-content {{
+            display: none;
+        }}
+        .tab-content.active {{
+            display: block;
+        }}
     </style>
 </head>
 <body class="bg-gray-100 p-8">
     <div class="container mx-auto bg-white p-6 rounded-lg shadow-lg">
         <h1 class="text-2xl font-bold mb-4 text-gray-800">Repolizer Check Analysis</h1>
+        
+        <!-- Tab buttons -->
+        <div class="flex space-x-2 mb-6">
+            <button id="report-tab-btn" class="tab-button active" onclick="switchTab('report')">
+                Report
+            </button>
+            <button id="debug-tab-btn" class="tab-button" onclick="switchTab('debug')">
+                Debug Logs
+            </button>
+        </div>
 
-        <div class="mb-6 p-4 border rounded bg-gray-50">
-            <h2 class="text-xl font-semibold mb-3 text-gray-700">Summary</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <h3 class="text-lg font-medium mb-2 text-gray-600">Overall</h3>
-                    <p class="text-sm">Average Score: <span class="font-bold {get_tailwind_color_classes('', overall_avg_score, '', '')[1]}">{overall_avg_score:.1f}</span></p>
-                    <p class="text-sm">Total Issues Found: <span class="font-bold {get_tailwind_color_classes('', None, f'Yes ({total_issues})' if total_issues > 0 else 'No', '')[2]}">{total_issues}</span></p>
-                </div>
-                <div>
-                    <h3 class="text-lg font-medium mb-2 text-gray-600">By Category</h3>
-                    <table class="summary-table text-sm w-full">
-                        <thead>
-                            <tr><th>Category</th><th class="text-right">Avg Score</th><th class="text-center">Issues</th></tr>
-                        </thead>
-                        <tbody>
+        <!-- Report Tab Content -->
+        <div id="report-tab" class="tab-content active">
+            <div class="mb-6 p-4 border rounded bg-gray-50">
+                <h2 class="text-xl font-semibold mb-3 text-gray-700">Summary</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="text-lg font-medium mb-2 text-gray-600">Overall</h3>
+                        <p class="text-sm">Average Score: <span class="font-bold {overall_score_class}">{overall_avg_score:.1f}</span></p>
+                        <p class="text-sm">Total Issues Found: <span class="font-bold {overall_issues_class}">{total_issues}</span></p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium mb-2 text-gray-600">By Category</h3>
+                        <table class="summary-table text-sm w-full">
+                            <thead>
+                                <tr><th>Category</th><th class="text-right">Avg Score</th><th class="text-center">Issues</th></tr>
+                            </thead>
+                            <tbody>
 """
     for category, stats in summary_stats.items():
         avg_score = stats['avg_score']
@@ -393,38 +562,29 @@ def generate_html_report(filepath=RESULTS_FILE):
                             </tr>"""
 
     html_start += """
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <h2 class="text-xl font-semibold mb-3 text-gray-700">Detailed Checks</h2>
-        <div class="overflow-x-auto">
-            <table class="min-w-full table-auto text-sm">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="px-4 py-2">Category</th>
-                        <th class="px-4 py-2">Check Name</th>
-                        <th class="px-4 py-2 text-center">Status</th>
-                        <th class="px-4 py-2 text-right">Score</th>
-                        <th class="px-4 py-2 text-center">Has Feature</th>
-                        <th class="px-4 py-2 details-cell">Details</th>
-                        <th class="px-4 py-2 text-center">Issues Found</th>
-                        <th class="px-4 py-2 recommendation-cell">Recommendation</th>
-                        <th class="px-4 py-2">Error</th>
-                    </tr>
-                </thead>
-                <tbody>
-    """
-
-    html_end = """
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Detailed Checks</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full table-auto text-sm">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="px-4 py-2">Category</th>
+                            <th class="px-4 py-2">Check Name</th>
+                            <th class="px-4 py-2 text-center">Status</th>
+                            <th class="px-4 py-2 text-right">Score</th>
+                            <th class="px-4 py-2 text-center">Has Feature</th>
+                            <th class="px-4 py-2 details-cell">Details</th>
+                            <th class="px-4 py-2 text-center">Issues Found</th>
+                            <th class="px-4 py-2 recommendation-cell">Recommendation</th>
+                            <th class="px-4 py-2">Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
     """
 
     table_body_html = ""
@@ -456,6 +616,126 @@ def generate_html_report(filepath=RESULTS_FILE):
                         <td class="px-4 py-2 text-gray-500">{error_esc}</td>
                     </tr>
         """
+
+    html_end = """
+                    </tbody>
+                </table>
+            </div>
+        </div> <!-- Close report tab content -->
+
+        <!-- Debug Log Tab Content -->
+        <div id="debug-tab" class="tab-content">
+            <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-700">Debug Log Viewer</h2>
+                </div>
+                <div class="px-6 py-4">
+"""
+    
+    if log_data:
+        html_end += """
+                    <div class="mb-4 flex flex-wrap items-center gap-2">
+                        <select id="log-level-filter" class="filter-select rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" onchange="filterLogs()">
+                            <option value="">All Levels</option>
+                            <option value="DEBUG">DEBUG</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                            <option value="RAW">RAW</option>
+                        </select>
+                        <input type="text" id="log-module-filter" placeholder="Filter by module..." class="filter-input rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" onkeyup="filterLogs()">
+                        <input type="text" id="log-message-filter" placeholder="Filter by message..." class="filter-input flex-grow rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" onkeyup="filterLogs()">
+                    </div>
+                    <div id="log-lines-container" class="border border-gray-200 rounded-md bg-gray-50 p-3 max-h-[600px] overflow-auto font-mono text-sm">
+"""
+
+        for entry in log_data:
+            html_end += f"""
+                    <div class="log-line" data-level="{entry['level']}" data-module="{entry['module']}">
+                        <span class="log-timestamp">{entry['timestamp']}</span>
+                        <span class="log-module" title="{entry['module']}">{entry['module']}</span>
+                        <span class="log-level log-level-{entry['level']}">{entry['level']}</span>
+                        <span class="log-message">{entry['message']}</span>
+                    </div>
+"""
+        
+        html_end += """
+                    </div>
+"""
+    else:
+        html_end += """
+                    <p class="text-gray-500 italic">No log data found or log file could not be read.</p>
+"""
+    
+    html_end += """
+                </div>
+            </div>
+        </div> <!-- Close debug tab content -->
+    </div> <!-- Close container -->
+
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(tabName + '-tab').classList.add('active');
+            document.getElementById(tabName + '-tab-btn').classList.add('active');
+        }
+        
+        function filterLogs() {
+            const levelFilter = document.getElementById('log-level-filter').value.toUpperCase();
+            const moduleFilter = document.getElementById('log-module-filter').value.toLowerCase();
+            const messageFilter = document.getElementById('log-message-filter').value.toLowerCase();
+            const logLinesContainer = document.getElementById('log-lines-container');
+            if (!logLinesContainer) return;
+            const logLines = logLinesContainer.querySelectorAll('.log-line');
+            let visibleCount = 0;
+
+            logLines.forEach(line => {
+                const level = line.getAttribute('data-level').toUpperCase();
+                const module = line.getAttribute('data-module').toLowerCase();
+                const messageSpan = line.querySelector('.log-message');
+                const message = messageSpan ? messageSpan.textContent.toLowerCase() : '';
+
+                const levelMatch = !levelFilter || level === levelFilter;
+                const moduleMatch = !moduleFilter || module.includes(moduleFilter);
+                const messageMatch = !messageFilter || message.includes(messageFilter);
+
+                if (levelMatch && moduleMatch && messageMatch) {
+                    line.style.display = '';
+                    visibleCount++;
+                } else {
+                    line.style.display = 'none';
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const levelFilterEl = document.getElementById('log-level-filter');
+            const moduleFilterEl = document.getElementById('log-module-filter');
+            const messageFilterEl = document.getElementById('log-message-filter');
+
+            if (levelFilterEl) {
+                levelFilterEl.addEventListener('change', filterLogs);
+            }
+            if (moduleFilterEl) {
+                moduleFilterEl.addEventListener('keyup', filterLogs);
+            }
+            if (messageFilterEl) {
+                messageFilterEl.addEventListener('keyup', filterLogs);
+            }
+        });
+    </script>
+
+</body>
+</html>
+    """
 
     final_html = html_start + table_body_html + html_end
 
