@@ -13,17 +13,62 @@
             theme: {
                 extend: {
                     colors: {
-                        // Define custom colors matching the old theme (optional, Tailwind defaults are good)
-                        primary: { DEFAULT: '#2563eb', dark: '#60a5fa' },
+                        // Define standard colors explicitly to ensure they work
+                        primary: { 
+                            DEFAULT: '#2563eb', 
+                            dark: '#60a5fa',
+                            500: '#2563eb',
+                            600: '#1e40af',
+                            700: '#1e3a8a',
+                            800: '#1e3a8a'
+                        },
+                        success: { 
+                            DEFAULT: '#22c55e', 
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d'
+                        },
+                        warning: { 
+                            DEFAULT: '#f59e42', 
+                            400: '#fbbf24',
+                            500: '#f59e42',
+                            600: '#d97706',
+                            700: '#b45309'
+                        },
+                        danger: { 
+                            DEFAULT: '#ef4444', 
+                            400: '#f87171',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c'
+                        },
                         secondary: { DEFAULT: '#f1f5f9', dark: '#23272f' },
-                        accent: { DEFAULT: '#10b981', dark: '#34d399' },
-                        danger: { DEFAULT: '#ef4444', dark: '#ef4444' },
-                        warning: { DEFAULT: '#f59e42', dark: '#f59e42' },
-                        success: { DEFAULT: '#22c55e', dark: '#22c55e' },
-                        // Tailwind uses neutral/gray for text/bg/borders
+                        accent: { DEFAULT: '#10b981', dark: '#34d399' }
                     }
                 }
+            },
+            // Add safelist to ensure color classes are included in the output
+            safelist: [
+                'bg-success-500', 'bg-warning-500', 'bg-danger-500',
+                'text-success-600', 'text-warning-600', 'text-danger-600',
+                'text-success-400', 'text-warning-400', 'text-danger-400',
+                'text-success-700', 'text-warning-700', 'text-danger-700',
+                'border-success-500', 'border-warning-500', 'border-danger-500'
+            ]
+        }
+
+        // Add a test function to check if colors are loaded correctly
+        function testColors() {
+            const colorTest = document.createElement('div');
+            colorTest.className = 'bg-success-500 hidden';
+            document.body.appendChild(colorTest);
+            const style = window.getComputedStyle(colorTest);
+            console.log('Color test - Success color:', style.backgroundColor);
+            if (style.backgroundColor === 'rgb(0, 0, 0)' || style.backgroundColor === 'rgba(0, 0, 0, 0)') {
+                console.warn('Colors not loading correctly!');
             }
+            document.body.removeChild(colorTest);
         }
 
         // Dark mode toggle function
@@ -42,8 +87,12 @@
                 document.documentElement.classList.remove('dark');
             }
         }
-        applyInitialDarkMode(); // Apply on initial load
 
+        // Add color test to DOM ready event
+        document.addEventListener('DOMContentLoaded', function() {
+            testColors();
+            applyInitialDarkMode();
+        });
     </script>
 
     {# Link Font Awesome (keep this) #}
