@@ -66,6 +66,13 @@ def check_dependency_freshness(repo_path: str = None, repo_data: Dict = None) ->
         "gradle": r'version\s*=?\s*[\'"]([^\'"]+)[\'"]'
     }
     
+    # Regex to extract version numbers (simple version, might need refinement)
+    # Use raw string to avoid SyntaxWarning for \.
+    version_pattern = r'(\d+\.\d+\.\d+)' 
+    
+    # Directories to skip
+    skip_dirs = ['node_modules', '.git', 'dist', 'build', 'vendor', 'target', 'bin', 'obj']
+    
     # Patterns for potentially outdated dependencies
     outdated_indicators = {
         "deprecated_syntax": [
