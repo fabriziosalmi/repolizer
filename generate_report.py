@@ -931,7 +931,7 @@ This automated analysis indicates areas where the repository demonstrates good p
             section_name="executive summary"
         )
         
-        summary_text = f"""# Executive Summary: {repo_name}
+        summary_text = f"""
 
 ## Overview
 {summary_result.get('overview', '[No overview content]')}
@@ -975,7 +975,7 @@ This automated analysis indicates areas where the repository demonstrates good p
             section_name="key opportunities"
         )
         
-        opportunities_text = "# Key Opportunities for Improvement\n\n"
+        opportunities_text = ""
         found_opp = False
         for i in range(1, 6):
             key = f"opportunity{i}"
@@ -1003,7 +1003,7 @@ This automated analysis indicates areas where the repository demonstrates good p
         )
         
         # Format as Markdown with bullet points
-        sr_text = "# Strengths & Risks Analysis\n\n## Repository Strengths\n\n"
+        sr_text = "## Repository Strengths\n\n"
         found_strength = False
         for i in range(1, 4):
             key = f"strength{i}"
@@ -1106,7 +1106,7 @@ This automated analysis indicates areas where the repository demonstrates good p
             section_name="next steps"
         )
         
-        next_steps_text = "# Next Steps Checklist\n\n"
+        next_steps_text = ""
         found_step = False
         for i in range(1, 8):
             key = f"step{i}"
@@ -1132,7 +1132,7 @@ This automated analysis indicates areas where the repository demonstrates good p
             section_name="resources"
         )
         
-        resources_text = "# Recommended Resources\n\n"
+        resources_text = ""
         found_res = False
         for i in range(1, 6):
             key = f"resource{i}"
