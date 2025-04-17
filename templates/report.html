@@ -421,16 +421,19 @@
                         {% set check_score_text_color = 'text-success-700 dark:text-success-400' if check.score >= 70 else 'text-warning-700 dark:text-warning-400' if check.score >= 40 else 'text-danger-700 dark:text-danger-400' %}
                         {% set check_indicator_color = 'bg-success-500' if check.score >= 70 else 'bg-warning-500' if check.score >= 40 else 'bg-danger-500' %}
                         {% set check_bar_bg_color = 'bg-success-500' if check.score >= 70 else 'bg-warning-500' if check.score >= 40 else 'bg-danger-500' %}
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                            <div class="flex-1 min-w-[150px] text-gray-800 dark:text-gray-200">{{ check.name }}</div>
-                            {# Score Bar #}
-                            <div class="flex-grow sm:flex-grow-0 sm:w-40 h-4 bg-gray-200 dark:bg-gray-600 rounded overflow-hidden order-2 sm:order-1" title="Score: {{ check.score | format_score }}/100">
+                        <div class="grid grid-cols-12 items-center gap-2 text-sm">
+                            {# Check name - 4 cols #}
+                            <div class="col-span-4 sm:col-span-3 text-gray-800 dark:text-gray-200">{{ check.name }}</div>
+                            
+                            {# Score Bar - 6 cols, consistent positioning #}
+                            <div class="col-span-5 sm:col-span-6 md:col-span-7 h-4 bg-gray-200 dark:bg-gray-600 rounded overflow-hidden" title="Score: {{ check.score | format_score }}/100">
                                 <div class="h-full {{ check_bar_bg_color }}" style="width: {{ check.score }}%;"></div>
                             </div>
-                            {# Score Text & Indicator #}
-                            <div class="flex items-center font-semibold {{ check_score_text_color }} order-1 sm:order-2">
-                                {{ check.score | format_score }}
-                                <span class="inline-block w-2.5 h-2.5 rounded-full ml-1.5 {{ check_indicator_color }}"></span>
+                            
+                            {# Score Text & Indicator - fixed width, right-aligned #}
+                            <div class="col-span-3 sm:col-span-3 md:col-span-2 flex items-center justify-end">
+                                <span class="font-semibold {{ check_score_text_color }} mr-1.5 w-8 text-right">{{ check.score | format_score }}</span>
+                                <span class="inline-block flex-shrink-0 w-2.5 h-2.5 rounded-full {{ check_indicator_color }}"></span>
                             </div>
                         </div>
                     {% endfor %} {# Innermost loop ends #}
