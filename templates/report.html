@@ -318,8 +318,9 @@
                 </div>
             </div>
 
-            {# NEW: Executive Summary Section #}
-            <section id="executive-summary" class="mb-8">
+            {# Executive Summary Section - UPDATED: Title moved outside card #}
+            <h2 id="executive-summary" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Executive Summary</h2>
+            <section class="mb-8">
                 <div class="prose dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow">
                     {{ summary|markdown_to_html|safe }}
                 </div>
@@ -360,18 +361,20 @@
                 </div>
             </div>
 
-            {# NEW: Key Opportunities Section #}
+            {# Key Opportunities Section - UPDATED: Title moved outside card #}
             {% if key_opportunities and 'No key opportunities' not in key_opportunities %}
-            <section id="key-opportunities" class="mb-8">
+            <h2 id="key-opportunities" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Key Opportunities</h2>
+            <section class="mb-8">
                 <div class="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow">
                     {{ key_opportunities|markdown_to_html|safe }}
                 </div>
             </section>
             {% endif %}
 
-            {# NEW: Strengths & Risks Section #}
+            {# Strengths & Risks Section - UPDATED: Title moved outside card #}
             {% if strengths_risks and 'No strengths or risks' not in strengths_risks %}
-            <section id="strengths-risks" class="mb-8">
+            <h2 id="strengths-risks" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Strengths & Risks</h2>
+            <section class="mb-8">
                 <div class="prose dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow">
                     {{ strengths_risks|markdown_to_html|safe }}
                 </div>
@@ -444,17 +447,19 @@
             {% endfor %} {# Outer loop ends #}
             </div> {# End space-y-6 #}
 
-            {# NEW: Next Steps Section #}
+            {# Next Steps Section - UPDATED: Title moved outside card #}
             {% if next_steps and 'No next steps' not in next_steps %}
-            <section id="next-steps" class="mb-8">
+            <h2 id="next-steps" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Next Steps</h2>
+            <section class="mb-8">
                 <div class="prose dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow">
                     {{ next_steps|markdown_to_html|safe }}
                 </div>
             </section>
             {% endif %}
 
-            {# NEW: Resources Section #}
+            {# Resources Section - UPDATED: Title moved outside card #}
             {% if resources and 'No resources' not in resources %}
+            <h2 id="resources" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Recommended Resources</h2>
             <section id="resources" class="mb-8">
                 <div class="prose dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow">
                     {{ resources|markdown_to_html|safe }}
