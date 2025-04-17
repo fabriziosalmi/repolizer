@@ -981,7 +981,7 @@ This automated analysis indicates areas where the repository demonstrates good p
             key = f"opportunity{i}"
             content = opportunity_result.get(key)
             if content and "[No content available" not in content and "[Fallback:" not in content:
-                opportunities_text += f"## {i}. {content}\n\n"
+                opportunities_text += f" {i}. {content}\n\n"
                 found_opp = True
         if not found_opp: opportunities_text += opportunity_result.get("opportunity1", "[No opportunities identified]") 
         self.report_data["key_opportunities"] = opportunities_text
