@@ -237,7 +237,7 @@
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-sans antialiased">
     {# Dark Mode Toggle Button - Adjusted Styling #}
-    <button class="fixed top-4 right-4 z-50 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500" onclick="toggleDarkMode()">
+    <button class="fixed top-3 right-5 z-50 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500" onclick="toggleDarkMode()">
         <span class="dark:hidden">🌙 Dark</span>
         <span class="hidden dark:inline">☀️ Light</span>
     </button>
@@ -365,7 +365,7 @@
             {% if key_opportunities and 'No key opportunities' not in key_opportunities %}
             <p id="key-opportunities" class="text-2xl font-semibold text-primary-700 dark:text-primary-400 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Key Opportunities</p>
             <section class="mb-8">
-                <div class="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow">
+                <div class="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow" style="font-size: 1rem;">
                     {{ key_opportunities|markdown_to_html|safe }}
                 </div>
             </section>
