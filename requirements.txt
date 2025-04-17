@@ -4,3 +4,4 @@ rich>=12.0.0
 flask_loginmarkdown>=3.4.0
 dirtyjson
 markdown
+psutil
