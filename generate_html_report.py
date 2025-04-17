@@ -2,107 +2,160 @@ import json
 import os
 import html
 from collections import defaultdict
+import math  # Import math for isnan
 
 RESULTS_FILE = "results.jsonl"
 SAMPLE_RESULTS_FILE = "sample_results.jsonl"
 OUTPUT_HTML_FILE = "repolizer_report.html"
 
-# Define the categories based on the structure observed in app.py and check files
 CATEGORIES = [
     'documentation', 'security', 'maintainability', 'code_quality',
     'testing', 'licensing', 'community', 'performance',
     'accessibility', 'ci_cd'
 ]
 
-# --- Enhanced format_details logic ---
+def format_dict_to_html(data, level=0):
+    """Recursively formats a dictionary or list into a collapsible HTML structure."""
+    html_str = ""
+    indent = " " * (level * 2)
+
+    if isinstance(data, dict):
+        if not data:
+            return '<span class="text-gray-500 italic">{}</span>'
+
+        use_details = level > 0 or len(data) > 3
+        tag = "details" if use_details else "div"
+        summary_tag = f"<summary class='cursor-pointer font-medium text-gray-600 hover:text-gray-800'>{{...}} ({len(data)} items)</summary>" if use_details else ""
+
+        html_str += f'{indent}<{tag} class="ml-{level*2} details-section" {"open" if not use_details else ""}>\n'
+        html_str += f'{indent}  {summary_tag}\n' if use_details else ''
+        html_str += f'{indent}  <ul class="list-none pl-4 border-l border-gray-200">\n'
+
+        for key, value in data.items():
+            key_esc = html.escape(str(key))
+            html_str += f'{indent}    <li class="mt-1">\n'
+            html_str += f'{indent}      <strong class="text-gray-700">{key_esc}:</strong> '
+            html_str += format_dict_to_html(value, level + 1)
+            html_str += f'\n{indent}    </li>\n'
+
+        html_str += f'{indent}  </ul>\n'
+        html_str += f'{indent}</{tag}>\n'
+
+    elif isinstance(data, list):
+        if not data:
+            return '<span class="text-gray-500 italic">[]</span>'
+
+        use_details = level > 0 or len(data) > 5
+        tag = "details" if use_details else "div"
+        summary_tag = f"<summary class='cursor-pointer font-medium text-gray-600 hover:text-gray-800'>[...] ({len(data)} items)</summary>" if use_details else ""
+
+        html_str += f'{indent}<{tag} class="ml-{level*2} details-section" {"open" if not use_details else ""}>\n'
+        html_str += f'{indent}  {summary_tag}\n' if use_details else ''
+        html_str += f'{indent}  <ul class="list-disc pl-5">\n'
+
+        for i, item in enumerate(data):
+            prefix = f'<span class="text-xs text-gray-400 mr-1">[{i}]</span>' if isinstance(item, (dict, list)) or len(data) > 10 else ""
+            html_str += f'{indent}    <li class="mt-1">{prefix}'
+            html_str += format_dict_to_html(item, level + 1)
+            html_str += f'</li>\n'
+
+        html_str += f'{indent}  </ul>\n'
+        html_str += f'{indent}</{tag}>\n'
+
+    elif isinstance(data, bool):
+        html_str = f'<span class="font-mono {"text-green-600" if data else "text-red-600"}">{html.escape(str(data))}</span>'
+    elif isinstance(data, (int, float)):
+        html_str = f'<span class="font-mono text-blue-600">{html.escape(str(data))}</span>'
+    elif data is None:
+        html_str = '<span class="font-mono text-gray-400 italic">null</span>'
+    else:
+        value_esc = html.escape(str(data))
+        html_str = f'<span class="font-mono text-purple-700 break-words">"{value_esc}"</span>'
+
+    return html_str
+
 def format_details(details_dict, recommendation_text):
-    """Extracts key info from the details dictionary for concise display."""
-    if not isinstance(details_dict, dict):
-        return 'N/A', 'N/A', 'No', recommendation_text
+    """Formats the entire details dictionary for display and extracts issue info."""
+    if not isinstance(details_dict, dict) or not details_dict:
+        details_val_html = '<span class="text-gray-500 italic">N/A</span>'
+        has_feature = 'No'
+        issues_found = 'No'
+        final_recommendation = recommendation_text if recommendation_text not in ['N/A', 'Check Details'] else "None"
+        return has_feature, details_val_html, issues_found, html.escape(final_recommendation)
 
-    has_feature_keys = [
-        'has_readme', 'has_contributing', 'has_license_file', 'has_code_of_conduct',
-        'has_secrets', 'has_iac', 'has_monitoring', 'has_logging', 'has_encryption',
-        'has_cors_config', 'has_input_validation', 'has_session_management',
-        'has_pipeline', 'has_artifact_storage', 'has_client_side_code',
-        'has_focus_styles', 'has_aria_attributes', 'prefers_reduced_motion_found',
-        'tab_navigation_supported'
-    ]
-    has_feature = 'N/A'
-    for key in has_feature_keys:
-        if key in details_dict and isinstance(details_dict[key], bool):
-            has_feature = str(details_dict[key])
-            break
-    if has_feature == 'N/A' and details_dict:
-         has_feature = "Yes" if any(v for v in details_dict.values()) else "No"
+    try:
+        details_val_html = format_dict_to_html(details_dict)
+    except Exception as e:
+        details_json_str = json.dumps(details_dict, indent=2, sort_keys=True)
+        details_val_html = f'<details><summary class="text-red-500">Error formatting details: {html.escape(str(e))}</summary><pre class="text-xs bg-gray-50 p-2 rounded mt-1 max-h-60 overflow-auto"><code>{html.escape(details_json_str)}</code></pre></details>'
 
-    count_keys = [
-        'potential_secrets_found', 'files_checked', 'files_analyzed',
-        'low_contrast_pairs', 'improper_tabindex_count', 'aria_attributes_count',
-        'interactive_elements_count', 'colors_extracted'
-    ]
-    list_keys = [
-        'iac_tools_detected', 'monitoring_tools', 'secret_tools', 'secret_types_found',
-        'validation_libraries_detected', 'encryption_libraries_detected',
-        'frameworks_detected', 'artifact_types', 'storage_locations',
-        'environments_detected', 'ci_config_files', 'sections'
-    ]
-    details_val = 'N/A'
-    for key in count_keys:
-        if key in details_dict and isinstance(details_dict[key], (int, float)):
-            details_val = f"{key.replace('_', ' ').title()}: {details_dict[key]}"
-            break
-    if details_val == 'N/A':
-        for key in list_keys:
-            if key in details_dict and isinstance(details_dict[key], list) and details_dict[key]:
-                items = details_dict[key]
-                details_val = f"{key.replace('_', ' ').title()}: {', '.join(map(str, items))}"
-                break
-    if details_val == 'N/A':
-        score_keys = [k for k in details_dict if k.endswith('_score') and isinstance(details_dict[k], (int, float))]
-        if score_keys:
-             score_key = score_keys[0]
-             details_val = f"{score_key.replace('_', ' ').title()}: {details_dict[score_key]:.1f}"
+    has_feature = 'Yes'
 
     issue_keys = [
         'potential_issues', 'potential_vulnerabilities', 'potential_secrets_found',
-        'low_contrast_pairs', 'potential_keyboard_traps', 'potential_misuse',
-        'bottlenecks_detected', 'insecure_algorithms_found'
+        'insecure_algorithms_found', 'bottlenecks_detected', 'low_contrast_pairs',
+        'potential_keyboard_traps', 'improper_tabindex_count', 'potential_misuse',
+        'outdated_dependencies', 'deprecated_dependencies', 'security_vulnerabilities',
+        'style_issues', 'linting_issues', 'smell_count', 'duplicate_blocks',
+        'todo_count', 'fixme_count', 'hack_count', 'failing_tests', 'flaky_tests',
+        'missing_lines', 'uncovered_branches', 'missing_docs_files', 'error', 'errors',
+        'validation_errors'
     ]
     issues_found = 'No'
     issue_count = 0
-    for key in issue_keys:
-        if key in details_dict:
-            val = details_dict[key]
-            if isinstance(val, list) and val:
-                issues_found = 'Yes'
-                issue_count += len(val)
-            elif isinstance(val, (int, float)) and val > 0:
-                issues_found = 'Yes'
-                issue_count += int(val)
-            elif isinstance(val, bool) and val:
-                 issues_found = 'Yes'
-                 issue_count += 1
+
+    def count_issues_recursive(data):
+        nonlocal issues_found, issue_count
+        if isinstance(data, dict):
+            for key, val in data.items():
+                if key in issue_keys:
+                    if isinstance(val, list) and val:
+                        issues_found = 'Yes'
+                        issue_count += len(val)
+                    elif isinstance(val, (int, float)) and val > 0:
+                        issues_found = 'Yes'
+                        issue_count += int(val)
+                    elif isinstance(val, bool) and val:
+                        issues_found = 'Yes'
+                        issue_count += 1
+                    elif isinstance(val, str) and val and val.lower() not in ['none', 'n/a', '']:
+                        if key in ['error', 'errors', 'validation_errors']:
+                            issues_found = 'Yes'
+                            issue_count += 1
+                elif isinstance(val, (dict, list)):
+                    count_issues_recursive(val)
+        elif isinstance(data, list):
+            for item in data:
+                count_issues_recursive(item)
+
+    count_issues_recursive(details_dict)
+
+    top_level_error = details_dict.get('error')
+    if top_level_error and top_level_error != 'None' and issues_found == 'No':
+        issues_found = 'Yes'
+        issue_count += 1
 
     if issues_found == 'Yes' and issue_count > 0:
         issues_found = f"Yes ({issue_count})"
 
     final_recommendation = recommendation_text
-    if isinstance(details_dict.get('recommendations'), list) and details_dict['recommendations']:
-        rec_text = str(details_dict['recommendations'][0])
+    details_recs = details_dict.get('recommendations')
+    if isinstance(details_recs, list) and details_recs:
+        rec_text = str(details_recs[0])
         final_recommendation = (rec_text[:75] + '...') if len(rec_text) > 75 else rec_text
-    elif final_recommendation == 'N/A':
-         score_val = details_dict.get('score')
-         if isinstance(score_val, (int, float)) and score_val < 50:
-             final_recommendation = "Improve Score"
-         elif issues_found.startswith("Yes"):
-             final_recommendation = "Address Issues"
-         else:
-             final_recommendation = "None"
+    elif final_recommendation in ['N/A', 'Check Details']:
+        score_val = details_dict.get('score')
+        if isinstance(score_val, (int, float)) and score_val < 50:
+            final_recommendation = "Improve Score"
+        elif issues_found.startswith("Yes"):
+            final_recommendation = "Address Issues"
+        else:
+            final_recommendation = "None"
 
-    return has_feature, html.escape(str(details_val)[:250]), issues_found, html.escape(final_recommendation)
+    final_recommendation = html.escape(str(final_recommendation))
 
-# --- Helper for Tailwind classes ---
+    return has_feature, details_val_html, issues_found, final_recommendation
+
 def get_tailwind_color_classes(status, score_val, issues_found, recommendation):
     """Maps values to Tailwind CSS color classes."""
     status_class = "text-gray-500"
@@ -130,15 +183,14 @@ def get_tailwind_color_classes(status, score_val, issues_found, recommendation):
     if "available" in rec_lower or "consider" in rec_lower or "review" in rec_lower:
         rec_class = "text-blue-600"
     elif "improve" in rec_lower or "address" in rec_lower or "fix" in rec_lower or "warning" in rec_lower:
-         rec_class = "text-yellow-700 font-semibold"
+        rec_class = "text-yellow-700 font-semibold"
     elif "critical" in rec_lower or "required" in rec_lower or "vulnerability" in rec_lower:
-         rec_class = "text-red-600 font-semibold"
+        rec_class = "text-red-600 font-semibold"
     elif recommendation == "None":
         rec_class = "text-green-600"
 
     return status_class, score_class, issues_class, issues_bg_class, rec_class
 
-# --- Main HTML Generation Logic ---
 def generate_html_report(filepath=RESULTS_FILE):
     """Generates an HTML report from the results.jsonl file."""
     actual_filepath = filepath
@@ -154,8 +206,6 @@ def generate_html_report(filepath=RESULTS_FILE):
     processed_checks = set()
     report_data = []
     category_scores = defaultdict(list)
-    total_issues = 0
-    category_issues = defaultdict(int)
 
     print(f"Reading data from {actual_filepath}...")
     with open(actual_filepath, 'r', encoding='utf-8') as f:
@@ -176,33 +226,26 @@ def generate_html_report(filepath=RESULTS_FILE):
                                     error = check_result.get('errors', 'None')
 
                                     recommendation = metadata.get('recommendation', 'N/A')
-                                    if recommendation == 'N/A' and isinstance(details, dict):
-                                         rec_list = details.get('recommendations')
-                                         recommendation = "Check Details" if isinstance(rec_list, list) and rec_list else "None"
-                                    elif isinstance(recommendation, bool): recommendation = str(recommendation)
-                                    elif recommendation is None: recommendation = "None"
+                                    if not isinstance(details, dict): details = {'content': details} if details else {}
 
-                                    if error is None or error == "" or (isinstance(error, list) and not error): error = "None"
-                                    elif isinstance(error, list): error = "Exists"
+                                    if 'score' not in details and score != 'N/A':
+                                        try:
+                                            details['score_from_check'] = float(score)
+                                        except (ValueError, TypeError):
+                                            pass
+
+                                    if error is None or error == "" or (isinstance(error, list) and not error): error_str = "None"
+                                    elif isinstance(error, list): error_str = f"Exists ({len(error)})"
+                                    else: error_str = "Exists"
 
                                     score_val = None
                                     try:
                                         score_val = float(score)
                                         score_str = f"{score_val:.1f}"
-                                        category_scores[category].append(score_val)
                                     except (ValueError, TypeError):
                                         score_str = str(score)
 
-                                    has_feature, details_val, issues_found, final_recommendation = format_details(details, recommendation)
-
-                                    if issues_found.startswith("Yes"):
-                                        try:
-                                            count = int(issues_found.split('(')[1].split(')')[0])
-                                            total_issues += count
-                                            category_issues[category] += count
-                                        except (IndexError, ValueError):
-                                            total_issues += 1
-                                            category_issues[category] += 1
+                                    has_feature, details_val_html, issues_found_str, final_recommendation_html = format_details(details, recommendation)
 
                                     report_data.append({
                                         "category": category,
@@ -211,10 +254,10 @@ def generate_html_report(filepath=RESULTS_FILE):
                                         "score_str": score_str,
                                         "score_val": score_val,
                                         "has_feature": has_feature,
-                                        "details_val": details_val,
-                                        "issues_found": issues_found,
-                                        "recommendation": final_recommendation,
-                                        "error": error
+                                        "details_val": details_val_html,
+                                        "issues_found": issues_found_str,
+                                        "recommendation": final_recommendation_html,
+                                        "error": error_str
                                     })
                                     processed_checks.add(check_key)
             except json.JSONDecodeError:
@@ -231,16 +274,35 @@ def generate_html_report(filepath=RESULTS_FILE):
     summary_stats = {}
     overall_avg_score = 0
     valid_scores_count = 0
-    for category in CATEGORIES:
-        scores = category_scores.get(category, [])
-        avg_score = sum(scores) / len(scores) if scores else 0
-        issues = category_issues.get(category, 0)
-        summary_stats[category] = {'avg_score': avg_score, 'issues': issues}
-        if scores:
-            overall_avg_score += sum(scores)
-            valid_scores_count += len(scores)
+    total_issues = 0
+    category_issues = defaultdict(int)
+    category_scores = defaultdict(list)
+
+    for check in report_data:
+        category = check['category']
+        score_val = check['score_val']
+        issues_found_str = check['issues_found']
+
+        if score_val is not None:
+            category_scores[category].append(score_val)
+            overall_avg_score += score_val
+            valid_scores_count += 1
+
+        if issues_found_str.startswith("Yes"):
+            try:
+                count = int(issues_found_str.split('(')[1].split(')')[0])
+                total_issues += count
+                category_issues[category] += count
+            except (IndexError, ValueError):
+                total_issues += 1
+                category_issues[category] += 1
 
     overall_avg_score = overall_avg_score / valid_scores_count if valid_scores_count > 0 else 0
+    for cat in CATEGORIES:
+        scores = category_scores.get(cat, [])
+        avg_score = sum(scores) / len(scores) if scores else 0
+        issues = category_issues.get(cat, 0)
+        summary_stats[cat] = {'avg_score': avg_score, 'issues': issues}
 
     html_start = f"""<!DOCTYPE html>
 <html lang="en">
@@ -255,11 +317,47 @@ def generate_html_report(filepath=RESULTS_FILE):
         th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }}
         th {{ background-color: #f2f2f2; }}
         tr:nth-child(even) {{ background-color: #f9f9f9; }}
-        tr:hover {{ background-color: #f1f1f1; }}
-        .details-cell {{ max-width: 350px; overflow-wrap: break-word; word-wrap: break-word; }}
+        .details-cell {{
+            max-width: 600px;
+            min-width: 300px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }}
+        .details-cell details {{ margin-left: 1rem; margin-top: 0.25rem; }}
+        .details-cell summary {{
+            cursor: pointer;
+            font-weight: 500;
+            color: #4a5568;
+            padding: 0.1rem 0.25rem;
+            border-radius: 0.25rem;
+            display: inline-block;
+        }}
+        .details-cell summary:hover {{ background-color: #edf2f7; }}
+        .details-cell summary::marker {{
+            color: #a0aec0;
+        }}
+        .details-cell details[open] > summary {{
+             margin-bottom: 0.25rem;
+        }}
+        .details-cell ul {{
+            list-style: none;
+            padding-left: 1rem;
+            border-left: 1px solid #e2e8f0;
+            margin-top: 0.25rem;
+        }}
+        .details-cell ul ul {{
+             padding-left: 1rem;
+             border-left-color: #cbd5e0;
+        }}
+         .details-cell ul li {{ margin-top: 0.1rem; }}
+        .details-cell strong {{ color: #2d3748; font-weight: 600; }}
+        .details-cell .font-mono {{ font-size: 0.75rem; }}
+        .details-cell .break-words {{ word-break: break-all; }}
         .recommendation-cell {{ max-width: 250px; overflow-wrap: break-word; word-wrap: break-word; }}
         .summary-table th, .summary-table td {{ border: 1px solid #eee; padding: 6px 10px; }}
-        .summary-table th {{ background-color: #e9e9e9; }}
+        .summary-table th {{ background-color: #e9e9f9; }}
     </style>
 </head>
 <body class="bg-gray-100 p-8">
@@ -330,12 +428,14 @@ def generate_html_report(filepath=RESULTS_FILE):
     """
 
     table_body_html = ""
+    report_data.sort(key=lambda x: (CATEGORIES.index(x['category']) if x['category'] in CATEGORIES else 99, x['check_name']))
+
     for check in report_data:
         status_class, score_class, issues_class, issues_bg_class, rec_class = get_tailwind_color_classes(
             check["status"], check["score_val"], check["issues_found"], check["recommendation"]
         )
 
-        category_esc = html.escape(check["category"])
+        category_esc = html.escape(check["category"].replace('_', ' ').title())
         check_name_esc = html.escape(check["check_name"])
         status_esc = html.escape(check["status"])
         score_str_esc = html.escape(check["score_str"])
