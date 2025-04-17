@@ -17,6 +17,25 @@ import json # Add this import
 
 logger = logging.getLogger('report_generator.html')
 
+# New function for formatting scores
+def format_score(value):
+    """Formats a score to remove trailing .0 or .x0"""
+    try:
+        # Ensure it's a float for calculations
+        score = float(value)
+        # Format to 2 decimal places initially
+        formatted = "{:.2f}".format(score)
+        # Remove trailing .00
+        if formatted.endswith('.00'):
+            return formatted[:-3]
+        # Remove trailing 0 if it ends in .x0
+        if formatted.endswith('0') and '.' in formatted:
+            return formatted[:-1]
+        return formatted
+    except (ValueError, TypeError):
+        # Return original value if conversion fails
+        return value
+
 class HTMLReportGenerator:
     """
     Generates HTML reports from repository analysis data
@@ -32,6 +51,7 @@ class HTMLReportGenerator:
         )
         # Add custom filters
         self.env.filters['markdown_to_html'] = self._markdown_to_html
+        self.env.filters['format_score'] = format_score # Register the new filter
     
     def _markdown_to_html(self, text: str) -> str:
         """Convert markdown to HTML"""
@@ -193,8 +213,7 @@ class HTMLReportGenerator:
 
         # Render HTML
         # Filter context to remove None values before rendering to avoid issues in template
-        filtered_context = {k: v for k, v in context.items() if v is not None}
-        html_content = template.render(**filtered_context)
+        html_content = template.render(**context)
 
         # Write to file
         with open(output_path, 'w', encoding='utf-8') as f:
