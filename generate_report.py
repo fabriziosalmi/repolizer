@@ -933,22 +933,22 @@ This automated analysis indicates areas where the repository demonstrates good p
         
         summary_text = f"""
 
-## Overview
+### Overview
 {summary_result.get('overview', '[No overview content]')}
 
-## Repository Health Metrics
+### Repository Health Metrics
 {summary_result.get('health_metrics', '[No health metrics content]')}
 
-## Key Strengths
+### Key Strengths
 {summary_result.get('strengths', '[No strengths content]')}
 
-## Critical Weaknesses
+### Critical Weaknesses
 {summary_result.get('weaknesses', '[No weaknesses content]')}
 
-## Improvement Opportunities
+### Improvement Opportunities
 {summary_result.get('opportunities', '[No opportunities content]')}
 
-## Conclusion
+### Conclusion
 {summary_result.get('conclusion', '[No conclusion content]')}
 """
         self.report_data["summary"] = summary_text
