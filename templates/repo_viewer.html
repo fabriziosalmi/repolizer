@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Repolizer - Home</title>
     
     <!-- Web App Meta Tags -->
@@ -193,6 +193,17 @@
             text-align: center;
             padding: 4rem 0;
             color: #6b7280; /* gray-500 */
+        }
+
+        /* Corrected blur effect to exclude modal */
+        body.blur-background > *:not(#share-modal) {
+            filter: blur(5px);
+            transition: filter 0.3s ease;
+        }
+
+        /* Ensure modal itself is not blurred */
+        #share-modal {
+            filter: none !important;
         }
     </style>
 </head>
@@ -1088,6 +1099,7 @@
       
       // Show the modal
       shareModal.classList.remove('hidden');
+      document.body.classList.add('blur-background');
       
       // Focus the share URL input for easy copying
       if (shareUrl) setTimeout(() => shareUrl.select(), 100);
@@ -1097,6 +1109,7 @@
     function hideShareModal() {
       if (shareModal) {
         shareModal.classList.add('hidden');
+        document.body.classList.remove('blur-background');
         if (copySuccess) copySuccess.classList.add('hidden');
       }
     }
