@@ -1003,7 +1003,7 @@ This automated analysis indicates areas where the repository demonstrates good p
         )
         
         # Format as Markdown with bullet points
-        sr_text = "## Repository Strengths\n\n"
+        sr_text = "### Repository Strengths\n\n"
         found_strength = False
         for i in range(1, 4):
             key = f"strength{i}"
@@ -1014,7 +1014,7 @@ This automated analysis indicates areas where the repository demonstrates good p
                 found_strength = True
         if not found_strength: sr_text += f"- {strengths_risks_result.get('strength1', '[No strengths identified]')}\n"
 
-        sr_text += "\n## Critical Risks\n\n"
+        sr_text += "\n### Critical Risks\n\n"
         found_risk = False
         for i in range(1, 4):
             key = f"risk{i}"
