@@ -4,7 +4,6 @@ import logging
 import time
 import json
 import subprocess
-import pkg_resources
 import tempfile  # Add missing import for tempfile module
 import shutil    # Add missing import for shutil which is used with tempfile
 from typing import Dict, Any, List, Tuple, Set

@@ -5,3 +5,5 @@ flask_loginmarkdown>=3.4.0
 dirtyjson
 markdown
 psutil
+toml
+safety
