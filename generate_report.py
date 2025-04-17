@@ -989,7 +989,7 @@ This automated analysis indicates areas where the repository demonstrates good p
         # Strengths & Risks section (JSON format)
         strengths_risks_prompt = [
             {"role": "system", "content": "You are a code review expert. Write a section highlighting the repository's greatest strengths (with examples) and any critical risks or weaknesses that could impact users or maintainers. Be specific and practical."},
-            {"role": "user", "content": f"For this repository, summarize unique strengths and critical risks or weaknesses, using evidence from the analysis. Repository: {repo_name}, Data: {json.dumps(category_data_for_prompt)}"} 
+            {"role": "user", "content": f"For this repository, summarize unique strengths and critical risks or weaknesses, using evidence from the analysis. Repository: {repo_name}, Data: {json.dumps(category_data_for_prompt)}"}
         ]
         
         strengths_risks_result = self._llm_request_json(
@@ -1002,15 +1002,17 @@ This automated analysis indicates areas where the repository demonstrates good p
             section_name="strengths and risks"
         )
         
+        # Format as Markdown with bullet points
         sr_text = "# Strengths & Risks Analysis\n\n## Repository Strengths\n\n"
         found_strength = False
         for i in range(1, 4):
             key = f"strength{i}"
             content = strengths_risks_result.get(key)
             if content and "[No content available" not in content and "[Fallback:" not in content:
-                sr_text += f"### {content}\n\n"
+                # Use bullet point format
+                sr_text += f"- **Strength {i}:** {content}\n"
                 found_strength = True
-        if not found_strength: sr_text += strengths_risks_result.get("strength1", "[No strengths identified]") + "\n\n"
+        if not found_strength: sr_text += f"- {strengths_risks_result.get('strength1', '[No strengths identified]')}\n"
 
         sr_text += "\n## Critical Risks\n\n"
         found_risk = False
@@ -1018,9 +1020,10 @@ This automated analysis indicates areas where the repository demonstrates good p
             key = f"risk{i}"
             content = strengths_risks_result.get(key)
             if content and "[No content available" not in content and "[Fallback:" not in content:
-                sr_text += f"### {content}\n\n"
+                # Use bullet point format
+                sr_text += f"- **Risk {i}:** {content}\n"
                 found_risk = True
-        if not found_risk: sr_text += strengths_risks_result.get("risk1", "[No risks identified]") + "\n\n"
+        if not found_risk: sr_text += f"- {strengths_risks_result.get('risk1', '[No risks identified]')}\n"
         self.report_data["strengths_risks"] = sr_text
 
         # Category insights with JSON structure - MODIFIED
