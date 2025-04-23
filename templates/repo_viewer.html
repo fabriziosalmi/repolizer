@@ -256,6 +256,67 @@
         #share-modal {
             filter: none !important;
         }
+
+        /* Full Report Coming Soon modal styles */
+        #coming-soon-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        #coming-soon-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .coming-soon-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 500px;
+            text-align: center;
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+        
+        #coming-soon-modal.active .coming-soon-content {
+            transform: scale(1);
+        }
+        
+        .coming-soon-content h3 {
+            margin-top: 0;
+            color: #4F46E5;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .coming-soon-close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #9CA3AF;
+            transition: color 0.2s;
+        }
+        
+        .coming-soon-close:hover {
+            color: #4B5563;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col" style="background-color: #00DBDE; background-image: linear-gradient(90deg, #00DBDE 0%, #FC00FF 100%);">
@@ -317,6 +378,19 @@
             <div id="copy-success" class="hidden bg-green-100 text-green-700 px-6 py-3 text-center font-medium">
                 <i class="fas fa-check mr-2"></i> Link copied to clipboard!
             </div>
+        </div>
+    </div>
+    
+    <!-- Full Report Coming Soon Modal -->
+    <div id="coming-soon-modal">
+        <div class="coming-soon-content">
+            <span class="coming-soon-close">&times;</span>
+            <h3><i class="fas fa-clock mr-2"></i>Coming Soon!</h3>
+            <p class="mb-4">Paid detailed reports will be available in the near future.</p>
+            <p class="text-sm text-gray-600 mb-4">Our team is working hard to bring you comprehensive repository analysis with advanced metrics and recommendations.</p>
+            <button id="coming-soon-ok" class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors">
+                Got it
+            </button>
         </div>
     </div>
     
@@ -1315,6 +1389,41 @@
         hideShareModal();
       }
     });
+
+    // Function to handle full report button click
+    function openModal(repoData) {
+        // Show the coming soon modal instead of any previous implementation
+        const modal = document.getElementById('coming-soon-modal');
+        if (modal) {
+            modal.classList.add('active');
+            
+            // Handle close button click
+            const closeButton = modal.querySelector('.coming-soon-close');
+            const okButton = document.getElementById('coming-soon-ok');
+            
+            const closeModal = () => {
+                modal.classList.remove('active');
+            };
+            
+            if (closeButton) {
+                closeButton.addEventListener('click', closeModal);
+            }
+            
+            if (okButton) {
+                okButton.addEventListener('click', closeModal);
+            }
+            
+            // Close modal when clicking outside of content
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            // Auto-close after 5 seconds
+            setTimeout(closeModal, 5000);
+        }
+    }
   });
 </script>
 </body>
