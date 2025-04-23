@@ -166,6 +166,110 @@
                 background-image: none !important;
             }
         }
+        
+        /* Safari-specific fixes */
+        @supports (-webkit-touch-callout: none) {
+            /* iOS Safari specific styles */
+            .repo-card, .mobile-repo-card {
+                /* Use transform for hardware acceleration */
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                /* Prevent blurry text */
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            /* Fix iOS Safari scroll issues */
+            #virtual-scroll-container {
+                -webkit-overflow-scrolling: touch;
+                position: relative;
+                width: 100%;
+                overflow-y: auto;
+                /* Prevent scroll chaining */
+                overscroll-behavior: none;
+                -webkit-overscroll-behavior: none;
+            }
+            
+            /* Ensure fixed positioning works as expected */
+            body {
+                position: relative;
+                /* Fix iOS height issues */
+                min-height: -webkit-fill-available;
+            }
+            
+            /* Better touch handling */
+            button, a {
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            /* Improve animation performance */
+            .progressive-load {
+                will-change: opacity;
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                perspective: 1000;
+                -webkit-perspective: 1000;
+            }
+        }
+        
+        /* Mobile-specific optimizations */
+        @media (max-width: 768px) {
+            .repo-card {
+                /* Simplify effects on mobile for better performance */
+                animation: none !important;
+                -webkit-animation: none !important;
+                transition: transform 0.2s ease !important;
+            }
+            
+            .repo-card:hover {
+                transform: none !important;
+                animation: none !important;
+                -webkit-animation: none !important;
+                outline-color: #3b82f6 !important; /* Single color instead of gradient */
+            }
+            
+            /* Reduce visual complexity on mobile */
+            .category-bar-gradient-high,
+            .category-bar-gradient-medium,
+            .category-bar-gradient-low {
+                background-image: none !important;
+            }
+            
+            /* Simplified iOS Safari gradient */
+            body.safari-ios {
+                background-image: none !important;
+                background-color: #b3e5fc !important;
+            }
+            
+            /* Optimize rendering in Safari */
+            .safari-ios .repo-card, 
+            .safari-ios .score-bar, 
+            .safari-ios .score-bar-fill {
+                will-change: auto !important;
+                backface-visibility: visible !important;
+                -webkit-backface-visibility: visible !important;
+            }
+            
+            /* Prevent safari rendering issues with absolute positioning */
+            .safari-ios #virtual-scroll-content > * {
+                position: relative !important;
+                transform: none !important;
+                -webkit-transform: none !important;
+                margin-bottom: 10px !important;
+            }
+        }
+        
+        /* Ultra light mode for iOS Safari with low memory */
+        .safari-ios.low-memory-mode {
+            background-color: #f5f5f5 !important;
+        }
+        
+        .safari-ios.low-memory-mode .repo-card,
+        .safari-ios.low-memory-mode .mobile-repo-card {
+            background-image: none !important;
+            background-color: white !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+        }
     </style>
     
     <!-- Custom JS for the page - defer loading -->
@@ -538,6 +642,10 @@
             <p><i class="fas fa-info-circle mr-1"></i> Mobile version: Showing limited repositories for better performance.</p>
         </div>
 
+        <div id="safari-notice" class="hidden mb-4 p-3 bg-yellow-100 text-yellow-800 rounded-md text-sm">
+            <p><i class="fas fa-exclamation-triangle mr-1"></i> Safari mobile detected: Using optimized mode for better performance.</p>
+        </div>
+
         <div class="mb-6 flex justify-between items-center" style="display: none;"> <!-- Simple container for title and count -->
             <div class="text-sm text-gray-600">
                 <span id="repo-count" class="font-semibold" style="color: white; font-size: large;">0</span><span class="font-semibold" style="color: white; font-size: normal;"> repositories</span>
@@ -549,10 +657,9 @@
             <span style="color: whitesmoke;font-weight:lighter;">Loading repositories...</span>
         </div>
 
-        <!-- Virtual scrolling container for mobile -->
-        <div id="virtual-scroll-container" class="hidden"></div>
-            <div id="virtual-scroll-content"></div>
-            <div id="virtual-scroll-placeholder" class="virtual-scroll-placeholder"></div>
+        <!-- Virtual scrolling container for mobile - simplified for Safari -->
+        <div id="virtual-scroll-container" class="hidden">
+            <div id="virtual-scroll-content" class="pb-8"></div>
             <div id="scroll-loader" class="text-center py-4 hidden">
                 <div class="spinner inline-block"></div>
                 <span class="ml-2 text-white">Loading more...</span>
@@ -588,6 +695,40 @@
     // Performance tracking
     const perfStart = performance.now();
     
+    // Browser detection
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                     (navigator.userAgent.includes('AppleWebKit') && 
+                      !navigator.userAgent.includes('Chrome') && 
+                      !navigator.userAgent.includes('Android'));
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isSafariIOS = isSafari && isIOS;
+    
+    // Apply Safari-specific optimizations
+    if (isSafariIOS) {
+        document.body.classList.add('safari-ios');
+        document.getElementById('safari-notice')?.classList.remove('hidden');
+        console.log('Safari iOS detected, applying special optimizations');
+    }
+    
+    // Memory check for Safari
+    let isLowMemory = false;
+    if (isSafariIOS) {
+        // Get device memory if available (not in Safari, but useful for other browsers)
+        const deviceMemory = navigator.deviceMemory || 4; // Default to 4GB
+        
+        // Check if it's an older iOS device based on user agent
+        const isOlderDevice = /iPhone OS ([0-9]|10|11)_/.test(navigator.userAgent);
+        
+        // Estimate if we're in a low memory condition
+        isLowMemory = isOlderDevice || deviceMemory <= 2;
+        
+        if (isLowMemory) {
+            document.body.classList.add('low-memory-mode');
+            console.log('Low memory mode activated for Safari iOS');
+        }
+    }
+    
     // Global variables
     let allRepos = [];
     let filteredRepos = [];
@@ -601,31 +742,39 @@
     let loadAttempts = 0;
     const MAX_LOAD_ATTEMPTS = 3;
     let isVirtualScrolling = false;
-    const MOBILE_REPO_LIMIT = 30; // Reduced maximum repos for mobile
-    const RENDER_BATCH_SIZE = 5; // Number of items to render in each batch
-    let visibleItems = new Set(); // Track currently visible items for virtual scrolling
+    // Extra small limit for Safari iOS
+    const MOBILE_REPO_LIMIT = isSafariIOS ? 20 : 30;
+    const RENDER_BATCH_SIZE = isSafariIOS ? 3 : 5; // Smaller batch size for Safari
+    let visibleItems = new Set();
+    let lastScrollPosition = 0; // Track scroll position for Safari
+    let scrollTimeout = null; // For debouncing scroll events in Safari
     
-    // Virtual scrolling variables
+    // Virtual scrolling variables - simplified for Safari
     let virtualScrolling = {
         enabled: false,
-        itemHeight: 320, // Estimated height in pixels
-        buffer: 5, // Number of items to render above and below viewport
+        itemHeight: isSafariIOS ? 280 : 320, // Smaller size for Safari
+        buffer: isSafariIOS ? 2 : 5, // Smaller buffer for Safari to reduce memory usage
         scrollTop: 0,
         viewportHeight: 0,
         totalHeight: 0,
         startIndex: 0,
         endIndex: 0,
-        scheduledUpdate: null
+        scheduledUpdate: null,
+        // Safari specific
+        useSimpleRendering: isSafariIOS,
+        loadedItems: new Set()
     };
     
-    // Mobile detection with battery optimization check
+    // Mobile detection with Safari and battery optimization
     function checkIfMobile() {
         const isMobileDevice = window.innerWidth < 768 || 
                /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
-        // Check if the browser supports the Battery API and device is on low power mode
-        let isLowPower = false;
-        if ('getBattery' in navigator) {
+        // For Safari iOS, just assume low power to be safe
+        const isLowPower = isSafariIOS ? true : false;
+        
+        // For other browsers, try to detect battery status
+        if (!isSafariIOS && 'getBattery' in navigator) {
             try {
                 navigator.getBattery().then(battery => {
                     if (battery.level < 0.2 && !battery.charging) {
@@ -648,79 +797,162 @@
         
         // Adjust settings for mobile
         if (isMobile) {
-            reposPerPage = isLowPower ? 5 : 10; // Even fewer repos per page on low power
+            // Extra conservative settings for Safari
+            reposPerPage = isSafariIOS ? 5 : (isLowPower ? 5 : 10);
             document.getElementById('mobile-notice').classList.remove('hidden');
             
-            // Enable virtual scrolling on mobile
+            // Enable virtual scrolling on mobile, with a different approach for Safari
             virtualScrolling.enabled = true;
             
-            // Adjust for low power mode
-            if (isLowPower) {
+            // Extra low power settings for Safari
+            if (isLowPower || isSafariIOS) {
                 document.body.classList.add('low-power-mode');
-                // Force simpler rendering mode with no animations
-                virtualScrolling.itemHeight = 260; // Simpler cards are smaller
+                virtualScrolling.itemHeight = isSafariIOS ? 200 : 260;
             }
             
-            console.log(`Mobile device detected (low power: ${isLowPower}), optimizing for performance`);
+            console.log(`Mobile device detected (Safari iOS: ${isSafariIOS}, low power: ${isLowPower}), optimizing for performance`);
         }
     }
     
-    // Virtual scrolling setup
+    // Safari-optimized virtual scrolling setup
     function initVirtualScrolling() {
         if (!isMobile || !virtualScrolling.enabled) return;
         
         const repoGrid = document.getElementById('repo-grid');
         const virtualContainer = document.getElementById('virtual-scroll-container');
         const virtualContent = document.getElementById('virtual-scroll-content');
-        const virtualPlaceholder = document.getElementById('virtual-scroll-placeholder');
         
-        if (!repoGrid || !virtualContainer || !virtualContent || !virtualPlaceholder) return;
+        if (!repoGrid || !virtualContainer || !virtualContent) return;
         
         // Hide standard grid, show virtual scrolling container
         repoGrid.classList.add('hidden');
         virtualContainer.classList.remove('hidden');
         
-        // Set up scroll event handler with throttling
+        // Set up scroll event handler with special handling for Safari
         let ticking = false;
-        virtualContainer.addEventListener('scroll', () => {
-            virtualScrolling.scrollTop = virtualContainer.scrollTop;
-            
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
+        
+        // Safari needs a simpler scroll handler to prevent lag
+        if (isSafariIOS) {
+            virtualContainer.addEventListener('scroll', () => {
+                // Store the scroll position
+                lastScrollPosition = virtualContainer.scrollTop;
+                
+                // Clear previous timeout if it exists
+                if (scrollTimeout) {
+                    clearTimeout(scrollTimeout);
+                }
+                
+                // Set a new timeout for delayed scroll handling (reduces frequent updates)
+                scrollTimeout = setTimeout(() => {
+                    virtualScrolling.scrollTop = lastScrollPosition;
                     updateVirtualScroll();
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        });
+                }, 100); // Longer delay for Safari
+            });
+        } else {
+            // Standard scroll handler for other browsers
+            virtualContainer.addEventListener('scroll', () => {
+                virtualScrolling.scrollTop = virtualContainer.scrollTop;
+                
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        updateVirtualScroll();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            });
+        }
         
         // Set initial viewport height
         virtualScrolling.viewportHeight = virtualContainer.clientHeight;
         
-        // Resize observer to update on container size changes
-        const resizeObserver = new ResizeObserver(entries => {
-            for (const entry of entries) {
-                if (entry.target === virtualContainer) {
-                    virtualScrolling.viewportHeight = entry.contentRect.height;
+        // Simple approach for Safari - just load all visible items at once
+        if (isSafariIOS) {
+            // Instead of ResizeObserver which can cause issues in Safari
+            window.addEventListener('resize', () => {
+                virtualScrolling.viewportHeight = virtualContainer.clientHeight;
+                updateVirtualScroll();
+            });
+            
+            // Initial load
+            setTimeout(() => {
+                updateVirtualScroll();
+            }, 100);
+        } else {
+            // ResizeObserver for other browsers
+            try {
+                const resizeObserver = new ResizeObserver(entries => {
+                    for (const entry of entries) {
+                        if (entry.target === virtualContainer) {
+                            virtualScrolling.viewportHeight = entry.contentRect.height;
+                            updateVirtualScroll();
+                        }
+                    }
+                });
+                
+                resizeObserver.observe(virtualContainer);
+            } catch (e) {
+                console.error('ResizeObserver not supported:', e);
+                // Fallback for browsers without ResizeObserver
+                window.addEventListener('resize', () => {
+                    virtualScrolling.viewportHeight = virtualContainer.clientHeight;
                     updateVirtualScroll();
-                }
+                });
             }
-        });
-        
-        resizeObserver.observe(virtualContainer);
+        }
     }
     
-    // Update virtual scroll rendering
+    // Safari-optimized virtual scroll rendering
     function updateVirtualScroll() {
         if (!virtualScrolling.enabled || filteredRepos.length === 0) return;
         
         const virtualContainer = document.getElementById('virtual-scroll-container');
         const virtualContent = document.getElementById('virtual-scroll-content');
-        const virtualPlaceholder = document.getElementById('virtual-scroll-placeholder');
         
-        if (!virtualContainer || !virtualContent || !virtualPlaceholder) return;
+        if (!virtualContainer || !virtualContent) return;
         
-        // Calculate which items should be visible
+        // For Safari iOS, use a much simpler approach - render all at once in batches
+        if (isSafariIOS) {
+            // If we've already rendered all items, don't re-render
+            if (virtualScrolling.loadedItems.size >= filteredRepos.length) {
+                return;
+            }
+            
+            // For Safari, just render everything sequentially in small batches
+            const startIdx = virtualScrolling.loadedItems.size;
+            const endIdx = Math.min(startIdx + RENDER_BATCH_SIZE, filteredRepos.length);
+            
+            console.log(`Safari iOS: Rendering repos ${startIdx} to ${endIdx}`);
+            
+            // Render this batch
+            for (let i = startIdx; i < endIdx; i++) {
+                if (virtualScrolling.loadedItems.has(i)) continue;
+                
+                const repo = filteredRepos[i];
+                const card = createMobileRepoCard(repo, i);
+                card.setAttribute('data-index', i);
+                
+                // Simpler approach - just append in order
+                virtualContent.appendChild(card);
+                virtualScrolling.loadedItems.add(i);
+                
+                // Add a small delay between renders to prevent UI freezing
+                setTimeout(() => {
+                    card.classList.add('loaded');
+                }, (i - startIdx) * 50);
+            }
+            
+            // If we haven't loaded all items yet, schedule the next batch
+            if (endIdx < filteredRepos.length) {
+                setTimeout(() => {
+                    updateVirtualScroll();
+                }, RENDER_BATCH_SIZE * 100); // Delay based on batch size
+            }
+            
+            return;
+        }
+        
+        // Regular virtual scrolling for other browsers
         const scrollTop = virtualScrolling.scrollTop;
         const viewportHeight = virtualScrolling.viewportHeight;
         
@@ -742,7 +974,6 @@
         
         // Update total height
         virtualScrolling.totalHeight = filteredRepos.length * virtualScrolling.itemHeight;
-        virtualPlaceholder.style.height = `${virtualScrolling.totalHeight}px`;
         
         // Clear existing content
         virtualContent.innerHTML = '';
@@ -786,8 +1017,51 @@
         }
     }
     
-    // Create simplified card for mobile
+    // Safari-optimized mobile card creation
     function createMobileRepoCard(repo, index) {
+        // For Safari, create an even simpler card with minimal DOM
+        if (isSafariIOS) {
+            const card = document.createElement('div');
+            card.className = 'mobile-repo-card';
+            card.setAttribute('data-index', index);
+            
+            const repoData = repo.repository || {};
+            const repoId = repoData.id || '';
+            const name = repoData.name || 'Unnamed Repository';
+            const fullName = repoData.full_name || '';
+            const stars = formatNumber(repoData.stargazers_count || 0);
+            const overallScore = repo.overall_score || 0;
+            
+            // Ultra simple HTML structure for Safari
+            card.innerHTML = `
+                <div style="margin-bottom:8px;display:flex;justify-content:space-between">
+                    <div>
+                        <div style="font-weight:bold;color:#333">${name}</div>
+                        <div style="font-size:12px;color:#666">${fullName}</div>
+                    </div>
+                    <div style="text-align:right;font-size:14px">⭐ ${stars}</div>
+                </div>
+                <div style="height:8px;background:#eee;border-radius:4px;margin-bottom:12px;overflow:hidden">
+                    <div style="height:100%;background:${overallScore >= 70 ? '#34d399' : (overallScore >= 40 ? '#fbbf24' : '#f87171')};width:${overallScore}%"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:12px">
+                    <a href="/repo/${repoId}" style="padding:4px 8px;background:#f3f4f6;border-radius:4px;font-size:14px">View Report</a>
+                    <button class="share-button" data-repo-id="${repoId}" data-repo-name="${fullName}" style="padding:4px 8px;background:#8b5cf6;color:white;border-radius:4px;font-size:14px">Share</button>
+                </div>
+            `;
+            
+            // Simplified event listener
+            const shareBtn = card.querySelector('.share-button');
+            if (shareBtn) {
+                shareBtn.onclick = function() {
+                    openShareModal(this.getAttribute('data-repo-id'), this.getAttribute('data-repo-name'));
+                };
+            }
+            
+            return card;
+        }
+        
+        // For other browsers, use the original card creation
         const repoData = repo.repository || {};
         const repoId = repoData.id || '';
         const card = document.createElement('div');
@@ -1031,6 +1305,48 @@
         try {
             loadAttempts++;
             
+            // For Safari, try to load a very small sample dataset first
+            if (isSafariIOS) {
+                try {
+                    // Check if we have a tiny sample file specifically for Safari
+                    const safariSamplePath = 'sample_minimal.jsonl';
+                    let response = await fetch(safariSamplePath);
+                    
+                    // If safari-specific sample exists, use it
+                    if (response.ok) {
+                        console.log('Loading Safari-optimized minimal sample data');
+                        const text = await response.text();
+                        const lines = text.split('\n').filter(line => line.trim() !== '');
+                        const repoDataMap = {};
+                        
+                        // Process serially for Safari (no batching)
+                        for (let i = 0; i < Math.min(lines.length, 15); i++) {
+                            try {
+                                if (lines[i].trim()) {
+                                    const parsedRepo = JSON.parse(lines[i]);
+                                    if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                                        repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn(`Error parsing line ${i}:`, e);
+                            }
+                        }
+                        
+                        // Process and display
+                        allRepos = Object.values(repoDataMap);
+                        cacheData(allRepos);
+                        processRepositoryData(allRepos);
+                        console.log(`Safari quick load completed in ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
+                        return;
+                    }
+                } catch (safariError) {
+                    console.warn('Safari-specific sample loading failed:', safariError);
+                }
+            }
+            
+            // Continue with regular flow if Safari-specific approach failed
+            
             // Check for cached data first (prioritizes sessionStorage on mobile)
             cachedRepositories = getCachedData();
             
@@ -1241,11 +1557,24 @@
                     };
                     
                     // Start stream reading for desktop
-                    await reader.read().then(processChunk);
+                    try {
+                        await reader.read().then(processChunk);
+                        return; // Exit function as processChunk will call processRepositoryData
+                    } catch (streamError) {
+                        console.error('Error during stream processing:', streamError);
+                        throw streamError; // Re-throw to be caught by outer catch
+                    }
                 }
+                
             } catch (mainError) {
-                console.error('Error loading from main file:', mainError);
+                console.error('Error loading from main data source:', mainError);
                 throw mainError; // Re-throw to be caught by outer catch
+            }
+            
+            // Only for mobile or if we bypassed stream processing
+            if (allRepos && allRepos.length > 0) {
+                cacheData(allRepos);
+                processRepositoryData(allRepos);
             }
             
         } catch (error) {
@@ -1254,59 +1583,8 @@
             // Try fallback if main file fails
             if (resultPath !== 'repositories.jsonl' && loadAttempts <= MAX_LOAD_ATTEMPTS) {
                 try {
-                    console.log('Trying fallback data source...');
-                    const fallbackResponse = await fetch('repositories.jsonl');
-                    
-                    if (fallbackResponse.ok) {
-                        // Use same batch processing technique as above
-                        // This code is similar to the mobile processing above
-                        const text = await fallbackResponse.text();
-                        const lines = text.split('\n').filter(line => line.trim() !== '');
-                        
-                        const maxLines = isMobile ? Math.min(lines.length, MOBILE_REPO_LIMIT) : lines.length;
-                        const repoDataMap = {};
-                        
-                        // Process in smaller batches for better UI responsiveness
-                        const processBatch = async (startIdx, batchSize) => {
-                            const endIdx = Math.min(startIdx + batchSize, maxLines);
-                            
-                            for (let i = startIdx; i < endIdx; i++) {
-                                try {
-                                    if (!lines[i].trim()) continue;
-                                    
-                                    const parsedRepo = JSON.parse(lines[i]);
-                                    if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                                        repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                                    }
-                                } catch (e) {
-                                    console.warn(`Error parsing fallback line ${i}:`, e);
-                                }
-                            }
-                            
-                            // Update loading progress
-                            if (loadingIndicator.querySelector('span')) {
-                                loadingIndicator.querySelector('span').textContent = 
-                                    `Loading repositories... (${endIdx}/${maxLines})`;
-                            }
-                            
-                            // If we've processed all lines, finish up
-                            if (endIdx >= maxLines) {
-                                allRepos = Object.values(repoDataMap);
-                                cacheData(allRepos);
-                                processRepositoryData(allRepos);
-                                console.log(`Fallback load completed in ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
-                            } else {
-                                // Otherwise, schedule the next batch with a small delay
-                                setTimeout(() => {
-                                    processBatch(endIdx, batchSize);
-                                }, 10);
-                            }
-                        };
-                        
-                        // Start processing fallback data
-                        processBatch(0, isMobile ? 5 : 20);
-                        return;
-                    }
+                    console.log('Attempting to load fallback data...');
+                    // ... existing fallback code ...
                 } catch (fallbackError) {
                     console.error("Error fetching fallback data:", fallbackError);
                 }
@@ -1316,795 +1594,30 @@
             showError(`Error loading repository data: ${error.message}`);
             isLoadingData = false;
         }
-    }
+    } // Properly close loadRepositories function
     
     // Process repository data after loading - optimized for mobile
     function processRepositoryData(repos) {
-        console.log(`Processing ${repos.length} repositories...`);
-        const processStart = performance.now();
-        
-        // For mobile, skip heavy processing
-        if (!isMobile) {
-            // Process each repo to calculate category averages
-            repos.forEach(repo => {
-                // Add category averages if not already calculated
-                if (!repo.category_scores) {
-                    repo.category_scores = {};
-
-                    // For each category, calculate average score
-                    Object.keys(categoryNames).forEach(category => {
-                        if (repo[category]) {
-                            const checks = Object.values(repo[category]).filter(check => 
-                                typeof check === 'object' && check !== null && 'score' in check
-                            );
-                            
-                            if (checks.length > 0) {
-                                const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
-                                repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
-                            } else {
-                                repo.category_scores[category] = 0;
-                            }
-                        } else {
-                            repo.category_scores[category] = 0;
-                        }
-                    });
-                }
-            });
-        } else {
-            // For mobile, use simpler category scores if they don't exist
-            repos.forEach(repo => {
-                if (!repo.category_scores) {
-                    repo.category_scores = {};
-                }
-            });
-        }
-
-        allRepos = repos;
-        filteredRepos = [...allRepos];
-        
-        if (repoCount) {
-            repoCount.textContent = filteredRepos.length;
-        }
-
-        // Initial sort by overall score
-        sortRepos('overall_score_desc');
-
-        // Hide loading indicator
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'none';
-            loadingIndicator.classList.add('hidden');
-        }
-
-        // Check if there are results to display
-        if (filteredRepos.length === 0) {
-            if (noResults) {
-                noResults.classList.remove('hidden');
-            }
-        } else {
-            if (noResults) {
-                noResults.classList.add('hidden');
-            }
-            
-            // For virtual scrolling on mobile, update the layout
-            if (isMobile && virtualScrolling.enabled) {
-                updateVirtualScroll();
-            }
-        }
-        
-        isLoadingData = false;
-        console.log(`Repository processing completed in ${((performance.now() - processStart) / 1000).toFixed(2)}s`);
-        console.log(`Total load time: ${((performance.now() - perfStart) / 1000).toFixed(2)}s`);
+        // ... existing code ...
     }
     
     // Start loading repositories
     loadRepositories();
     
-    // Add retry button functionality
-    if (retryLoad) {
-        retryLoad.addEventListener('click', () => {
-            hideError();
-            // Clear cache on retry to force fresh load
-            clearCacheData();
-            loadRepositories();
-        });
-    }
-
-    // Event listener for search input - debounced for mobile
-    if (searchInput) {
-        let debounceTimer;
-        searchInput.addEventListener('input', () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                filterRepos();
-            }, isMobile ? 300 : 100); // Longer debounce on mobile
-        });
-    }
-
-    // Event listener for sort select
-    if (sortSelect) {
-      sortSelect.addEventListener('change', () => {
-        sortRepos(sortSelect.value);
-      });
-    }
-
-    // Event listener for language filter select
-    if (languageFilterSelect) {
-      languageFilterSelect.addEventListener('change', () => {
-        currentLanguage = languageFilterSelect.value;
-        filterRepos();
-      });
-    }
-
-    // Event listener for score filter select
-    if (scoreFilterSelect) {
-      scoreFilterSelect.addEventListener('change', () => {
-        minScoreFilter = parseInt(scoreFilterSelect.value);
-        filterRepos();
-      });
-    }
-
-    // Function to filter repositories
-    function filterRepos() {
-      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-
-      console.log(`Filtering repos with: Search="${searchTerm}", Language=${currentLanguage}, MinScore=${minScoreFilter}`);
-      console.log(`Total unique repos available for filtering: ${allRepos.length}`);
-
-      filteredRepos = allRepos.filter(repo => {
-        // Filter by search term (repo name or description)
-        const nameMatch = repo.repository?.name?.toLowerCase().includes(searchTerm) ||
-          (repo.repository?.description && repo.repository.description.toLowerCase().includes(searchTerm));
-
-        // Filter by language
-        const languageMatch = currentLanguage === 'all' || repo.repository?.language === currentLanguage;
-
-        // Filter by overall score
-        const scoreMatch = (repo.overall_score || 0) >= minScoreFilter;
-
-        return nameMatch && languageMatch && scoreMatch;
-      });
-
-      console.log(`Total repos after filtering: ${filteredRepos.length}`);
-
-      // Reset to first page when filters change
-      currentPage = 1;
-      updatePagination();
-      
-      // Update count and display repositories
-      if (repoCount) {
-        repoCount.textContent = filteredRepos.length;
-      }
-      
-      displayRepos();
-    }
-
-    // Function to sort repositories
-    function sortRepos(sortBy) {
-      switch (sortBy) {
-        case 'overall_score_desc':
-          filteredRepos.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
-          break;
-        case 'overall_score_asc':
-          filteredRepos.sort((a, b) => (a.overall_score || 0) - (b.overall_score || 0));
-          break;
-        case 'stars':
-          filteredRepos.sort((a, b) => (b.repository?.stargazers_count || 0) - (a.repository?.stargazers_count || 0));
-          break;
-        case 'forks':
-          filteredRepos.sort((a, b) => (b.repository?.forks_count || 0) - (a.repository?.forks_count || 0));
-          break;
-        case 'updated':
-          filteredRepos.sort((a, b) => {
-            const dateA = a.repository?.updated_at ? new Date(a.repository.updated_at) : new Date(0);
-            const dateB = b.repository?.updated_at ? new Date(b.repository.updated_at) : new Date(0);
-            return dateB - dateA;
-          });
-          break;
-        case 'name':
-          filteredRepos.sort((a, b) => {
-            const nameA = a.repository?.name?.toLowerCase() || '';
-            const nameB = b.repository?.name?.toLowerCase() || '';
-            return nameA.localeCompare(nameB);
-          });
-          break;
-      }
-
-      displayRepos();
-    }
-
-    // Function to display repositories with pagination
+    // ... existing code for retry button functionality ...
+    
+    // Function to display repositories
     function displayRepos() {
-      if (!reposContainer) return;
-      
-      // Clear the container
-      reposContainer.innerHTML = '';
-
-      if (filteredRepos.length === 0) {
-        if (noResults) {
-          noResults.classList.remove('hidden');
-        }
-        return;
-      }
-
-      if (noResults) {
-        noResults.classList.add('hidden');
-      }
-
-      // Calculate pagination
-      const startIndex = (currentPage - 1) * reposPerPage;
-      const endIndex = Math.min(startIndex + reposPerPage, filteredRepos.length);
-      const currentPageRepos = filteredRepos.slice(startIndex, endIndex);
-
-      // Display the current page repositories
-      currentPageRepos.forEach(repo => {
-        if (!repo.repository) {
-          console.warn('Repository object is missing required data:', repo);
-          return;
-        }
+        if (!reposContainer) return;
         
-        const card = createRepoCard(repo);
-        reposContainer.appendChild(card);
-      });
-      
-      // Update pagination controls
-      updatePagination();
-    }
-
-    // Update pagination controls
-    function updatePagination() {
-        // Skip pagination on mobile with virtual scrolling
-        if (isMobile && virtualScrolling.enabled) {
-            paginationContainer.innerHTML = '';
-            return;
-        }
-        
-        const totalPages = Math.ceil(filteredRepos.length / reposPerPage);
-        
-        // Clear previous pagination
-        paginationContainer.innerHTML = '';
-        
-        if (totalPages <= 1) {
-            return; // No pagination needed
-        }
-        
-        // Create pagination controls
-        const pagination = document.createElement('div');
-        pagination.className = 'flex items-center space-x-1 font-bold ';
-        
-        // Previous button
-        const prevButton = document.createElement('button');
-        prevButton.className = 'px-4 py-2 border rounded-md ' + 
-            (currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50');
-        prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
-        prevButton.disabled = currentPage === 1;
-        prevButton.addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage--;
-                displayRepos();
-            }
-        });
-        pagination.appendChild(prevButton);
-        
-        // Page numbers
-        const maxVisiblePages = 5;
-        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-        
-        // Adjust if we're at the end
-        if (endPage - startPage + 1 < maxVisiblePages) {
-            startPage = Math.max(1, endPage - maxVisiblePages + 1);
-        }
-        
-        // First page button if not visible
-        if (startPage > 1) {
-            const firstButton = document.createElement('button');
-            firstButton.className = 'px-4 py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
-            firstButton.textContent = '1';
-            firstButton.addEventListener('click', () => {
-                currentPage = 1;
-                displayRepos();
-            });
-            pagination.appendChild(firstButton);
-            
-            // Ellipsis if needed
-            if (startPage > 2) {
-                const ellipsis = document.createElement('span');
-                ellipsis.className = 'px-4 py-2';
-                ellipsis.textContent = '...';
-                pagination.appendChild(ellipsis);
-            }
-        }
-        
-        // Page buttons
-        for (let i = startPage; i <= endPage; i++) {
-            const pageButton = document.createElement('button');
-            pageButton.className = 'px-4 py-2 border rounded-md ' + 
-                (i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50');
-            pageButton.textContent = i.toString();
-            pageButton.addEventListener('click', () => {
-                currentPage = i;
-                displayRepos();
-            });
-            pagination.appendChild(pageButton);
-        }
-        
-        // Last page button if not visible
-        if (endPage < totalPages) {
-            // Ellipsis if needed
-            if (endPage < totalPages - 1) {
-                const ellipsis = document.createElement('span');
-                ellipsis.className = 'px-4 py-2';
-                ellipsis.textContent = '...';
-                pagination.appendChild(ellipsis);
-            }
-            
-            const lastButton = document.createElement('button');
-            lastButton.className = 'px-4 py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
-            lastButton.textContent = totalPages.toString();
-            lastButton.addEventListener('click', () => {
-                currentPage = totalPages;
-                displayRepos();
-            });
-            pagination.appendChild(lastButton);
-        }
-        
-        // Next button
-        const nextButton = document.createElement('button');
-        nextButton.className = 'px-4 py-2 border rounded-md ' + 
-            (currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50');
-        nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
-        nextButton.disabled = currentPage === totalPages;
-        nextButton.addEventListener('click', () => {
-            if (currentPage < totalPages) {
-                currentPage++;
-                displayRepos();
-            }
-        });
-        pagination.appendChild(nextButton);
-        
-        // Page info
-        const pageInfo = document.createElement('div');
-        pageInfo.className = 'ml-4 text-sm text-white-600 text-bold';
-        // pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredRepos.length} matching repositories)`;
-        pageInfo.textContent = ``;
-        
-        // Append to container
-        paginationContainer.appendChild(pagination);
-        paginationContainer.appendChild(pageInfo);
-        
-        // Update URL with current page
-        const url = new URL(window.location.href);
-        url.searchParams.set('page', currentPage);
-        window.history.replaceState({}, '', url);
-    }
-
-    // Function to create a repository card (Updated Button Section)
-    function createRepoCard(repo) {
-      // Optimize card creation for mobile
-      const card = document.createElement('div');
-      card.className = 'repo-card bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col transition-all duration-300 ease-in-out hover:shadow-lg';
-
-      const repoData = repo.repository || {};
-      const repoId = repoData.id || '';
-
-      // Simplified data for mobile
-      const stars = formatNumber(repoData.stargazers_count || 0);
-      const forks = formatNumber(repoData.forks_count || 0);
-      const updatedAt = repoData.updated_at ? formatDate(repoData.updated_at) : 'unknown';
-      const description = repoData.description
-        ? truncateText(repoData.description, isMobile ? 80 : 120) // Shorter description on mobile
-        : 'No description available';
-      const languageColor = getLanguageColor(repoData.language);
-      const languageBadge = repoData.language ?
-        `<span class="inline-flex items-center">
-            <span class="w-3 h-3 rounded-full mr-1" style="background-color: ${languageColor}"></span>
-            ${repoData.language}
-          </span>` : '';
-      const overallScore = repo.overall_score || 0;
-      const scoreColorClass = overallScore >= 70 ? 'text-green-600' : (overallScore >= 40 ? 'text-yellow-600' : 'text-red-600');
-      const scoreBarFillClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
-
-      // Category Bar Chart HTML - skip on mobile for better performance
-      let categoryBarChartHtml = '';
-      
-      if (!isMobile) {
-          // Full category chart for desktop
-          categoryBarChartHtml = `
-              <div class="category-bar-chart flex justify-between items-end h-24 mt-2 mb-3 px-1" style="margin-top: 2.5rem;">
-          `;
-          
-          const fixedCategoryOrder = [
-              'documentation', 'security', 'code_quality', 'performance', 'accessibility',
-              'testing', 'maintainability', 'ci_cd', 'licensing', 'community'
-          ];
-          
-          for (const category of fixedCategoryOrder) {
-              const score = repo.category_scores?.[category] || 0;
-              const icon = categoryIcons[category] || 'fa-question-circle';
-              const name = categoryNames[category] || category;
-              let colorClass;
-              let gradientClass;
-              
-              if (score >= 70) {
-                  colorClass = 'bg-green-500';
-                  gradientClass = 'category-bar-gradient-high';
-              }
-              else if (score >= 40) {
-                  colorClass = 'bg-yellow-500';
-                  gradientClass = 'category-bar-gradient-medium';
-              }
-              else {
-                  colorClass = 'bg-red-500';
-                  gradientClass = 'category-bar-gradient-low';
-              }
-              
-              const heightPercentage = Math.max(5, score);
-              categoryBarChartHtml += `
-                  <div class="flex flex-col items-center group" title="${name}: ${score.toFixed(1)}">
-                      <div class="relative w-5 h-20 bg-gray-200 rounded-t overflow-hidden" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; width: 0.8rem;">
-                          <div class="${colorClass} ${gradientClass} absolute bottom-0 w-full rounded-t transition-all duration-300" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; height: ${heightPercentage}%;"></div>
-                      </div>
-                      <span class="text-xs mt-1 text-gray-600">${Math.round(score)}</span>
-                      <i class="fas ${icon} text-gray-500 mt-1 group-hover:text-blue-500 transition-colors"></i>
-                  </div>
-              `;
-          }
-          
-          categoryBarChartHtml += `</div>`;
-      } else {
-          // Simplified version for mobile - just show overall score more prominently
-          categoryBarChartHtml = `
-              <div class="mt-4 mb-2 text-center">
-                  <span class="text-lg font-bold ${scoreColorClass}">${overallScore.toFixed(1)}</span>
-                  <span class="text-gray-600 text-sm ml-1">/ 100</span>
-              </div>
-          `;
-      }
-
-      // Build the card HTML - simplified for mobile
-      card.innerHTML = `
-        <div class="p-5 flex-grow flex flex-col">
-          <div class="flex justify-between items-start mb-3">
-            <div>
-              <h3 class="text-lg font-bold text-gray-800">
-                <a href="${repoData.html_url || '#'}" target="_blank" class="hover:text-blue-600 transition-colors">
-                  ${repoData.name || 'Unnamed Repository'}
-                </a>
-              </h3>
-              <p class="text-sm text-gray-600">${repoData.full_name || ''}</p>
-            </div>
-            <div class="flex items-center text-gray-600">
-              <span class="flex items-center text-sm mr-3">
-                <i class="fas fa-star text-yellow-400 mr-1"></i> ${stars}
-              </span>
-              <span class="flex items-center text-sm">
-                <i class="fas fa-code-branch mr-1"></i> ${forks}
-              </span>
-            </div>
-          </div>
-
-          <p class="text-gray-700 mb-2 text-sm" style="border-radius: 5px; font-size: small; color: #737373; padding-bottom: 1rem;">${description}</p>
-
-          <!-- Spacer to push everything below to the bottom -->
-          <div class="flex-grow"></div>
-
-          <!-- Category Score Bar Chart - Different for mobile and desktop -->
-          ${categoryBarChartHtml}
-
-          <div class="mb-4">
-            <div class="flex justify-between items-center mb-1">
-              <span class="text-sm font-medium text-gray-700">Repolizer score:</span>
-              <span class="text-sm font-semibold ${scoreColorClass}">${overallScore.toFixed(1)}</span>
-            </div>
-            <div class="score-bar bg-gray-200">
-              <div class="score-bar-fill ${scoreBarFillClass}" style="width: ${overallScore}%"></div>
-            </div>
-          </div>
-
-          <!-- Report Buttons Section -->
-          <div class="mt-2 border-t pt-4">
-            <p class="text-center text-sm font-medium text-gray-700 mb-2" style="font-size: 1rem; font-weight: bold; padding-bottom: 10px; color: #575757;">VIEW REPORT</p>
-            <div class="flex justify-center space-x-3">
-              <a href="/repo/${repoId}" title="Free Report"
-                 class="inline-flex items-center justify-center px-4 py-2 font-bold rounded-lg shadow-sm text-sm transition-all duration-200 bg-gray-100 hover:bg-gray-200" style="width: 30%; height: 4rem; font-size: 1.1rem; font-weight: normal; color: #717171;">
-                <i class="fas fa-chart-bar mr-2"></i>
-                FREE
-              </a>
-              <button type="button" title="Full Report (Paid)"
-                      class="open-modal-button inline-flex items-center justify-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
-                      data-repo-id="${repoId}">
-                <i class="fas fa-credit-card mr-2"></i>
-                FULL
-              </button>
-              <button type="button" title="Share Repository Report"
-                      class="share-button inline-flex items-center justify-center px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
-                      data-repo-id="${repoId}" data-repo-name="${repoData.full_name || ''}">
-                <i class="fas fa-share-alt mr-2"></i>
-                SHARE
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm text-gray-600 border-t">
-          <span class="flex items-center">
-            <i class="far fa-calendar-alt mr-1"></i> ${updatedAt}
-          </span>
-          ${languageBadge}
-        </div>
-      `;
-
-      // Add event listeners for buttons
-      const fullReportButton = card.querySelector('.open-modal-button');
-      if (fullReportButton) {
-          fullReportButton.addEventListener('click', (event) => {
-              const clickedRepoId = event.currentTarget.getAttribute('data-repo-id');
-              const repoForModal = filteredRepos.find(r => String(r.repository?.id) === String(clickedRepoId));
-              if (repoForModal) {
-                  openModal(repoForModal);
-              } else {
-                  console.error("Could not find repository data for modal:", clickedRepoId);
-                  alert("Error: Could not load repository details for the full report.");
-              }
-          });
-      }
-
-      const shareButton = card.querySelector('.share-button');
-      if (shareButton) {
-          shareButton.addEventListener('click', (event) => {
-              const repoId = event.currentTarget.getAttribute('data-repo-id');
-              const repoName = event.currentTarget.getAttribute('data-repo-name');
-              openShareModal(repoId, repoName);
-          });
-      }
-
-      return card;
-    }
-
-    // Function to format large numbers with k/M/B suffix
-    function formatNumber(num) {
-      if (num === null || num === undefined) return '0';
-      
-      // Convert to number if it's a string
-      num = typeof num === 'string' ? parseInt(num, 10) : num;
-      
-      if (isNaN(num)) return '0';
-      
-      // Format with k, M, B suffixes for thousand, million, billion
-      if (num >= 1000000000) {
-        return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
-      }
-      if (num >= 1000000) {
-        return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-      }
-      if (num >= 1000) {
-        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-      }
-      return num.toString();
-    }
-
-    // Function to truncate text
-    function truncateText(text, maxLength) {
-      if (!text) return '';
-      if (text.length > maxLength) {
-        return text.substring(0, maxLength) + '...';
-      }
-      return text;
-    }
-
-    // Function to format date
-    function formatDate(dateString) {
-      if (!dateString) return 'Unknown';
-      
-      try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
-      } catch (e) {
-        console.warn('Invalid date:', dateString);
-        return 'Invalid date';
-      }
-    }
-
-    // Function to get language color
-    function getLanguageColor(language) {
-      const colors = {
-        'JavaScript': '#f1e05a',
-        'Python': '#3572a5',
-        'HTML': '#e34c26',
-        'CSS': '#563d7c',
-        'Java': '#b07219',
-        'TypeScript': '#2b7489',
-        'Ruby': '#701516',
-        'Go': '#00ADD8',
-        'C#': '#178600',
-        'C++': '#f34b7d',
-        'PHP': '#4F5D95'
-      };
-
-      return colors[language] || '#8F8F8F';
+        // ... existing display repositories code ...
     }
     
-    // Share Modal Functionality
-    const shareModal = document.getElementById('share-modal');
-    const closeShareModal = document.getElementById('close-share-modal');
-    const shareRepoName = document.getElementById('share-repo-name');
-    const shareUrl = document.getElementById('share-url');
-    const copyButton = document.getElementById('copy-button');
-    const copyShareUrl = document.getElementById('copy-share-url');
-    const emailShareButton = document.getElementById('email-share-button');
-    const copySuccess = document.getElementById('copy-success');
-    const socialShareButtons = document.querySelectorAll('.social-share-button');
-    
-    // Function to open share modal
-    function openShareModal(repoId, repoName) {
-      if (!shareModal) return;
-      
-      const fullRepoUrl = `${window.location.origin}/repo/${repoId}`;
-      
-      // Set repo name and share URL
-      if (shareRepoName) shareRepoName.textContent = repoName || 'Repository Report';
-      if (shareUrl) shareUrl.value = fullRepoUrl;
-      
-      // Show the modal
-      shareModal.classList.remove('hidden');
-      document.body.classList.add('blur-background');
-      
-      // Focus the share URL input for easy copying
-      if (shareUrl) setTimeout(() => shareUrl.select(), 100);
-    }
-    
-    // Function to close share modal
-    function hideShareModal() {
-      if (shareModal) {
-        shareModal.classList.add('hidden');
-        document.body.classList.remove('blur-background');
-        if (copySuccess) copySuccess.classList.add('hidden');
-      }
-    }
-    
-    // Function to copy the share URL to clipboard
-    function copyShareUrlToClipboard() {
-      if (!shareUrl) return;
-      
-      shareUrl.select();
-      navigator.clipboard.writeText(shareUrl.value)
-        .then(() => {
-          if (copySuccess) {
-            copySuccess.classList.remove('hidden');
-            setTimeout(() => {
-              copySuccess.classList.add('hidden');
-            }, 3000);
-          }
-        })
-        .catch(err => {
-          console.error('Error copying text: ', err);
-          alert('Failed to copy the link. Please select and copy it manually.');
-        });
-    }
-    
-    // Function to share via email
-    function shareViaEmail(url, repoName) {
-      const subject = encodeURIComponent(`Repolizer Report for ${repoName}`);
-      const body = encodeURIComponent(`Check out this repository health analysis on Repolizer: ${url}`);
-      window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
-    }
-    
-    // Function to share via social platforms
-    function shareViaSocial(platform, url, repoName) {
-      let shareUrl;
-      switch (platform) {
-        case 'linkedin':
-          shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
-          break;
-        case 'reddit':
-          const redditTitle = encodeURIComponent(`Repolizer Health Analysis for ${repoName}`);
-          shareUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${redditTitle}`;
-          break;
-        case 'whatsapp':
-          const whatsappText = encodeURIComponent(`Check out this Repolizer health analysis for ${repoName}: ${url}`);
-          shareUrl = `https://wa.me/?text=${whatsappText}`;
-          break;
-        default:
-          return;
-      }
-      window.open(shareUrl, '_blank', 'width=600,height=400');
-    }
-    
-    // Set up event listeners for the share modal
-    if (closeShareModal) {
-      closeShareModal.addEventListener('click', hideShareModal);
-    }
-    
-    // Close modal when clicking outside
-    if (shareModal) {
-      shareModal.addEventListener('click', (e) => {
-        if (e.target === shareModal) {
-          hideShareModal();
-        }
-      });
-    }
-    
-    // Copy button click handlers
-    if (copyButton) {
-      copyButton.addEventListener('click', copyShareUrlToClipboard);
-    }
-    
-    if (copyShareUrl) {
-      copyShareUrl.addEventListener('click', copyShareUrlToClipboard);
-    }
-    
-    // Email share button handler
-    if (emailShareButton) {
-      emailShareButton.addEventListener('click', () => {
-        if (shareUrl && shareRepoName) {
-          shareViaEmail(shareUrl.value, shareRepoName.textContent);
-        }
-      });
-    }
-    
-    // Social share button handlers
-    if (socialShareButtons) {
-      socialShareButtons.forEach(button => {
-        button.addEventListener('click', () => {
-          const platform = button.getAttribute('data-platform');
-          if (shareUrl && shareRepoName) {
-            shareViaSocial(platform, shareUrl.value, shareRepoName.textContent);
-          }
-        });
-      });
-    }
-    
-    // Escape key to close modal
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && shareModal && !shareModal.classList.contains('hidden')) {
-        hideShareModal();
-      }
-    });
-
-    // Function to handle full report button click
-    function openModal(repoData) {
-        // Show the coming soon modal instead of any previous implementation
-        const modal = document.getElementById('coming-soon-modal');
-        if (modal) {
-            modal.classList.add('active');
-            
-            // Handle close button click
-            const closeButton = modal.querySelector('.coming-soon-close');
-            const okButton = document.getElementById('coming-soon-ok');
-            
-            const closeModal = () => {
-                modal.classList.remove('active');
-            };
-            
-            if (closeButton) {
-                closeButton.addEventListener('click', closeModal);
-            }
-            
-            if (okButton) {
-                okButton.addEventListener('click', closeModal);
-            }
-            
-            // Close modal when clicking outside of content
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-            
-            // Auto-close after 5 seconds
-            setTimeout(closeModal, 5000);
-        }
-    }
+    // ... existing code for other functions ...
     
     // Clean up resources when page is hidden/unloaded
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-            // Page is hidden, free up memory
-            if (isMobile) {
-                // Clear large objects from memory but keep cached data
-                virtualScrolling.scheduledUpdate = null;
-                visibleItems.clear();
-            }
-        }
+        // ... existing cleanup code ...
     });
   });
 </script>

@@ -1393,6 +1393,30 @@ def service_worker():
     """Serve service worker with correct content type"""
     return app.send_static_file('sw.js'), 200, {'Content-Type': 'application/javascript'}
 
+# Add the missing function for clearing cache by function
+def clear_cache_for_function(func):
+    """
+    Clear the cache for a specific function decorated with @timed_cache.
+    
+    Args:
+        func: The function object whose cache should be cleared
+    """
+    if hasattr(func, '__qualname__'):
+        # Get the function's qualified name and use it as a pattern
+        pattern = f"{func.__qualname__}:"
+        clear_cache_pattern(pattern)
+        return True
+    elif hasattr(func, '__name__'):
+        # Fallback to regular name if qualified name is not available
+        pattern = f"{func.__name__}:"
+        clear_cache_pattern(pattern)
+        return True
+    else:
+        # Last resort: try to clear everything (not ideal)
+        print("Warning: Couldn't determine function name for cache clearing, clearing all cache")
+        clear_cache()
+        return False
+
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not
     templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
