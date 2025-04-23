@@ -1431,21 +1431,28 @@ def repo_detail_pdf(repo_id):
         return render_template('error.html',
                               error=f"Repository '{repo_id}' found, but no analysis results are available."), 404
 
-    # Render the HTML first - we'll use the same template used for web display
-    rendered_html = render_template('repo_detail.html', repo=latest_valid_repo_data)
+    # Render using a PDF-specific template that avoids problematic CSS
+    rendered_html = render_template('repo_detail_pdf.html', repo=latest_valid_repo_data)
     
-    # Generate a PDF from the rendered HTML
-    pdf = weasyprint.HTML(string=rendered_html, base_url=request.url).write_pdf()
+    try:
+        # Generate PDF with minimal styling to avoid CSS conversion issues
+        pdf = weasyprint.HTML(string=rendered_html).write_pdf()
+        
+        # Get repository name for the filename
+        repo_name = latest_valid_repo_data.get('repository', {}).get('name', 'repository')
+        
+        # Create response with PDF content
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename="{repo_name}_report.pdf"'
+        
+        return response
     
-    # Get repository name for the filename
-    repo_name = latest_valid_repo_data.get('repository', {}).get('name', 'repository')
-    
-    # Create response with PDF content
-    response = make_response(pdf)
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename="{repo_name}_report.pdf"'
-    
-    return response
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
+        # If PDF generation fails, redirect to the HTML version with an error message
+        flash("PDF generation failed. Viewing HTML version instead.", "error")
+        return redirect(url_for('repo_detail', repo_id=repo_id))
 
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not
