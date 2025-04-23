@@ -7,3 +7,4 @@ markdown
 psutil
 toml
 safety
+weasyprint
