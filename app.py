@@ -17,6 +17,7 @@ import requests # Add requests import
 from app_utils import enqueue_output, run_analyzer, get_results_file_info # Import moved functions
 from collections import defaultdict
 from email.utils import formatdate, parsedate_to_datetime # Import for Last-Modified and If-Modified-Since support
+import weasyprint # Add weasyprint for PDF generation
 
 app = Flask(__name__)
 
@@ -1366,6 +1367,85 @@ def offline():
 def service_worker():
     """Serve service worker with correct content type"""
     return app.send_static_file('sw.js'), 200, {'Content-Type': 'application/javascript'}
+
+@app.route('/repo/<path:repo_id>/pdf')
+def repo_detail_pdf(repo_id):
+    """Generate a PDF version of the repository detail report"""
+    print(f"--- Generating PDF for repo ID/Name: {repo_id} ---")
+    
+    # Get the same data as the normal repo_detail route
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+    if not os.path.exists(file_path):
+        sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
+        if os.path.exists(sample_path):
+            file_path = sample_path
+        else:
+            return render_template('error.html', error="Results file not found"), 404
+
+    latest_valid_repo_data = None
+    latest_valid_timestamp = None
+    
+    # Determine if the repo_id is numeric (GitHub ID) or a string (full_name)
+    is_numeric_id = repo_id.isdigit()
+    repo_id_int = int(repo_id) if is_numeric_id else None
+    repo_full_name = repo_id if not is_numeric_id else None
+
+    try:
+        with open(file_path, 'r') as f:
+            for line in f:
+                try:
+                    data = json.loads(line)
+                    current_repo_info = data.get('repository', {})
+                    repo_id_in_data = current_repo_info.get('id')
+                    repo_name_in_data = current_repo_info.get('full_name')
+
+                    # Check if this entry matches the requested repo ID or Name
+                    match = False
+                    if is_numeric_id and repo_id_int is not None and repo_id_in_data == repo_id_int:
+                        match = True
+                    elif not is_numeric_id and repo_full_name is not None and repo_name_in_data == repo_full_name:
+                         match = True
+                    elif is_numeric_id and str(repo_id_in_data) == repo_id:
+                         match = True
+
+                    if match:
+                        timestamp_str = data.get('timestamp')
+                        
+                        if current_repo_info and timestamp_str:
+                            try:
+                                current_timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                                if current_timestamp.tzinfo is None:
+                                     current_timestamp = current_timestamp.replace(tzinfo=timezone.utc)
+                                
+                                if latest_valid_timestamp is None or current_timestamp >= latest_valid_timestamp:
+                                    latest_valid_timestamp = current_timestamp
+                                    latest_valid_repo_data = data
+                            except ValueError:
+                                continue
+                except Exception:
+                    continue
+    except Exception as e:
+        return render_template('error.html', error=f"Error loading repository data: {e}"), 500
+
+    if not latest_valid_repo_data:
+        return render_template('error.html',
+                              error=f"Repository '{repo_id}' found, but no analysis results are available."), 404
+
+    # Render the HTML first - we'll use the same template used for web display
+    rendered_html = render_template('repo_detail.html', repo=latest_valid_repo_data)
+    
+    # Generate a PDF from the rendered HTML
+    pdf = weasyprint.HTML(string=rendered_html, base_url=request.url).write_pdf()
+    
+    # Get repository name for the filename
+    repo_name = latest_valid_repo_data.get('repository', {}).get('name', 'repository')
+    
+    # Create response with PDF content
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename="{repo_name}_report.pdf"'
+    
+    return response
 
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not

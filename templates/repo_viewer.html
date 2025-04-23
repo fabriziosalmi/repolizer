@@ -1137,12 +1137,12 @@
                 <i class="fas fa-chart-bar mr-2" style="font-size: 1.5rem;"></i>
                 
               </a>
-              <button type="button" title="Full Report (Paid)"
-                      class="open-modal-button inline-flex items-center justify-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
-                      data-repo-id="${repoId}">
+              <a href="/repo/${repoId}/pdf" title="Download as PDF"
+                 class="inline-flex items-center justify-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
+                 data-repo-id="${repoId}">
                 <i class="fas fa-download mr-2" style="font-size: 1.5rem;"></i>
                 
-              </button>
+              </a>
               <button type="button" title="Share Repository Report"
                       class="share-button inline-flex items-center justify-center px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
                       data-repo-id="${repoId}" data-repo-name="${repoData.full_name || ''}">
@@ -1160,22 +1160,8 @@
         </div>
       `;
 
-      // Add event listener to the modal button (no change needed here)
-      const fullReportButton = card.querySelector('.open-modal-button');
-      if (fullReportButton) {
-          fullReportButton.addEventListener('click', (event) => {
-              const clickedRepoId = event.currentTarget.getAttribute('data-repo-id');
-              const repoForModal = filteredRepos.find(r => String(r.repository?.id) === String(clickedRepoId));
-              if (repoForModal) {
-                  openModal(repoForModal);
-              } else {
-                  console.error("Could not find repository data for modal:", clickedRepoId);
-                  alert("Error: Could not load repository details for the full report.");
-              }
-          });
-      }
-
-      // Add event listener to the share button
+      // Remove the event listener for the open-modal-button since we're using a direct link now
+      // Instead, we'll still keep event listener for share button
       const shareButton = card.querySelector('.share-button');
       if (shareButton) {
           shareButton.addEventListener('click', (event) => {
