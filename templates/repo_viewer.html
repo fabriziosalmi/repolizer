@@ -413,21 +413,21 @@
             <div class="flex items-center space-x-4">
               <a href="/" class="text-blue-300 flex items-center border-b-0 md:border-b-2 md:border-blue-300">
                   <i class="fas fa-home"></i>
-                  <span class="hidden sm:inline ml-1">Home</span>
+                  <span class="inline xs:hidden sm:inline ml-1">Home</span>
               </a>
               {% if current_user.is_authenticated %}
                   <a href="/scraper" class="text-white hover:text-blue-300 transition-colors flex items-center">
                       <i class="fas fa-search"></i>
-                      <span class="hidden sm:inline ml-1">Scraper</span>
+                      <span class="inline xs:hidden sm:inline ml-1">Scraper</span>
                   </a>
                   <a href="/analyze" class="text-white hover:text-blue-300 transition-colors flex items-center">
                       <i class="fas fa-chart-line"></i>
-                      <span class="hidden sm:inline ml-1">Analyzer</span>
+                      <span class="inline xs:hidden sm:inline ml-1">Analyzer</span>
                   </a>
               {% endif %}
               <a href="/stats" class="text-white hover:text-blue-300 transition-colors flex items-center">
                   <i class="fas fa-chart-pie"></i>
-                  <span class="hidden sm:inline ml-1">Statistics</span>
+                  <span class="inline xs:hidden sm:inline ml-1">Statistics</span>
               </a>
           </div>
         </div>
