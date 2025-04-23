@@ -18,6 +18,7 @@ from app_utils import enqueue_output, run_analyzer, get_results_file_info # Impo
 from collections import defaultdict
 from caching_middleware import timed_cache, clear_cache, clear_cache_pattern  # Import our caching middleware
 from email.utils import formatdate, parsedate_to_datetime # Import for Last-Modified and If-Modified-Since support
+import traceback # Add traceback import
 
 app = Flask(__name__)
 
@@ -498,7 +499,16 @@ def stop_scraper():
 @timed_cache(seconds=60*15)  # Increase cache time to 15 minutes
 def index():
     # Publicly accessible
-    return render_template('repo_viewer.html')
+    # Determine which results file to use
+    results_file_info = get_results_file_info()
+    result_path = results_file_info.get('filename', 'results.jsonl') # Default to results.jsonl
+    if not results_file_info.get('path'): # If no results file exists, try sample
+        sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
+        if os.path.exists(sample_path):
+            result_path = 'sample_results.jsonl'
+
+    # Pass the determined result_path to the template
+    return render_template('repo_viewer.html', resultPath=result_path)
 
 @app.route('/scraper')
 @login_required # Protect this page
@@ -638,8 +648,9 @@ def serve_result_file(filename):
 def repo_detail(repo_id):
     print(f"--- Starting repo_detail for ID/Name: {repo_id} ---") # DEBUG
     # Load results.jsonl or sample_results.jsonl
-    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
-    if not os.path.exists(file_path):
+    results_file_info = get_results_file_info()
+    file_path = results_file_info.get('path')
+    if not file_path:
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
         if os.path.exists(sample_path):
             file_path = sample_path
@@ -750,9 +761,11 @@ def repo_detail(repo_id):
 def repo_history(repo_id):
     """Render the analysis history page for a specific repository"""
     print(f"--- Starting repo_history for ID/Name: {repo_id} ---") # DEBUG
-    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+    # Ensure we use the correct file path determination logic
+    results_file_info = get_results_file_info()
+    file_path = results_file_info.get('path')
 
-    if not os.path.exists(file_path):
+    if not file_path:
         # Try sample data if main file doesn't exist
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
         if os.path.exists(sample_path):

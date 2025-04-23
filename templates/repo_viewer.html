@@ -815,6 +815,7 @@
         </div>
     </footer>
 
+    {% raw %}
     <script>
   document.addEventListener('DOMContentLoaded', async () => {
     // Performance tracking
@@ -1409,7 +1410,7 @@
     /**
      * Parses lines from a JSONL string, handling potential errors and multi-line fragments.
      * @param {string} jsonlString The raw JSONL content.
-     * @returns {{ data: Map<string, object>, stats: { success: number, failed: number, total: number } }}
+     * @returns {{ data: Array<object>, stats: { success: number, failed: number, total: number } }}
      */
     function parseJSONLLines(jsonlString) {
         const lines = jsonlString.split('\n');
@@ -1483,6 +1484,7 @@
     
     // ...existing code for other functions and event handlers...
   });
-</script>
+    </script>
+    {% endraw %}
 </body>
 </html>
