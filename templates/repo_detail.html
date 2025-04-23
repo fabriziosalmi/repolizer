@@ -261,9 +261,9 @@
                     <a href="{{ url_for('repo_history', repo_id=repo.repository.id) }}" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm transition-colors">
                         <i class="fas fa-history mr-2"></i> History
                     </a>
-                    <!-- Paid Report Button - Using a temporary href to avoid BuildError -->
-                    <a href="#" onclick="alert('Paid reports coming soon!'); return false;" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm transition-colors">
-                        <i class="fas fa-credit-card mr-2"></i> FULL REPORT
+                    <!-- PDF Download Button - Updated to match functionality in repo viewer -->
+                    <a href="{{ url_for('repo_detail_pdf', repo_id=repo.repository.id) }}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm flex items-center text-sm transition-colors">
+                        <i class="fas fa-download mr-2"></i> Full Report
                     </a>
                 </div>
             </div>
