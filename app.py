@@ -16,7 +16,6 @@ from datetime import datetime, timezone # Import datetime and timezone for sorti
 import requests # Add requests import
 from app_utils import enqueue_output, run_analyzer, get_results_file_info # Import moved functions
 from collections import defaultdict
-from caching_middleware import timed_cache, clear_cache, clear_cache_pattern  # Import our caching middleware
 from email.utils import formatdate, parsedate_to_datetime # Import for Last-Modified and If-Modified-Since support
 
 app = Flask(__name__)
@@ -495,7 +494,6 @@ def stop_scraper():
         }), 500
 
 @app.route('/')
-@timed_cache(seconds=60*15)  # Increase cache time to 15 minutes
 def index():
     # Publicly accessible
     return render_template('repo_viewer.html')
@@ -506,9 +504,8 @@ def scraper():
     return render_template('repo_scraper.html')
 
 # --- Helper functions for robust file caching ---
-@timed_cache(seconds=60*5)
 def get_repositories_jsonl_content():
-    """Read and cache the content of repositories.jsonl or sample_repositories.jsonl as a string."""
+    """Read the content of repositories.jsonl or sample_repositories.jsonl as a string."""
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'repositories.jsonl')
     if not os.path.exists(file_path):
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_repositories.jsonl')
@@ -520,9 +517,8 @@ def get_repositories_jsonl_content():
     with open(file_path, 'r') as file:
         return file.read()
 
-@timed_cache(seconds=60*5)
 def get_results_jsonl_content():
-    """Read and cache the content of results.jsonl or sample_results.jsonl as a string."""
+    """Read the content of results.jsonl or sample_results.jsonl as a string."""
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
     if not os.path.exists(file_path):
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
@@ -634,7 +630,6 @@ def serve_result_file(filename):
 
 @app.route('/repo/<path:repo_id>') # Use <path:repo_id> to allow slashes
 # Removed protection - Publicly accessible
-@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def repo_detail(repo_id):
     print(f"--- Starting repo_detail for ID/Name: {repo_id} ---") # DEBUG
     # Load results.jsonl or sample_results.jsonl
@@ -746,7 +741,6 @@ def repo_detail(repo_id):
 
 @app.route('/repo/<path:repo_id>/history')
 # Removed protection - Publicly accessible
-@timed_cache(seconds=60*5)  # Cache for 5 minutes
 def repo_history(repo_id):
     """Render the analysis history page for a specific repository"""
     print(f"--- Starting repo_history for ID/Name: {repo_id} ---") # DEBUG
@@ -1087,14 +1081,13 @@ def repo_stats():
     return render_template('repo_stats.html')
 
 @app.route('/api/statistics')
-@timed_cache(seconds=60*15)  # Cache statistics for 15 minutes
 def get_statistics():
     """
     API endpoint to get repository statistics.
     Returns:
         JSON response with statistics data.
     """
-    print("Calculating repository statistics (cached for 15 minutes)")
+    print("Calculating repository statistics (no longer cached)")
     
     # Load results data
     results_file_info = get_results_file_info()
@@ -1348,38 +1341,19 @@ def inject_global_vars():
 @login_required  # Protect this API endpoint
 def refresh_statistics():
     """
-    Clear the statistics cache to force recalculation on next request.
+    Force recalculation of statistics on next request.
     This is useful after analyzing new repositories.
     """
     try:
-        # Get the function object for the get_statistics endpoint
-        stats_func = app.view_functions.get('get_statistics')
-        if stats_func:
-            # Clear the cache for this specific function
-            clear_cache_for_function(stats_func)
-            return jsonify({
-                'status': 'success',
-                'message': 'Statistics cache cleared successfully'
-            })
-        else:
-            return jsonify({
-                'status': 'error',
-                'message': 'Statistics endpoint not found'
-            }), 404
+        return jsonify({
+            'status': 'success',
+            'message': 'Statistics will be recalculated on next request'
+        })
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': f'Failed to clear statistics cache: {str(e)}'
+            'message': f'Failed to refresh statistics: {str(e)}'
         }), 500
-
-@app.before_request
-def clear_cache_on_start():
-    """Clear all caches on first request to ensure a fresh start."""
-    # Only run once by checking if we've set a flag
-    if not hasattr(app, '_cache_cleared'):
-        print("Clearing all caches on application start...")
-        clear_cache()
-        app._cache_cleared = True
 
 # Add PWA offline route
 @app.route('/offline')

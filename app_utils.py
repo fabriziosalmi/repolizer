@@ -10,7 +10,6 @@ import os
 import glob
 import json
 from datetime import datetime
-from caching_middleware import timed_cache, clear_cache, clear_cache_pattern  # Import caching utilities
 
 # Helper function to read from process output and put in queue
 def enqueue_output(pipe, process_id, log_queue, is_error=False):
@@ -290,11 +289,9 @@ def get_results_file_info():
         'count': repo_count
     }
 
-@timed_cache(seconds=300)  # Cache for 5 minutes
 def get_repo_by_id_from_jsonl(repo_id, file_path):
     """
     Retrieves repository data from a JSONL file based on repository ID.
-    Uses caching to improve performance for frequently accessed repositories.
     
     Args:
         repo_id (str): The repository ID or full name to search for
@@ -303,7 +300,7 @@ def get_repo_by_id_from_jsonl(repo_id, file_path):
     Returns:
         dict: The latest valid repository data or None if not found
     """
-    print(f"--- Reading repo data for ID/Name: {repo_id} (Cached function) ---")
+    print(f"--- Reading repo data for ID/Name: {repo_id} ---")
     
     if not os.path.exists(file_path):
         print(f"Error: Results file not found at {file_path}")
@@ -371,11 +368,9 @@ def get_repo_by_id_from_jsonl(repo_id, file_path):
     
     return latest_valid_repo_data
 
-@timed_cache(seconds=300)  # Cache for 5 minutes
 def get_repo_history_from_jsonl(repo_id, file_path):
     """
     Retrieves all historical data for a repository from a JSONL file.
-    Uses caching to improve performance for frequently accessed repositories.
     
     Args:
         repo_id (str): The repository ID or full name to search for
@@ -384,7 +379,7 @@ def get_repo_history_from_jsonl(repo_id, file_path):
     Returns:
         tuple: (list of history entries, latest repository info)
     """
-    print(f"--- Reading repo history for ID/Name: {repo_id} (Cached function) ---")
+    print(f"--- Reading repo history for ID/Name: {repo_id} ---")
     
     if not os.path.exists(file_path):
         print(f"Error: Results file not found at {file_path}")
@@ -515,14 +510,11 @@ def get_repo_history_from_jsonl(repo_id, file_path):
 
 def invalidate_repo_cache(repo_id):
     """
-    Invalidates the cache for a specific repository.
-    Should be called after repository data is updated.
+    This function previously invalidated the cache for a specific repository.
+    Now it does nothing since caching has been removed.
     
     Args:
-        repo_id (str): The repository ID or full name to invalidate
+        repo_id (str): The repository ID or full name
     """
-    pattern = f"get_repo_by_id_from_jsonl:{repo_id}"
-    clear_cache_pattern(pattern)
-    
-    pattern = f"get_repo_history_from_jsonl:{repo_id}"
-    clear_cache_pattern(pattern)
+    # No action needed - caching has been removed
+    pass
