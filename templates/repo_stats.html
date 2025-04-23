@@ -94,11 +94,23 @@
             </div>
             <!-- Updated navigation menu -->
             <div class="flex items-center space-x-4">
-                <a href="/" class="text-white hover:text-blue-300 transition-colors">
-                    <i class="fas fa-home mr-1"></i> Home
+                <a href="/" class="text-blue-300 flex items-center border-b-0 md:border-b-2 md:border-blue-300">
+                    <i class="fas fa-home"></i>
+                    <span class="hidden md:inline ml-1">Home</span>
                 </a>
-                <a href="/stats" class="text-blue-300 border-b-2 border-blue-300"> <!-- Active link style -->
-                    <i class="fas fa-chart-pie mr-1"></i> Statistics
+                {% if current_user.is_authenticated %}
+                    <a href="/scraper" class="text-white hover:text-blue-300 transition-colors flex items-center">
+                        <i class="fas fa-search"></i>
+                        <span class="hidden md:inline ml-1">Scraper</span>
+                    </a>
+                    <a href="/analyze" class="text-white hover:text-blue-300 transition-colors flex items-center">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="hidden md:inline ml-1">Analyzer</span>
+                    </a>
+                {% endif %}
+                <a href="/stats" class="text-white hover:text-blue-300 transition-colors flex items-center">
+                    <i class="fas fa-chart-pie"></i>
+                    <span class="hidden md:inline ml-1">Statistics</span>
                 </a>
             </div>
         </div>
