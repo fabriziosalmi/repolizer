@@ -1048,6 +1048,7 @@
       const overallScore = repo.overall_score || 0;
       const scoreColorClass = overallScore >= 70 ? 'text-green-600' : (overallScore >= 40 ? 'text-yellow-600' : 'text-red-600');
       const scoreBarFillClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
+      const scoreBgClass = overallScore >= 70 ? 'bg-green-100' : (overallScore >= 40 ? 'bg-yellow-100' : 'bg-red-100');
 
       // --- Category Bar Chart ---
       let categoryBarChartHtml = `
@@ -1119,13 +1120,18 @@
           <!-- Category Score Bar Chart - Now at the bottom -->
           ${categoryBarChartHtml}
 
+          <!-- Update the score display section in the createRepoCard function -->
           <div class="mb-4">
-            <div class="flex justify-between items-center mb-1">
-              <span class="text-sm font-medium text-gray-700">Repolizer score:</span>
-              <span class="text-sm font-semibold ${scoreColorClass}">${overallScore.toFixed(1)}</span>
+            <div class="flex items-center mb-1">
+              <span class="text-sm font-medium text-gray-700 mr-2">Repolizer score:</span>
             </div>
-            <div class="score-bar bg-gray-200">
-              <div class="score-bar-fill ${scoreBarFillClass}" style="width: ${overallScore}%"></div>
+            <div class="flex items-center">
+              <div class="score-bar bg-gray-200 flex-grow mr-3">
+                <div class="score-bar-fill ${scoreBarFillClass}" style="width: ${overallScore}%"></div>
+              </div>
+              <div class="w-8 h-8 rounded-full flex items-center justify-center ${scoreColorClass} ${scoreBgClass}">
+                <span class="text-sm font-bold">${Math.round(overallScore)}</span>
+              </div>
             </div>
           </div>
 
