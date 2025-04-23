@@ -495,7 +495,7 @@ def stop_scraper():
         }), 500
 
 @app.route('/')
-@timed_cache(seconds=60*5)  # Cache for 5 minutes
+@timed_cache(seconds=60*15)  # Increase cache time to 15 minutes
 def index():
     # Publicly accessible
     return render_template('repo_viewer.html')
@@ -553,14 +553,28 @@ def serve_repos_file():
             if ims_dt >= file_dt:
                 resp = make_response('', 304)
                 resp.headers['Last-Modified'] = last_modified
-                resp.headers['Cache-Control'] = 'public, max-age=300'
+                resp.headers['Cache-Control'] = 'public, max-age=900'  # Increase cache time to 15 minutes
                 return resp
         except Exception:
             pass
+    
+    # Add compression for better performance
     content = get_repositories_jsonl_content()
     response = Response(content, mimetype='application/json')
-    response.headers['Cache-Control'] = 'public, max-age=300'
+    response.headers['Cache-Control'] = 'public, max-age=900'  # Increase cache time to 15 minutes
     response.headers['Last-Modified'] = last_modified
+    
+    # Enable compression if supported
+    if 'gzip' in request.headers.get('Accept-Encoding', '').lower():
+        import gzip
+        import io
+        gzip_buffer = io.BytesIO()
+        with gzip.GzipFile(mode='wb', fileobj=gzip_buffer) as f:
+            f.write(content.encode('utf-8'))
+        response.data = gzip_buffer.getvalue()
+        response.headers['Content-Encoding'] = 'gzip'
+        response.headers['Vary'] = 'Accept-Encoding'
+    
     return response
 
 @app.route('/results.jsonl')
@@ -580,14 +594,28 @@ def serve_results_file():
             if ims_dt >= file_dt:
                 resp = make_response('', 304)
                 resp.headers['Last-Modified'] = last_modified
-                resp.headers['Cache-Control'] = 'public, max-age=300'
+                resp.headers['Cache-Control'] = 'public, max-age=900'  # Increase cache time to 15 minutes
                 return resp
         except Exception:
             pass
+    
+    # Add compression for better performance
     content = get_results_jsonl_content()
     response = Response(content, mimetype='application/json')
-    response.headers['Cache-Control'] = 'public, max-age=300'
+    response.headers['Cache-Control'] = 'public, max-age=900'  # Increase cache time to 15 minutes 
     response.headers['Last-Modified'] = last_modified
+    
+    # Enable compression if supported
+    if 'gzip' in request.headers.get('Accept-Encoding', '').lower():
+        import gzip
+        import io
+        gzip_buffer = io.BytesIO()
+        with gzip.GzipFile(mode='wb', fileobj=gzip_buffer) as f:
+            f.write(content.encode('utf-8'))
+        response.data = gzip_buffer.getvalue()
+        response.headers['Content-Encoding'] = 'gzip'
+        response.headers['Vary'] = 'Accept-Encoding'
+    
     return response
 
 @app.route('/results/<filename>')
@@ -1221,8 +1249,7 @@ def get_statistics():
         # Extract checks by category - no need to process all repos again
         checks_by_category = []
         for category in ['documentation', 'security', 'maintainability', 'code_quality', 
-                        'testing', 'licensing', 'community', 'performance', 
-                        'accessibility', 'ci_cd']:
+                        'testing', 'performance', 'accessibility', 'community', 'licensing', 'ci_cd']:
             if category in category_scores:
                 # Just add known check names from our sample data
                 standard_checks = get_standard_checks_for_category(category)

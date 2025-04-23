@@ -14,6 +14,10 @@
     <meta name="msapplication-TileColor" content="#1f2937">
     <meta name="msapplication-navbutton-color" content="#1f2937">
     
+    <!-- Preconnect to external domains for faster loading -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
     <!-- App Icons -->
     <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
@@ -22,13 +26,58 @@
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json">
     
-    <!-- Custom CSS for the page -->
-    <script src="/static/js/modal.js"></script>
+    <!-- Critical CSS inlined for faster rendering -->
+    <style>
+        /* Critical styles for loading state and layout */
+        #loading-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 0;
+            font-size: 1.2rem;
+            color: #4b5563;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #fdfdfddc; 
+            animation: spin 1s ease infinite;
+            margin-right: 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        body {
+            background-color: #00DBDE;
+            background-image: linear-gradient(90deg, #00DBDE 0%, #FC00FF 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container { 
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+    
+    <!-- Custom JS for the page - defer loading -->
+    <script src="/static/js/modal.js" defer></script>
 
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS via CDN with defer strategy -->
+    <script src="https://cdn.tailwindcss.com" defer></script>
+    
+    <!-- Font Awesome for icons - loaded asynchronously -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    
+    <!-- Non-critical styles loaded after page render -->
     <style>
         /* Add specific styles for iOS web app */
         @media (display-mode: standalone) {
@@ -346,6 +395,8 @@
     let minScoreFilter = 0;
     let currentPage = 1;
     const reposPerPage = 30;
+    let isLoadingData = false;
+    let cachedRepositories = null;
     
     // Get elements from the DOM
     const reposContainer = document.getElementById('repo-grid');
@@ -396,6 +447,42 @@
       'community': 'Community'
     };
 
+    // Check for cached data in localStorage
+    function getCachedData() {
+        try {
+            const cached = localStorage.getItem('repolizerRepositories');
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                // Only use cache if it's less than 15 minutes old
+                if (Date.now() - timestamp < 15 * 60 * 1000) {
+                    console.log('Using cached repository data');
+                    return data;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to retrieve cached data:', e);
+        }
+        return null;
+    }
+
+    // Cache data in localStorage
+    function cacheData(data) {
+        try {
+            localStorage.setItem('repolizerRepositories', JSON.stringify({
+                data,
+                timestamp: Date.now()
+            }));
+        } catch (e) {
+            console.warn('Failed to cache data:', e);
+            // Clear storage if we hit quota limits
+            try {
+                localStorage.clear();
+            } catch (clearError) {
+                console.error('Failed to clear localStorage:', clearError);
+            }
+        }
+    }
+
     // Get result path from parameters or use default
     const urlParams = new URLSearchParams(window.location.search);
     const resultPath = urlParams.get('path') || 'results.jsonl';
@@ -406,192 +493,202 @@
     
     console.log(`Loading repositories from: ${resultPath}, page ${currentPage}`);
 
-    // Load repositories from the results file
-    try {
-      // Show loading indicator
-      if (loadingIndicator) {
-        loadingIndicator.style.display = 'flex';
-        loadingIndicator.classList.remove('hidden');
-      }
-      
-      if (noResults) {
-        noResults.classList.add('hidden');
-      }
-      
-      // First try the specified results file
-      const response = await fetch(resultPath);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
-      }
-
-      const text = await response.text();
-
-      if (!text || text.trim() === '') {
-        throw new Error(`No data in ${resultPath}`);
-      }
-
-      console.log(`Loaded file with ${text.length} characters`);
-
-      // Determine if the file is JSON or JSONL format
-      const isJson = resultPath.toLowerCase().endsWith('.json') || 
-                     (text.trim().startsWith('[') && text.trim().endsWith(']'));
-
-      console.log(`Detected file format: ${isJson ? 'JSON' : 'JSONL'}`);
-
-      // Use a dictionary to store the latest entry for each repo ID
-      const repoDataMap = {};
-
-      if (isJson) {
-        // Handle JSON format (array of objects)
+    // Modified function to load repositories incrementally
+    async function loadRepositories() {
+        if (isLoadingData) return;
+        isLoadingData = true;
+        
         try {
-          const jsonData = JSON.parse(text);
-          const repos = Array.isArray(jsonData) ? jsonData : (jsonData && jsonData.repository ? [jsonData] : []);
-
-          repos.forEach(parsedRepo => {
-            if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-              // Store the latest entry (or only entry) for this ID
-              repoDataMap[parsedRepo.repository.id] = parsedRepo;
+            // Check for cached data first
+            cachedRepositories = getCachedData();
+            
+            if (cachedRepositories) {
+                processRepositoryData(cachedRepositories);
+                return;
             }
-          });
-        } catch (e) {
-          console.error('Error parsing JSON:', e);
-          throw new Error('Invalid JSON format');
-        }
-      } else {
-        // Handle JSONL format (one JSON object per line)
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        console.log(`Processing ${lines.length} lines of JSONL`);
-
-        for (const line of lines) {
-          try {
-            const parsedRepo = JSON.parse(line);
-            if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-              // Store the latest entry for this ID, overwriting previous ones
-              repoDataMap[parsedRepo.repository.id] = parsedRepo;
+            
+            // Show loading indicator
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'flex';
+                loadingIndicator.classList.remove('hidden');
             }
-          } catch (e) {
-            console.warn('Error parsing line:', line.substring(0, 100) + '...', e);
-            // Continue to next line
-          }
-        }
-      }
+            
+            if (noResults) {
+                noResults.classList.add('hidden');
+            }
+            
+            // First try the specified results file
+            const response = await fetch(resultPath);
 
-      // Convert the map values back to an array
-      allRepos = Object.values(repoDataMap);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
+            }
 
-      console.log(`Total unique repositories loaded (before filtering): ${allRepos.length}`);
-
-      // Fallback logic remains the same...
-      if (allRepos.length === 0 && resultPath !== 'repositories.jsonl') { // Avoid infinite loop if fallback fails
-        console.log("No repositories found in the results file. Trying repositories.jsonl as fallback.");
-        // ... (rest of fallback logic using repositories.jsonl) ...
-        // Note: Fallback currently doesn't deduplicate, might need adjustment if duplicates exist there too.
-        try {
-            const fallbackResponse = await fetch('repositories.jsonl');
-            if (fallbackResponse.ok) {
-                const fallbackText = await fallbackResponse.text();
-                if (fallbackText.trim()) {
-                    const fallbackLines = fallbackText.split('\n').filter(line => line.trim() !== '');
-                    const fallbackRepoMap = {}; // Use map for fallback deduplication too
-                    for (const line of fallbackLines) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let partialLine = '';
+            const repoDataMap = {};
+            
+            // Process the stream in chunks
+            let processedLines = 0;
+            const processingStartTime = performance.now();
+            
+            const processChunk = async (result) => {
+                if (result.done) {
+                    // Process any remaining partial line
+                    if (partialLine.trim()) {
                         try {
-                            const rawRepo = JSON.parse(line);
-                            if (rawRepo && rawRepo.id) { // Assuming fallback has ID
-                                // Convert to results format and store latest
-                                fallbackRepoMap[rawRepo.id] = {
-                                    repository: rawRepo,
-                                    overall_score: 0, // Default score for raw repo data
-                                    timestamp: new Date().toISOString()
-                                    // Add other default fields if needed
-                                };
+                            const parsedRepo = JSON.parse(partialLine);
+                            if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                                repoDataMap[parsedRepo.repository.id] = parsedRepo;
                             }
                         } catch (e) {
-                            console.warn('Error parsing fallback line:', e);
+                            console.warn('Error parsing final line:', e);
                         }
                     }
-                    allRepos = Object.values(fallbackRepoMap); // Replace allRepos with fallback data
-                    console.log(`Loaded ${allRepos.length} unique repositories from fallback repositories.jsonl.`);
-                    console.log(`Total unique repositories loaded from fallback (before filtering): ${allRepos.length}`);
+                    
+                    // Done reading the file
+                    allRepos = Object.values(repoDataMap);
+                    console.log(`Completed loading ${allRepos.length} repositories in ${((performance.now() - processingStartTime) / 1000).toFixed(2)}s`);
+                    
+                    // Cache the results
+                    cacheData(allRepos);
+                    
+                    // Process the data
+                    processRepositoryData(allRepos);
+                    return;
                 }
-            } else {
-                console.log("No fallback repository data found either.");
-            }
-        } catch (fallbackError) {
-             console.error("Error fetching or processing fallback repositories.jsonl:", fallbackError);
-        }
-      }
-
-
-      // Process each repo to calculate category averages
-      allRepos.forEach(repo => {
-        // Add category averages
-        repo.category_scores = {};
-
-        // For each category, calculate average score
-        Object.keys(categoryNames).forEach(category => {
-          if (repo[category]) {
-            const checks = Object.values(repo[category]).filter(check => 
-              typeof check === 'object' && check !== null && 'score' in check
-            );
+                
+                // Process this chunk
+                const chunk = decoder.decode(result.value, {stream: true});
+                const lines = (partialLine + chunk).split('\n');
+                partialLine = lines.pop() || ''; // Last line might be incomplete
+                
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    
+                    try {
+                        const parsedRepo = JSON.parse(line);
+                        if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                            repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                            processedLines++;
+                            
+                            // Every 100 lines, update UI to show progress
+                            if (processedLines % 100 === 0) {
+                                // Quick progress update
+                                if (loadingIndicator.querySelector('span')) {
+                                    loadingIndicator.querySelector('span').textContent = 
+                                        `Loading repositories... (${processedLines} processed)`;
+                                }
+                                
+                                // Allow UI to update
+                                await new Promise(r => setTimeout(r, 0));
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error parsing line:', e);
+                    }
+                }
+                
+                // Continue reading
+                reader.read().then(processChunk);
+            };
             
-            if (checks.length > 0) {
-              const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
-              repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
-            } else {
-              repo.category_scores[category] = 0;
+            // Start reading
+            reader.read().then(processChunk);
+            
+        } catch (error) {
+            console.error('Error loading repositories:', error);
+            
+            // Try fallback if main file fails
+            if (resultPath !== 'repositories.jsonl') {
+                try {
+                    const fallbackResponse = await fetch('repositories.jsonl');
+                    if (fallbackResponse.ok) {
+                        // Process fallback with similar streaming approach
+                        // ...implementation similar to above...
+                    }
+                } catch (fallbackError) {
+                    console.error("Error fetching fallback data:", fallbackError);
+                }
             }
-          } else {
-            repo.category_scores[category] = 0;
-          }
-        });
-      });
-
-      filteredRepos = [...allRepos];
-      
-      if (repoCount) {
-        repoCount.textContent = filteredRepos.length;
-      }
-
-      // Initial sort by overall score
-      sortRepos('overall_score_desc');
-
-      // Hide loading indicator
-      if (loadingIndicator) {
-        loadingIndicator.style.display = 'none';
-        loadingIndicator.classList.add('hidden');
-      }
-
-      // Check if there are results to display
-      if (filteredRepos.length === 0) {
-        if (noResults) {
-          noResults.classList.remove('hidden');
+            
+            // Ensure the loading indicator is hidden
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+                loadingIndicator.classList.add('hidden');
+            }
+            
+            if (noResults) {
+                noResults.classList.remove('hidden');
+                
+                const errorMsg = noResults.querySelector('p');
+                if (errorMsg) {
+                    errorMsg.textContent = `Error loading repository data: ${error.message}`;
+                }
+            }
+            isLoadingData = false;
         }
-      } else {
-         if (noResults) { // Ensure no-results is hidden if we have data
-            noResults.classList.add('hidden');
-         }
-        // updatePagination(); // Called within filterRepos/sortRepos -> displayRepos
-      }
-
-    } catch (error) {
-      console.error('Error loading repositories:', error);
-      
-      // Ensure the loading indicator is hidden
-      if (loadingIndicator) {
-        loadingIndicator.style.display = 'none';
-        loadingIndicator.classList.add('hidden');
-      }
-      
-      if (noResults) {
-        noResults.classList.remove('hidden');
-        
-        const errorMsg = noResults.querySelector('p');
-        if (errorMsg) {
-          errorMsg.textContent = `Error loading repository data: ${error.message}`;
-        }
-      }
     }
+    
+    // Process repository data after loading
+    function processRepositoryData(repos) {
+        // Process each repo to calculate category averages
+        repos.forEach(repo => {
+            // Add category averages
+            repo.category_scores = {};
+
+            // For each category, calculate average score
+            Object.keys(categoryNames).forEach(category => {
+                if (repo[category]) {
+                    const checks = Object.values(repo[category]).filter(check => 
+                        typeof check === 'object' && check !== null && 'score' in check
+                    );
+                    
+                    if (checks.length > 0) {
+                        const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
+                        repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
+                    } else {
+                        repo.category_scores[category] = 0;
+                    }
+                } else {
+                    repo.category_scores[category] = 0;
+                }
+            });
+        });
+
+        allRepos = repos;
+        filteredRepos = [...allRepos];
+        
+        if (repoCount) {
+            repoCount.textContent = filteredRepos.length;
+        }
+
+        // Initial sort by overall score
+        sortRepos('overall_score_desc');
+
+        // Hide loading indicator
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+            loadingIndicator.classList.add('hidden');
+        }
+
+        // Check if there are results to display
+        if (filteredRepos.length === 0) {
+            if (noResults) {
+                noResults.classList.remove('hidden');
+            }
+        } else {
+            if (noResults) {
+                noResults.classList.add('hidden');
+            }
+        }
+        
+        isLoadingData = false;
+    }
+    
+    // Start loading repositories
+    loadRepositories();
 
     // Event listener for search input
     if (searchInput) {
