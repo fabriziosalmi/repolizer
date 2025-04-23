@@ -1335,7 +1335,8 @@ def serve_static(path):
 def inject_global_vars():
     return {
         'current_year': datetime.now().year,
-        'current_user': current_user # Make current_user available to templates
+        'current_user': current_user, # Make current_user available to templates
+        'now': datetime.now  # Add the now function to the template context
     }
 
 @app.route('/api/statistics/refresh', methods=['POST'])
