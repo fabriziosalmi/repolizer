@@ -841,7 +841,7 @@
     let cachedRepositories = null;
     let loadAttempts = 0;
     const MAX_LOAD_ATTEMPTS = 3;
-    const MOBILE_REPO_LIMIT = 50; // Reasonable limit for all mobile devices
+    const MOBILE_REPO_LIMIT = 30; // Reduced limit for mobile to prevent storage quota issues
     const RENDER_BATCH_SIZE = 5; // Consistent batch size
     
     // Universal virtual scrolling configuration
@@ -865,10 +865,10 @@
     
     // Better data chunking configuration
     const dataChunking = {
-        chunkSize: isMobile ? 50 : 200, // Process data in chunks
+        chunkSize: isMobile ? 30 : 200, // Reduced chunk size for mobile
         processDelay: 10, // ms between chunk processing
-        maxItemsToProcess: isMobile ? 300 : 1000, // Maximum items to process
-        initialLoadSize: isMobile ? 20 : 50 // Initial items to show immediately
+        maxItemsToProcess: isMobile ? 200 : 1000, // Reduced max items for mobile
+        initialLoadSize: isMobile ? 15 : 50 // Reduced initial load for mobile
     };
     
     // Initialize virtual scrolling
@@ -1244,44 +1244,108 @@
     // Update caching functions if necessary (should work with array)
     function getCachedData() {
         try {
-            // ... existing sessionStorage check ...
-            
+            // Check sessionStorage first (faster)
+            const sessionCached = sessionStorage.getItem('repolizerSessionRepos');
+            if (sessionCached) {
+                const { data, timestamp } = JSON.parse(sessionCached);
+                // Use session cache if less than 30 minutes old
+                if (Date.now() - timestamp < 30 * 60 * 1000) {
+                    console.log('Using sessionStorage cached repository data (array)');
+                    return data;
+                } else {
+                    sessionStorage.removeItem('repolizerSessionRepos'); // Remove expired session cache
+                }
+            }
+
+            // Fallback to localStorage
             const cached = localStorage.getItem('repolizerRepositories');
             if (cached) {
                 const { data, timestamp } = JSON.parse(cached);
-                // Use cache if less than 15 minutes old
+                // Use cache if less than 15 minutes old (keep localStorage shorter)
                 if (Date.now() - timestamp < 15 * 60 * 1000) {
                     console.log('Using localStorage cached repository data (array)');
-                    // ... existing sessionStorage update ...
+                    // Refresh session cache if using localStorage data
+                    try {
+                        sessionStorage.setItem('repolizerSessionRepos', JSON.stringify({ data, timestamp: Date.now() }));
+                    } catch (e) {
+                         if (e.name === 'QuotaExceededError') {
+                            console.warn('SessionStorage quota exceeded while refreshing from localStorage.');
+                         } else {
+                            console.warn('Error refreshing sessionStorage:', e);
+                         }
+                    }
                     return data; // Return the array
+                } else {
+                    localStorage.removeItem('repolizerRepositories'); // Remove expired localStorage cache
                 }
             }
         } catch (e) {
-            console.warn('Failed to retrieve cached data:', e);
+            console.warn('Failed to retrieve or parse cached data:', e);
+            // Clear potentially corrupted cache
             clearCacheData();
         }
         return null;
     }
-    
+
     function cacheData(data) { // Accepts array
         try {
-            const dataToCache = isMobile ? data.slice(0, MOBILE_REPO_LIMIT) : data;
+            // Limit data size for caching, especially on mobile
+            const dataToCache = isMobile ? data.slice(0, MOBILE_REPO_LIMIT) : data.slice(0, 200); // Limit desktop cache too
             
-            localStorage.setItem('repolizerRepositories', JSON.stringify({
-                data: dataToCache, // Store the array
+            if (dataToCache.length === 0) return; // Don't cache empty data
+
+            const cacheObject = {
+                data: dataToCache, // Store the potentially limited array
                 timestamp: Date.now()
-            }));
-            
-            if (isMobile) {
-                sessionStorage.setItem('repolizerSessionRepos', JSON.stringify({
-                    data: dataToCache, // Store the array
-                    timestamp: Date.now()
-                }));
+            };
+            const cacheString = JSON.stringify(cacheObject);
+
+            // Estimate size (very rough)
+            const estimatedSizeMB = (cacheString.length * 2) / (1024 * 1024);
+            console.log(`Attempting to cache ${dataToCache.length} repositories. Estimated size: ${estimatedSizeMB.toFixed(2)} MB`);
+
+            // Try localStorage first (more persistent)
+            try {
+                localStorage.setItem('repolizerRepositories', cacheString);
+                console.log(`Cached ${dataToCache.length} repositories to localStorage.`);
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    console.warn(`LocalStorage quota exceeded (Estimate: ${estimatedSizeMB.toFixed(2)} MB). Clearing localStorage and skipping.`);
+                    localStorage.clear(); // Clear storage to potentially make space for future attempts
+                } else {
+                    console.warn('Failed to cache data to localStorage:', e);
+                }
+                // Don't try sessionStorage if localStorage failed due to size
+                return;
             }
-            console.log(`Cached ${dataToCache.length} repositories (as array)`);
+
+            // Also update sessionStorage for faster access in the current session
+            try {
+                sessionStorage.setItem('repolizerSessionRepos', cacheString);
+                console.log(`Updated sessionStorage with ${dataToCache.length} repositories.`);
+            } catch (e) {
+                 if (e.name === 'QuotaExceededError') {
+                    console.warn(`SessionStorage quota exceeded (Estimate: ${estimatedSizeMB.toFixed(2)} MB). Skipping session cache update.`);
+                    // Optionally clear session storage
+                    // sessionStorage.clear();
+                 } else {
+                    console.warn('Failed to update sessionStorage:', e);
+                 }
+            }
+
         } catch (e) {
-            console.warn('Failed to cache data:', e);
-            clearCacheData();
+            // Catch errors during stringify or slicing
+            console.error('Unexpected error during cacheData preparation:', e);
+        }
+    }
+
+    function clearCacheData() {
+        try {
+            localStorage.removeItem('repolizerRepositories');
+            sessionStorage.removeItem('repolizerSessionRepos');
+            console.log('Cleared localStorage and sessionStorage cache.');
+        } catch (e) {
+            console.warn('Error clearing cache:', e);
         }
     }
     
