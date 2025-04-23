@@ -66,318 +66,6 @@
         .hidden {
             display: none !important;
         }
-        
-        /* Mobile-specific optimizations */
-        @media (max-width: 768px) {
-            .repo-card {
-                /* Simplify effects on mobile for better performance */
-                animation: none !important;
-                -webkit-animation: none !important;
-                transition: transform 0.2s ease !important;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            }
-            
-            .repo-card:hover {
-                transform: none !important;
-                animation: none !important;
-                -webkit-animation: none !important;
-                outline-color: #3b82f6 !important; /* Single color instead of gradient */
-                box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
-            }
-            
-            /* Reduce visual complexity on mobile */
-            .category-bar-gradient-high,
-            .category-bar-gradient-medium,
-            .category-bar-gradient-low {
-                background-image: none !important;
-            }
-            
-            /* Optimize rendering performance */
-            .repo-card, .score-bar, .score-bar-fill {
-                will-change: auto !important; /* Disable hardware acceleration hints when not needed */
-                backface-visibility: hidden; /* Reduce composite layers */
-            }
-            
-            /* Lighter bg gradient for mobile */
-            body {
-                background-image: linear-gradient(90deg, #7ffcff 0%, #ffadfa 100%) !important;
-            }
-            
-            /* Virtual scrolling container */
-            #virtual-scroll-container {
-                position: relative;
-                width: 100%;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS */
-            }
-        }
-        
-        /* Virtual scrolling styles */
-        .virtual-scroll-placeholder {
-            width: 100%;
-            contain: strict; /* Improve rendering performance */
-        }
-        
-        /* Lightweight mobile card */
-        .mobile-repo-card {
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-            background: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        /* Optimize rendering */
-        .hardware-accelerated {
-            transform: translateZ(0);
-            will-change: transform;
-        }
-        
-        /* Loading states */
-        .progressive-load {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .progressive-load.loaded {
-            opacity: 1;
-        }
-        
-        /* Mobile-specific optimizations */
-        @media (max-width: 768px) {
-            .repo-card {
-                /* Simplify effects on mobile for better performance */
-                animation: none !important;
-                -webkit-animation: none !important;
-                transition: transform 0.2s ease !important;
-            }
-            
-            .repo-card:hover {
-                transform: none !important;
-                animation: none !important;
-                -webkit-animation: none !important;
-                outline-color: #3b82f6 !important; /* Single color instead of gradient */
-            }
-            
-            /* Reduce visual complexity on mobile */
-            .category-bar-gradient-high,
-            .category-bar-gradient-medium,
-            .category-bar-gradient-low {
-                background-image: none !important;
-            }
-        }
-        
-        /* Safari-specific fixes */
-        @supports (-webkit-touch-callout: none) {
-            /* iOS Safari specific styles */
-            .repo-card, .mobile-repo-card {
-                /* Use transform for hardware acceleration */
-                transform: translateZ(0);
-                -webkit-transform: translateZ(0);
-                /* Prevent blurry text */
-                -webkit-font-smoothing: antialiased;
-            }
-            
-            /* Fix iOS Safari scroll issues */
-            #virtual-scroll-container {
-                -webkit-overflow-scrolling: touch;
-                position: relative;
-                width: 100%;
-                overflow-y: auto;
-                /* Prevent scroll chaining */
-                overscroll-behavior: none;
-                -webkit-overscroll-behavior: none;
-            }
-            
-            /* Ensure fixed positioning works as expected */
-            body {
-                position: relative;
-                /* Fix iOS height issues */
-                min-height: -webkit-fill-available;
-            }
-            
-            /* Better touch handling */
-            button, a {
-                cursor: pointer;
-                -webkit-tap-highlight-color: transparent;
-            }
-            
-            /* Improve animation performance */
-            .progressive-load {
-                will-change: opacity;
-                backface-visibility: hidden;
-                -webkit-backface-visibility: hidden;
-                perspective: 1000;
-                -webkit-perspective: 1000;
-            }
-        }
-        
-        /* Mobile-specific optimizations */
-        @media (max-width: 768px) {
-            .repo-card {
-                /* Simplify effects on mobile for better performance */
-                animation: none !important;
-                -webkit-animation: none !important;
-                transition: transform 0.2s ease !important;
-            }
-            
-            .repo-card:hover {
-                transform: none !important;
-                animation: none !important;
-                -webkit-animation: none !important;
-                outline-color: #3b82f6 !important; /* Single color instead of gradient */
-            }
-            
-            /* Reduce visual complexity on mobile */
-            .category-bar-gradient-high,
-            .category-bar-gradient-medium,
-            .category-bar-gradient-low {
-                background-image: none !important;
-            }
-            
-            /* Simplified iOS Safari gradient */
-            body.safari-ios {
-                background-image: none !important;
-                background-color: #b3e5fc !important;
-            }
-            
-            /* Optimize rendering in Safari */
-            .safari-ios .repo-card, 
-            .safari-ios .score-bar, 
-            .safari-ios .score-bar-fill {
-                will-change: auto !important;
-                backface-visibility: visible !important;
-                -webkit-backface-visibility: visible !important;
-            }
-            
-            /* Prevent safari rendering issues with absolute positioning */
-            .safari-ios #virtual-scroll-content > * {
-                position: relative !important;
-                transform: none !important;
-                -webkit-transform: none !important;
-                margin-bottom: 10px !important;
-            }
-        }
-        
-        /* Ultra light mode for iOS Safari with low memory */
-        .safari-ios.low-memory-mode {
-            background-color: #f5f5f5 !important;
-        }
-        
-        .safari-ios.low-memory-mode .repo-card,
-        .safari-ios.low-memory-mode .mobile-repo-card {
-            background-image: none !important;
-            background-color: white !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
-        }
-        
-        /* Universal virtual scrolling styles */
-        .virtual-scroll-container {
-            position: relative;
-            width: 100%;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch; /* Better scrolling on all mobile browsers */
-            overscroll-behavior-y: contain; /* Prevent scroll chaining on all browsers */
-        }
-        
-        .virtual-scroll-content {
-            position: relative;
-            min-height: 100px;
-        }
-        
-        .virtual-scroll-item {
-            margin-bottom: 0.75rem;
-            transition: opacity 0.2s ease-in;
-        }
-        
-        /* Universal mobile card styles */
-        .mobile-repo-card {
-            padding: 0.75rem;
-            background: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            opacity: 0;
-            animation: fadeIn 0.3s forwards;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        /* Optimize performance on all devices */
-        @media (max-width: 768px) {
-            .repo-card {
-                animation: none !important;
-                transition: transform 0.2s ease !important;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            }
-            
-            .repo-card:hover {
-                transform: none !important;
-                animation: none !important;
-                outline-color: #3b82f6 !important; /* Single color instead of gradient */
-            }
-            
-            /* Use solid colors instead of gradients for better performance */
-            .category-bar-gradient-high,
-            .category-bar-gradient-medium,
-            .category-bar-gradient-low {
-                background-image: none !important;
-            }
-            
-            .category-bar-gradient-high {
-                background-color: #34d399 !important;
-            }
-            
-            .category-bar-gradient-medium {
-                background-color: #fbbf24 !important;
-            }
-            
-            .category-bar-gradient-low {
-                background-color: #f87171 !important;
-            }
-            
-            /* Lighter bg for all mobile devices */
-            body {
-                background-image: linear-gradient(90deg, #7ffcff 0%, #ffadfa 100%) !important;
-            }
-        }
-        
-        /* Mobile optimization indicator */
-        #optimization-notice {
-            padding: 0.75rem;
-            background-color: #e0f2fe;
-            border-radius: 0.375rem;
-            margin-bottom: 1rem;
-            display: none;
-        }
-        
-        /* Loading skeleton for better perceived performance */
-        .skeleton-loader {
-            background: linear-gradient(90deg, #f3f4f6 0px, #e5e7eb 40%, #f3f4f6 80%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: 0.375rem;
-            height: 250px;
-            margin-bottom: 1rem;
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-
-        /* Style for parsing error notice */
-        #parse-error-notice {
-            padding: 0.75rem;
-            background-color: #fef2f2; /* Red-50 */
-            color: #b91c1c; /* Red-700 */
-            border: 1px solid #fecaca; /* Red-300 */
-            border-radius: 0.375rem;
-            margin-bottom: 1rem;
-            display: none; /* Hidden by default */
-        }
     </style>
     
     <!-- Custom JS for the page - defer loading -->
@@ -388,7 +76,6 @@
     
     <!-- Font Awesome for icons - loaded asynchronously -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     
     <!-- Non-critical styles loaded after page render -->
     <style>
@@ -746,15 +433,6 @@
     </header>
 
     <main class="container mx-auto p-4 flex-grow">
-        <div id="mobile-notice" class="hidden mb-4 p-3 bg-blue-100 text-blue-800 rounded-md text-sm">
-            <p><i class="fas fa-info-circle mr-1"></i> Mobile version: Showing limited repositories for better performance.</p>
-        </div>
-
-        <!-- Replace Safari notice with universal optimization notice -->
-        <div id="optimization-notice" class="hidden mb-4 p-3 bg-blue-100 text-blue-800 rounded-md text-sm">
-            <p><i class="fas fa-bolt mr-1"></i> Performance mode: Using optimized loading for better experience.</p>
-        </div>
-
         <div class="mb-6 flex justify-between items-center" style="display: none;"> <!-- Simple container for title and count -->
             <div class="text-sm text-gray-600">
                 <span id="repo-count" class="font-semibold" style="color: white; font-size: large;">0</span><span class="font-semibold" style="color: white; font-size: normal;"> repositories</span>
@@ -766,25 +444,6 @@
             <span style="color: whitesmoke;font-weight:lighter;">Loading repositories...</span>
         </div>
 
-        <!-- Simplified virtual scrolling container for all browsers -->
-        <div id="virtual-scroll-container" class="virtual-scroll-container hidden">
-            <div id="virtual-scroll-content" class="virtual-scroll-content"></div>
-            <div id="scroll-loader" class="text-center py-4 hidden">
-                <div class="spinner inline-block"></div>
-                <span class="ml-2 text-white">Loading more...</span>
-            </div>
-        </div>
-
-        <!-- Add skeleton loaders for initial load -->
-        <div id="skeleton-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
-            <div class="skeleton-loader"></div>
-            <div class="skeleton-loader"></div>
-            <div class="skeleton-loader"></div>
-            <div class="skeleton-loader"></div>
-            <div class="skeleton-loader"></div>
-            <div class="skeleton-loader"></div>
-        </div>
-
         <div id="repo-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Repository cards will be dynamically inserted here -->
         </div>
@@ -792,20 +451,6 @@
         <div id="no-results" class="hidden">
             <i class="fas fa-search text-gray-400 text-5xl mb-4"></i>
             <p class="text-xl text-gray-600">No repositories found matching your search criteria.</p>
-        </div>
-
-        <div id="load-error" class="hidden text-center py-8">
-            <i class="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
-            <p class="text-xl text-white mb-4">We encountered an issue loading the repository data.</p>
-            <button id="retry-load" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                <i class="fas fa-sync-alt mr-2"></i> Retry Loading
-            </button>
-        </div>
-
-        <!-- Add notice area for parsing errors -->
-        <div id="parse-error-notice">
-            <p><i class="fas fa-exclamation-triangle mr-1"></i> Data Corruption Detected:</p>
-            <p id="parse-error-details" class="text-sm mt-1"></p>
         </div>
     </main>
 
@@ -815,676 +460,971 @@
         </div>
     </footer>
 
-    {% raw %}
     <script>
   document.addEventListener('DOMContentLoaded', async () => {
-    // Performance tracking
-    const perfStart = performance.now();
-    
-    // Remove Safari-specific detection and simplify mobile detection
-    const isMobile = window.innerWidth < 768 || 
-                    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    // Show optimization notice on mobile
-    if (isMobile) {
-        document.getElementById('mobile-notice').classList.remove('hidden');
-        document.getElementById('optimization-notice').style.display = 'block';
-    }
-    
     // Global variables
     let allRepos = [];
     let filteredRepos = [];
     let currentLanguage = 'all';
     let minScoreFilter = 0;
     let currentPage = 1;
-    let reposPerPage = isMobile ? 10 : 30; // Reduced for mobile
+    const reposPerPage = 30;
     let isLoadingData = false;
     let cachedRepositories = null;
-    let loadAttempts = 0;
-    const MAX_LOAD_ATTEMPTS = 3;
-    const MOBILE_REPO_LIMIT = 30; // Reduced limit for mobile to prevent storage quota issues
-    const RENDER_BATCH_SIZE = 5; // Consistent batch size
     
-    // Universal virtual scrolling configuration
-    const virtualScroll = {
-        enabled: isMobile,
-        container: null,
-        content: null,
-        itemHeight: 320, // Default height estimate
-        visibleItems: new Set(),
-        renderedItems: new Map(), // Track rendered items by index
-        totalHeight: 0,
-        visibleStart: 0,
-        visibleEnd: 0,
-        scrollPosition: 0,
-        viewportHeight: 0,
-        buffer: 5, // Number of items to render above/below viewport
-        debounceTime: 100, // Debounce scroll events
-        scrollTimer: null,
-        pendingUpdate: false
-    };
+    // Get elements from the DOM
+    const reposContainer = document.getElementById('repo-grid');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const noResults = document.getElementById('no-results');
+    const repoCount = document.getElementById('repo-count');
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const languageFilterSelect = document.getElementById('language-filter-select');
+    const scoreFilterSelect = document.getElementById('score-filter-select');
     
-    // Better data chunking configuration
-    const dataChunking = {
-        chunkSize: isMobile ? 30 : 200, // Reduced chunk size for mobile
-        processDelay: 10, // ms between chunk processing
-        maxItemsToProcess: isMobile ? 200 : 1000, // Reduced max items for mobile
-        initialLoadSize: isMobile ? 15 : 50 // Reduced initial load for mobile
-    };
-    
-    // Initialize virtual scrolling
-    function initVirtualScrolling() {
-        if (!virtualScroll.enabled) return;
-        
-        virtualScroll.container = document.getElementById('virtual-scroll-container');
-        virtualScroll.content = document.getElementById('virtual-scroll-content');
-        
-        if (!virtualScroll.container || !virtualScroll.content) return;
-        
-        // Show virtual container, hide regular grid
-        document.getElementById('repo-grid').classList.add('hidden');
-        virtualScroll.container.classList.remove('hidden');
-        
-        // Set initial viewport height
-        virtualScroll.viewportHeight = virtualScroll.container.clientHeight || window.innerHeight * 0.6;
-        
-        // Add scroll handler with debouncing for all browsers
-        virtualScroll.container.addEventListener('scroll', () => {
-            virtualScroll.scrollPosition = virtualScroll.container.scrollTop;
-            
-            // Clear previous timer
-            if (virtualScroll.scrollTimer) {
-                clearTimeout(virtualScroll.scrollTimer);
-            }
-            
-            // Set new timer with debouncing
-            if (!virtualScroll.pendingUpdate) {
-                virtualScroll.pendingUpdate = true;
-                requestAnimationFrame(() => {
-                    updateVirtualScroll();
-                    virtualScroll.pendingUpdate = false;
-                });
-            }
-            
-            // Additional debounced update for smoother scrolling
-            virtualScroll.scrollTimer = setTimeout(() => {
-                requestAnimationFrame(updateVirtualScroll);
-            }, virtualScroll.debounceTime);
-        });
-        
-        // Handle resize
-        window.addEventListener('resize', () => {
-            virtualScroll.viewportHeight = virtualScroll.container.clientHeight || window.innerHeight * 0.6;
-            updateVirtualScroll();
-        });
-        
-        console.log('Virtual scrolling initialized for mobile device');
+    // Create pagination container at the bottom of the page
+    const paginationContainer = document.createElement('div');
+    paginationContainer.id = 'pagination-container';
+    paginationContainer.className = 'flex justify-center my-6';
+    reposContainer.parentNode.insertBefore(paginationContainer, reposContainer.nextSibling);
+
+    // Check if all required DOM elements exist
+    if (!reposContainer || !loadingIndicator || !noResults || !repoCount) {
+      console.error('Required DOM elements not found.');
+      return;
     }
-    
-    // Universal update function for virtual scrolling
-    function updateVirtualScroll() {
-        if (!virtualScroll.enabled || filteredRepos.length === 0) return;
-        
-        const scrollTop = virtualScroll.scrollPosition;
-        const viewportHeight = virtualScroll.viewportHeight;
-        
-        // Calculate visible range with buffer
-        const estimatedStart = Math.max(0, Math.floor(scrollTop / virtualScroll.itemHeight) - virtualScroll.buffer);
-        const estimatedEnd = Math.min(
-            filteredRepos.length - 1,
-            Math.ceil((scrollTop + viewportHeight) / virtualScroll.itemHeight) + virtualScroll.buffer
-        );
-        
-        // Skip update if visible range hasn't changed significantly
-        if (
-            estimatedStart === virtualScroll.visibleStart && 
-            estimatedEnd === virtualScroll.visibleEnd &&
-            virtualScroll.renderedItems.size > 0
-        ) {
-            return;
-        }
-        
-        // Update indices
-        virtualScroll.visibleStart = estimatedStart;
-        virtualScroll.visibleEnd = estimatedEnd;
-        
-        // Get visible items
-        const visibleRepos = filteredRepos.slice(estimatedStart, estimatedEnd + 1);
-        const newVisibleIds = new Set(visibleRepos.map((_, idx) => estimatedStart + idx));
-        
-        // Remove items that are no longer visible
-        virtualScroll.renderedItems.forEach((element, index) => {
-            if (!newVisibleIds.has(index)) {
-                if (element && element.parentNode) {
-                    element.parentNode.removeChild(element);
+
+    // Category icons and names
+    const categoryIcons = {
+      'documentation': 'fa-file-lines',
+      'security': 'fa-shield-alt',
+      'code_quality': 'fa-code',
+      'performance': 'fa-tachometer-alt',
+      'accessibility': 'fa-universal-access',
+      'ci_cd': 'fa-sync',
+      'maintainability': 'fa-wrench',
+      'testing': 'fa-vial',
+      'licensing': 'fa-balance-scale',
+      'community': 'fa-users'
+    };
+
+    const categoryNames = {
+      'documentation': 'Documentation',
+      'security': 'Security',
+      'code_quality': 'Code Quality',
+      'performance': 'Performance',
+      'accessibility': 'Accessibility',
+      'ci_cd': 'CI/CD',
+      'maintainability': 'Maintainability',
+      'testing': 'Testing',
+      'licensing': 'Licensing',
+      'community': 'Community'
+    };
+
+    // Check for cached data in localStorage
+    function getCachedData() {
+        try {
+            const cached = localStorage.getItem('repolizerRepositories');
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                // Only use cache if it's less than 15 minutes old
+                if (Date.now() - timestamp < 15 * 60 * 1000) {
+                    console.log('Using cached repository data');
+                    return data;
                 }
-                virtualScroll.renderedItems.delete(index);
             }
-        });
-        
-        // Add new visible items
-        visibleRepos.forEach((repo, idx) => {
-            const actualIndex = estimatedStart + idx;
-            
-            // Skip if already rendered
-            if (virtualScroll.renderedItems.has(actualIndex)) return;
-            
-            // Create card
-            const card = createUniversalCard(repo, actualIndex);
-            card.classList.add('virtual-scroll-item');
-            card.style.transform = `translateY(${actualIndex * virtualScroll.itemHeight}px)`;
-            card.style.position = 'absolute';
-            card.style.width = 'calc(100% - 16px)';
-            
-            // Add to DOM
-            virtualScroll.content.appendChild(card);
-            virtualScroll.renderedItems.set(actualIndex, card);
-            
-            // Animate in with slight delay based on position
-            setTimeout(() => {
-                card.style.opacity = '1';
-            }, idx * 20);
-        });
-        
-        // Update content height to accommodate all items
-        virtualScroll.totalHeight = filteredRepos.length * virtualScroll.itemHeight;
-        virtualScroll.content.style.height = `${virtualScroll.totalHeight}px`;
-        
-        // Check if we're near the end and should load more
-        const scrollThreshold = virtualScroll.totalHeight - viewportHeight - 500;
-        if (scrollTop > scrollThreshold && !isLoadingData && filteredRepos.length < allRepos.length) {
-            // Load more items
-            console.log('Near end of scroll, loading more items...');
-            loadMoreItems();
+        } catch (e) {
+            console.warn('Failed to retrieve cached data:', e);
+        }
+        return null;
+    }
+
+    // Cache data in localStorage
+    function cacheData(data) {
+        try {
+            localStorage.setItem('repolizerRepositories', JSON.stringify({
+                data,
+                timestamp: Date.now()
+            }));
+        } catch (e) {
+            console.warn('Failed to cache data:', e);
+            // Clear storage if we hit quota limits
+            try {
+                localStorage.clear();
+            } catch (clearError) {
+                console.error('Failed to clear localStorage:', clearError);
+            }
         }
     }
-    
-    // Create a universal card that works well on all devices
-    function createUniversalCard(repo, index) {
-        const card = document.createElement('div');
-        card.className = isMobile ? 'mobile-repo-card' : 'repo-card p-5 h-full flex flex-col';
-        card.setAttribute('data-index', index);
-        
-        const repoData = repo.repository || {};
-        const repoId = repoData.id || '';
-        
-        // Extract common essential data
-        const name = repoData.name || 'Unnamed Repository';
-        const fullName = repoData.full_name || '';
-        const stars = formatNumber(repoData.stargazers_count || 0);
-        const language = repoData.language || '';
-        const overallScore = repo.overall_score || 0;
-        const scoreClass = overallScore >= 70 ? 'bg-green-500' : (overallScore >= 40 ? 'bg-yellow-500' : 'bg-red-500');
-        
-        // Create appropriate card HTML based on device
-        if (isMobile) {
-            // Simplified card for mobile
-            card.innerHTML = `
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <h3 class="font-bold text-gray-800">${name}</h3>
-                        <p class="text-xs text-gray-600">${fullName}</p>
-                    </div>
-                    <div class="text-right">
-                        <div class="flex items-center text-sm">
-                            <i class="fas fa-star text-yellow-400 mr-1"></i> ${stars}
-                        </div>
-                        ${language ? `<div class="text-xs text-gray-600 mt-1">${language}</div>` : ''}
-                    </div>
-                </div>
-                <div class="relative h-4 bg-gray-200 rounded-full overflow-hidden mb-3">
-                    <div class="absolute top-0 left-0 h-full ${scoreClass}" style="width: ${overallScore}%"></div>
-                </div>
-                <div class="flex justify-between mt-4">
-                    <a href="/repo/${repoId}" class="px-3 py-1 bg-gray-100 rounded text-sm">
-                        View Report
-                    </a>
-                    <button type="button" class="share-button px-3 py-1 bg-purple-500 text-white rounded text-sm"
-                            data-repo-id="${repoId}" data-repo-name="${fullName}">
-                        Share
-                    </button>
-                </div>
-            `;
-        } else {
-            // Full card for desktop (existing implementation)
-            // ...existing desktop card HTML creation...
-        }
-        
-        // Add event listeners
-        const shareBtn = card.querySelector('.share-button');
-        if (shareBtn) {
-            shareBtn.addEventListener('click', (e) => {
-                const id = e.currentTarget.getAttribute('data-repo-id');
-                const name = e.currentTarget.getAttribute('data-repo-name');
-                openShareModal(id, name);
-            });
-        }
-        
-        return card;
+
+    // Get result path from parameters or use default
+    const urlParams = new URLSearchParams(window.location.search);
+    const resultPath = urlParams.get('path') || 'results.jsonl';
+    const pageParam = urlParams.get('page');
+    if (pageParam) {
+      currentPage = parseInt(pageParam, 10) || 1;
     }
     
-    // Optimized data loading for all browsers
+    console.log(`Loading repositories from: ${resultPath}, page ${currentPage}`);
+
+    // Modified function to load repositories incrementally
     async function loadRepositories() {
         if (isLoadingData) return;
         isLoadingData = true;
-        hideError();
-        // Hide parsing error notice initially
-        document.getElementById('parse-error-notice').style.display = 'none';
         
         try {
-            // Show skeleton loaders for better UX
-            document.getElementById('skeleton-container').classList.remove('hidden');
-            
-            // Check cache first
+            // Check for cached data first
             cachedRepositories = getCachedData();
+            
             if (cachedRepositories) {
-                // Hide loading indicator
-                if (document.getElementById('loading-indicator')) {
-                    document.getElementById('loading-indicator').style.display = 'none';
-                }
-                document.getElementById('skeleton-container').classList.add('hidden');
-                
-                // Process cached data
                 processRepositoryData(cachedRepositories);
                 return;
             }
             
-            // Try to load sample data first (faster)
-            try {
-                const samplePath = 'sample_results.jsonl';
-                const response = await fetch(samplePath);
-                
-                if (response.ok) {
-                    await processJSONLResponse(response, isMobile ? MOBILE_REPO_LIMIT : null);
-                    return; // Exit if sample loaded successfully
-                }
-            } catch (sampleError) {
-                console.warn('Sample data not available or failed to load:', sampleError);
+            // Show loading indicator
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'flex';
+                loadingIndicator.classList.remove('hidden');
             }
             
-            // Fall back to main data file
-            try {
-                const response = await fetch(resultPath);
-                
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
+            if (noResults) {
+                noResults.classList.add('hidden');
+            }
+            
+            // First try the specified results file
+            const response = await fetch(resultPath);
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let partialLine = '';
+            const repoDataMap = {};
+            
+            // Process the stream in chunks
+            let processedLines = 0;
+            const processingStartTime = performance.now();
+            
+            const processChunk = async (result) => {
+                if (result.done) {
+                    // Process any remaining partial line
+                    if (partialLine.trim()) {
+                        try {
+                            const parsedRepo = JSON.parse(partialLine);
+                            if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                                repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                            }
+                        } catch (e) {
+                            console.warn('Error parsing final line:', e);
+                        }
+                    }
+                    
+                    // Done reading the file
+                    allRepos = Object.values(repoDataMap);
+                    console.log(`Completed loading ${allRepos.length} repositories in ${((performance.now() - processingStartTime) / 1000).toFixed(2)}s`);
+                    
+                    // Cache the results
+                    cacheData(allRepos);
+                    
+                    // Process the data
+                    processRepositoryData(allRepos);
+                    return;
                 }
                 
-                await processJSONLResponse(response, isMobile ? MOBILE_REPO_LIMIT : null);
-            } catch (mainError) {
-                console.error('Error loading from main data source:', mainError);
-                throw mainError; // Re-throw to be caught by outer catch
-            }
+                // Process this chunk
+                const chunk = decoder.decode(result.value, {stream: true});
+                const lines = (partialLine + chunk).split('\n');
+                partialLine = lines.pop() || ''; // Last line might be incomplete
+                
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    
+                    try {
+                        const parsedRepo = JSON.parse(line);
+                        if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                            repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                            processedLines++;
+                            
+                            // Every 100 lines, update UI to show progress
+                            if (processedLines % 100 === 0) {
+                                // Quick progress update
+                                if (loadingIndicator.querySelector('span')) {
+                                    loadingIndicator.querySelector('span').textContent = 
+                                        `Loading repositories... (${processedLines} processed)`;
+                                }
+                                
+                                // Allow UI to update
+                                await new Promise(r => setTimeout(r, 0));
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error parsing line:', e);
+                    }
+                }
+                
+                // Continue reading
+                reader.read().then(processChunk);
+            };
+            
+            // Start reading
+            reader.read().then(processChunk);
+            
         } catch (error) {
             console.error('Error loading repositories:', error);
             
-            // Try fallback (simplified)
-            if (resultPath !== 'repositories.jsonl' && loadAttempts <= MAX_LOAD_ATTEMPTS) {
+            // Try fallback if main file fails
+            if (resultPath !== 'repositories.jsonl') {
                 try {
-                    console.log('Attempting to load fallback data (repositories.jsonl)...');
                     const fallbackResponse = await fetch('repositories.jsonl');
                     if (fallbackResponse.ok) {
-                        await processJSONLResponse(fallbackResponse, isMobile ? MOBILE_REPO_LIMIT : null);
-                        return; // Exit if fallback loaded successfully
+                        // Process fallback with similar streaming approach
+                        // ...implementation similar to above...
                     }
                 } catch (fallbackError) {
                     console.error("Error fetching fallback data:", fallbackError);
                 }
             }
             
-            // Show error UI if all attempts failed
-            showError(`Error loading repository data: ${error.message}`);
-        } finally {
-            document.getElementById('skeleton-container').classList.add('hidden');
+            // Ensure the loading indicator is hidden
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+                loadingIndicator.classList.add('hidden');
+            }
+            
+            if (noResults) {
+                noResults.classList.remove('hidden');
+                
+                const errorMsg = noResults.querySelector('p');
+                if (errorMsg) {
+                    errorMsg.textContent = `Error loading repository data: ${error.message}`;
+                }
+            }
             isLoadingData = false;
         }
     }
     
-    /**
-     * Processes the Response object containing JSONL data.
-     * @param {Response} response The fetch Response object.
-     * @param {number|null} maxItems Maximum items to process (for mobile).
-     */
-    async function processJSONLResponse(response, maxItems = null) {
-        const loadStartTime = performance.now();
-        let parseStats = { success: 0, failed: 0, total: 0 };
-        
-        try {
-            const text = await response.text();
-            
-            // Update loading indicator
-            if (loadingIndicator && loadingIndicator.querySelector('span')) {
-                loadingIndicator.querySelector('span').textContent = 'Parsing data...';
-            }
-            
-            // Parse the entire JSONL content robustly
-            const { data: parsedReposArray, stats } = parseJSONLLines(text);
-            parseStats = stats;
-            
-            console.log(`Parsing complete: ${stats.success} successful, ${stats.failed} failed out of ${stats.total} lines/fragments.`);
-            
-            // Show parsing error notice if needed
-            if (stats.failed > 0) {
-                const errorNotice = document.getElementById('parse-error-notice');
-                const errorDetails = document.getElementById('parse-error-details');
-                if (errorNotice && errorDetails) {
-                    errorDetails.textContent = `${stats.failed} out of ${stats.total} lines/fragments could not be parsed correctly. Some data might be missing or incomplete.`;
-                    errorNotice.style.display = 'block';
+    // Process repository data after loading
+    function processRepositoryData(repos) {
+        // Process each repo to calculate category averages
+        repos.forEach(repo => {
+            // Add category averages
+            repo.category_scores = {};
+
+            // For each category, calculate average score
+            Object.keys(categoryNames).forEach(category => {
+                if (repo[category]) {
+                    const checks = Object.values(repo[category]).filter(check => 
+                        typeof check === 'object' && check !== null && 'score' in check
+                    );
+                    
+                    if (checks.length > 0) {
+                        const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
+                        repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
+                    } else {
+                        repo.category_scores[category] = 0;
+                    }
+                } else {
+                    repo.category_scores[category] = 0;
                 }
-            }
-            
-            // Limit items if needed (e.g., for mobile)
-            allRepos = maxItems ? parsedReposArray.slice(0, maxItems) : parsedReposArray;
-            
-            // Update loading indicator
-            if (loadingIndicator && loadingIndicator.querySelector('span')) {
-                loadingIndicator.querySelector('span').textContent = 'Processing data...';
-            }
-            
-            // Cache the successfully parsed data
-            if (allRepos.length > 0) {
-                cacheData(allRepos); // Cache the array directly
-            }
-            
-            // Process the successfully parsed data
-            processRepositoryData(allRepos);
-            
-            // Hide loading indicator after processing
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-            }
-            
-            console.log(`Data loading and processing took ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
-            
-        } catch (e) {
-            console.error('Error processing JSONL response:', e);
-            showError(`Error processing data: ${e.message}`);
-            // Hide loading indicator on error
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-            }
-        }
-    }
-    
-    // Remove the old processJSONLStream function as it's replaced by processJSONLResponse
-    
-    // Modify processRepositoryData to accept the array directly
-    function processRepositoryData(repos) { // Accepts array directly
-        allRepos = repos; // Assign the passed array
+            });
+        });
+
+        allRepos = repos;
+        filteredRepos = [...allRepos];
         
-        // Hide loading indicator if it's still visible
+        if (repoCount) {
+            repoCount.textContent = filteredRepos.length;
+        }
+
+        // Initial sort by overall score
+        sortRepos('overall_score_desc');
+
+        // Hide loading indicator
         if (loadingIndicator) {
             loadingIndicator.style.display = 'none';
+            loadingIndicator.classList.add('hidden');
         }
-        
-        // Update repo count display
-        if (repoCount) {
-            repoCount.textContent = allRepos.length;
-        }
-        
-        // Apply initial filters and sorting
-        applyFiltersAndSort();
-        
-        // Initial display
-        displayRepos();
-        
-        // Populate filter options (if not mobile or simplified)
-        if (!isMobile) {
-            // populateLanguageFilter(); // Keep this if needed
-        }
-        
-        // Performance logging
-        const perfEnd = performance.now();
-        console.log(`Total page load and initial render time: ${((perfEnd - perfStart) / 1000).toFixed(2)}s`);
-    }
-    
-    // ... rest of the existing functions (applyFiltersAndSort, displayRepos, etc.) ...
-    // Ensure createUniversalCard and other functions correctly access repo data
-    // e.g., repo.repository.name, repo.overall_score
-    
-    // Update caching functions if necessary (should work with array)
-    function getCachedData() {
-        try {
-            // Check sessionStorage first (faster)
-            const sessionCached = sessionStorage.getItem('repolizerSessionRepos');
-            if (sessionCached) {
-                const { data, timestamp } = JSON.parse(sessionCached);
-                // Use session cache if less than 30 minutes old
-                if (Date.now() - timestamp < 30 * 60 * 1000) {
-                    console.log('Using sessionStorage cached repository data (array)');
-                    return data;
-                } else {
-                    sessionStorage.removeItem('repolizerSessionRepos'); // Remove expired session cache
-                }
+
+        // Check if there are results to display
+        if (filteredRepos.length === 0) {
+            if (noResults) {
+                noResults.classList.remove('hidden');
             }
-
-            // Fallback to localStorage
-            const cached = localStorage.getItem('repolizerRepositories');
-            if (cached) {
-                const { data, timestamp } = JSON.parse(cached);
-                // Use cache if less than 15 minutes old (keep localStorage shorter)
-                if (Date.now() - timestamp < 15 * 60 * 1000) {
-                    console.log('Using localStorage cached repository data (array)');
-                    // Refresh session cache if using localStorage data
-                    try {
-                        sessionStorage.setItem('repolizerSessionRepos', JSON.stringify({ data, timestamp: Date.now() }));
-                    } catch (e) {
-                         if (e.name === 'QuotaExceededError') {
-                            console.warn('SessionStorage quota exceeded while refreshing from localStorage.');
-                         } else {
-                            console.warn('Error refreshing sessionStorage:', e);
-                         }
-                    }
-                    return data; // Return the array
-                } else {
-                    localStorage.removeItem('repolizerRepositories'); // Remove expired localStorage cache
-                }
-            }
-        } catch (e) {
-            console.warn('Failed to retrieve or parse cached data:', e);
-            // Clear potentially corrupted cache
-            clearCacheData();
-        }
-        return null;
-    }
-
-    function cacheData(data) { // Accepts array
-        try {
-            // Limit data size for caching, especially on mobile
-            const dataToCache = isMobile ? data.slice(0, MOBILE_REPO_LIMIT) : data.slice(0, 200); // Limit desktop cache too
-            
-            if (dataToCache.length === 0) return; // Don't cache empty data
-
-            const cacheObject = {
-                data: dataToCache, // Store the potentially limited array
-                timestamp: Date.now()
-            };
-            const cacheString = JSON.stringify(cacheObject);
-
-            // Estimate size (very rough)
-            const estimatedSizeMB = (cacheString.length * 2) / (1024 * 1024);
-            console.log(`Attempting to cache ${dataToCache.length} repositories. Estimated size: ${estimatedSizeMB.toFixed(2)} MB`);
-
-            // Try localStorage first (more persistent)
-            try {
-                localStorage.setItem('repolizerRepositories', cacheString);
-                console.log(`Cached ${dataToCache.length} repositories to localStorage.`);
-            } catch (e) {
-                if (e.name === 'QuotaExceededError') {
-                    console.warn(`LocalStorage quota exceeded (Estimate: ${estimatedSizeMB.toFixed(2)} MB). Clearing localStorage and skipping.`);
-                    localStorage.clear(); // Clear storage to potentially make space for future attempts
-                } else {
-                    console.warn('Failed to cache data to localStorage:', e);
-                }
-                // Don't try sessionStorage if localStorage failed due to size
-                return;
-            }
-
-            // Also update sessionStorage for faster access in the current session
-            try {
-                sessionStorage.setItem('repolizerSessionRepos', cacheString);
-                console.log(`Updated sessionStorage with ${dataToCache.length} repositories.`);
-            } catch (e) {
-                 if (e.name === 'QuotaExceededError') {
-                    console.warn(`SessionStorage quota exceeded (Estimate: ${estimatedSizeMB.toFixed(2)} MB). Skipping session cache update.`);
-                    // Optionally clear session storage
-                    // sessionStorage.clear();
-                 } else {
-                    console.warn('Failed to update sessionStorage:', e);
-                 }
-            }
-
-        } catch (e) {
-            // Catch errors during stringify or slicing
-            console.error('Unexpected error during cacheData preparation:', e);
-        }
-    }
-
-    function clearCacheData() {
-        try {
-            localStorage.removeItem('repolizerRepositories');
-            sessionStorage.removeItem('repolizerSessionRepos');
-            console.log('Cleared localStorage and sessionStorage cache.');
-        } catch (e) {
-            console.warn('Error clearing cache:', e);
-        }
-    }
-    
-    // --- Robust JSON Parsing ---
-    
-    /**
-     * Attempts to parse a JSON string, trying to fix common errors.
-     * @param {string} jsonString The potentially malformed JSON string.
-     * @returns {object|null} The parsed object or null if parsing fails.
-     */
-    function robustJSONParse(jsonString) {
-        if (!jsonString || typeof jsonString !== 'string') {
-            return null;
-        }
-        
-        let cleanedString = jsonString.trim();
-        
-        // 1. Remove problematic control characters (except common whitespace)
-        cleanedString = cleanedString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
-        
-        // 2. Attempt direct parsing first
-        try {
-            return JSON.parse(cleanedString);
-        } catch (e) {
-            // console.warn("Initial JSON parse failed, attempting fixes...", e.message);
-        }
-        
-        // 3. Attempt common fixes (add with caution, can be risky)
-        
-        // Fix unescaped quotes within strings (simple heuristic)
-        // This is very basic and might break valid JSON. Use carefully.
-        // cleanedString = cleanedString.replace(/([^\\])"/g, '$1\\"');
-        
-        // Fix missing quotes around property names (requires more complex regex)
-        // Example: { property: "value" } -> { "property": "value" }
-        // cleanedString = cleanedString.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
-        
-        // Fix trailing commas (often handled by modern JS engines, but good practice)
-        cleanedString = cleanedString.replace(/,\s*([}\]])/g, '$1');
-        
-        // Fix imbalanced braces/brackets (very difficult, often indicates severe corruption)
-        // Basic check: count opening and closing braces/brackets
-        const openBraces = (cleanedString.match(/{/g) || []).length;
-        const closeBraces = (cleanedString.match(/}/g) || []).length;
-        const openBrackets = (cleanedString.match(/\[/g) || []).length;
-        const closeBrackets = (cleanedString.match(/]/g) || []).length;
-        
-        if (openBraces > closeBraces) cleanedString += '}'.repeat(openBraces - closeBraces);
-        if (openBrackets > closeBrackets) cleanedString += ']'.repeat(openBrackets - closeBrackets);
-        // Note: Adding closing braces might not fix the structure correctly.
-        
-        // Final attempt after cleaning
-        try {
-            return JSON.parse(cleanedString);
-        } catch (e) {
-            // console.error("Robust JSON parse failed after fixes:", e.message, "Original:", jsonString.substring(0, 100));
-            return null; // Failed even after attempts
-        }
-    }
-    
-    /**
-     * Parses lines from a JSONL string, handling potential errors and multi-line fragments.
-     * @param {string} jsonlString The raw JSONL content.
-     * @returns {{ data: Array<object>, stats: { success: number, failed: number, total: number } }}
-     */
-    function parseJSONLLines(jsonlString) {
-        const lines = jsonlString.split('\n');
-        const parsedData = new Map(); // Use Map for efficient ID-based storage and deduplication
-        let stats = { success: 0, failed: 0, total: 0 };
-        let currentFragment = '';
-        
-        for (const line of lines) {
-            stats.total++;
-            const trimmedLine = line.trim();
-            
-            if (!trimmedLine && !currentFragment) {
-                // Skip empty lines if not part of a fragment
-                continue;
-            }
-            
-            currentFragment += trimmedLine;
-            
-            // Attempt to parse the current fragment
-            const parsedObject = robustJSONParse(currentFragment);
-            
-            if (parsedObject !== null) {
-                // Successfully parsed
-                stats.success++;
-                
-                // Store by repository ID if available, otherwise skip
-                const repoId = parsedObject?.repository?.id;
-                if (repoId) {
-                    // If duplicate ID, keep the one parsed later (assuming newer)
-                    parsedData.set(String(repoId), parsedObject);
-                } else {
-                    // console.warn("Parsed object missing repository ID:", JSON.stringify(parsedObject).substring(0, 100));
-                    // Optionally count these as a specific type of failure
-                }
-                
-                currentFragment = ''; // Reset fragment
-            } else {
-                // Parsing failed. Check if it might be an incomplete fragment
-                // Heuristic: If it starts with { or [ but doesn't end correctly, keep accumulating
-                const startsValid = currentFragment.startsWith('{') || currentFragment.startsWith('[');
-                const endsValid = (currentFragment.endsWith('}') || currentFragment.endsWith(']')); // Basic check
-                
-                if (startsValid && !endsValid && currentFragment.length < 50000) { // Add length limit
-                    // Likely an incomplete fragment, continue accumulating
-                    continue;
-                } else {
-                    // Treat as a failed line/fragment
-                    stats.failed++;
-                    // console.error("Failed to parse JSONL fragment:", currentFragment.substring(0, 200));
-                    currentFragment = ''; // Reset fragment after definite failure
-                }
+        } else {
+            if (noResults) {
+                noResults.classList.add('hidden');
             }
         }
         
-        // Handle any remaining fragment at the end of the file
-        if (currentFragment) {
-            stats.failed++; // Count the leftover fragment as failed
-            // console.error("Unparsed fragment at end of file:", currentFragment.substring(0, 200));
-        }
-        
-        // Convert Map values back to an array for processing
-        const dataArray = Array.from(parsedData.values());
-        
-        return { data: dataArray, stats };
+        isLoadingData = false;
     }
-    
-    // --- End Robust JSON Parsing ---
     
     // Start loading repositories
     loadRepositories();
+
+    // Event listener for search input
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        filterRepos();
+      });
+    }
+
+    // Event listener for sort select
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => {
+        sortRepos(sortSelect.value);
+      });
+    }
+
+    // Event listener for language filter select
+    if (languageFilterSelect) {
+      languageFilterSelect.addEventListener('change', () => {
+        currentLanguage = languageFilterSelect.value;
+        filterRepos();
+      });
+    }
+
+    // Event listener for score filter select
+    if (scoreFilterSelect) {
+      scoreFilterSelect.addEventListener('change', () => {
+        minScoreFilter = parseInt(scoreFilterSelect.value);
+        filterRepos();
+      });
+    }
+
+    // Function to filter repositories
+    function filterRepos() {
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+      console.log(`Filtering repos with: Search="${searchTerm}", Language=${currentLanguage}, MinScore=${minScoreFilter}`);
+      console.log(`Total unique repos available for filtering: ${allRepos.length}`);
+
+      filteredRepos = allRepos.filter(repo => {
+        // Filter by search term (repo name or description)
+        const nameMatch = repo.repository?.name?.toLowerCase().includes(searchTerm) ||
+          (repo.repository?.description && repo.repository.description.toLowerCase().includes(searchTerm));
+
+        // Filter by language
+        const languageMatch = currentLanguage === 'all' || repo.repository?.language === currentLanguage;
+
+        // Filter by overall score
+        const scoreMatch = (repo.overall_score || 0) >= minScoreFilter;
+
+        return nameMatch && languageMatch && scoreMatch;
+      });
+
+      console.log(`Total repos after filtering: ${filteredRepos.length}`);
+
+      // Reset to first page when filters change
+      currentPage = 1;
+      updatePagination();
+      
+      // Update count and display repositories
+      if (repoCount) {
+        repoCount.textContent = filteredRepos.length;
+      }
+      
+      displayRepos();
+    }
+
+    // Function to sort repositories
+    function sortRepos(sortBy) {
+      switch (sortBy) {
+        case 'overall_score_desc':
+          filteredRepos.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+          break;
+        case 'overall_score_asc':
+          filteredRepos.sort((a, b) => (a.overall_score || 0) - (b.overall_score || 0));
+          break;
+        case 'stars':
+          filteredRepos.sort((a, b) => (b.repository?.stargazers_count || 0) - (a.repository?.stargazers_count || 0));
+          break;
+        case 'forks':
+          filteredRepos.sort((a, b) => (b.repository?.forks_count || 0) - (a.repository?.forks_count || 0));
+          break;
+        case 'updated':
+          filteredRepos.sort((a, b) => {
+            const dateA = a.repository?.updated_at ? new Date(a.repository.updated_at) : new Date(0);
+            const dateB = b.repository?.updated_at ? new Date(b.repository.updated_at) : new Date(0);
+            return dateB - dateA;
+          });
+          break;
+        case 'name':
+          filteredRepos.sort((a, b) => {
+            const nameA = a.repository?.name?.toLowerCase() || '';
+            const nameB = b.repository?.name?.toLowerCase() || '';
+            return nameA.localeCompare(nameB);
+          });
+          break;
+      }
+
+      displayRepos();
+    }
+
+    // Function to display repositories with pagination
+    function displayRepos() {
+      if (!reposContainer) return;
+      
+      // Clear the container
+      reposContainer.innerHTML = '';
+
+      if (filteredRepos.length === 0) {
+        if (noResults) {
+          noResults.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (noResults) {
+        noResults.classList.add('hidden');
+      }
+
+      // Calculate pagination
+      const startIndex = (currentPage - 1) * reposPerPage;
+      const endIndex = Math.min(startIndex + reposPerPage, filteredRepos.length);
+      const currentPageRepos = filteredRepos.slice(startIndex, endIndex);
+
+      // Display the current page repositories
+      currentPageRepos.forEach(repo => {
+        if (!repo.repository) {
+          console.warn('Repository object is missing required data:', repo);
+          return;
+        }
+        
+        const card = createRepoCard(repo);
+        reposContainer.appendChild(card);
+      });
+      
+      // Update pagination controls
+      updatePagination();
+    }
+
+    // Function to update pagination controls
+    function updatePagination() {
+      const totalPages = Math.ceil(filteredRepos.length / reposPerPage);
+      
+      // Clear previous pagination
+      paginationContainer.innerHTML = '';
+      
+      if (totalPages <= 1) {
+        return; // No pagination needed
+      }
+      
+      // Create pagination controls
+      const pagination = document.createElement('div');
+      pagination.className = 'flex items-center space-x-1 font-bold ';
+      
+      // Previous button
+      const prevButton = document.createElement('button');
+      prevButton.className = 'px-4 py-2 border rounded-md ' + 
+        (currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50');
+      prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+      prevButton.disabled = currentPage === 1;
+      prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          displayRepos();
+        }
+      });
+      pagination.appendChild(prevButton);
+      
+      // Page numbers
+      const maxVisiblePages = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      // Adjust if we're at the end
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+      
+      // First page button if not visible
+      if (startPage > 1) {
+        const firstButton = document.createElement('button');
+        firstButton.className = 'px-4 py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
+        firstButton.textContent = '1';
+        firstButton.addEventListener('click', () => {
+          currentPage = 1;
+          displayRepos();
+        });
+        pagination.appendChild(firstButton);
+        
+        // Ellipsis if needed
+        if (startPage > 2) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-4 py-2';
+          ellipsis.textContent = '...';
+          pagination.appendChild(ellipsis);
+        }
+      }
+      
+      // Page buttons
+      for (let i = startPage; i <= endPage; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.className = 'px-4 py-2 border rounded-md ' + 
+          (i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50');
+        pageButton.textContent = i.toString();
+        pageButton.addEventListener('click', () => {
+          currentPage = i;
+          displayRepos();
+        });
+        pagination.appendChild(pageButton);
+      }
+      
+      // Last page button if not visible
+      if (endPage < totalPages) {
+        // Ellipsis if needed
+        if (endPage < totalPages - 1) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-4 py-2';
+          ellipsis.textContent = '...';
+          pagination.appendChild(ellipsis);
+        }
+        
+        const lastButton = document.createElement('button');
+        lastButton.className = 'px-4 py-2 border rounded-md bg-white text-blue-600 hover:bg-blue-50';
+        lastButton.textContent = totalPages.toString();
+        lastButton.addEventListener('click', () => {
+          currentPage = totalPages;
+          displayRepos();
+        });
+        pagination.appendChild(lastButton);
+      }
+      
+      // Next button
+      const nextButton = document.createElement('button');
+      nextButton.className = 'px-4 py-2 border rounded-md ' + 
+        (currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50');
+      nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          displayRepos();
+        }
+      });
+      pagination.appendChild(nextButton);
+      
+      // Page info
+      const pageInfo = document.createElement('div');
+      pageInfo.className = 'ml-4 text-sm text-white-600 text-bold';
+      // pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredRepos.length} matching repositories)`;
+      pageInfo.textContent = ``;
+      
+      // Append to container
+      paginationContainer.appendChild(pagination);
+      paginationContainer.appendChild(pageInfo);
+      
+      // Update URL with current page
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', currentPage);
+      window.history.replaceState({}, '', url);
+    }
+
+    // Function to create a repository card (Updated Button Section)
+    function createRepoCard(repo) {
+      const card = document.createElement('div');
+      card.className = 'repo-card bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col transition-all duration-300 ease-in-out hover:shadow-lg';
+
+      const repoData = repo.repository || {};
+      const repoId = repoData.id || '';
+
+      // ... (rest of the card creation logic: stars, forks, description, chart, score bar) ...
+      const stars = formatNumber(repoData.stargazers_count || 0);
+      const forks = formatNumber(repoData.forks_count || 0);
+      const updatedAt = repoData.updated_at ? formatDate(repoData.updated_at) : 'unknown';
+      const description = repoData.description
+        ? truncateText(repoData.description, 120)
+        : 'No description available';
+      const languageColor = getLanguageColor(repoData.language);
+      const languageBadge = repoData.language ?
+        `<span class="inline-flex items-center">
+            <span class="w-3 h-3 rounded-full mr-1" style="background-color: ${languageColor}"></span>
+            ${repoData.language}
+          </span>` : '';
+      const overallScore = repo.overall_score || 0;
+      const scoreColorClass = overallScore >= 70 ? 'text-green-600' : (overallScore >= 40 ? 'text-yellow-600' : 'text-red-600');
+      const scoreBarFillClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
+
+      // --- Category Bar Chart ---
+      let categoryBarChartHtml = `
+        <div class="category-bar-chart flex justify-between items-end h-24 mt-2 mb-3 px-1" style="margin-top: 2.5rem;">
+      `;
+      const fixedCategoryOrder = [
+        'documentation', 'security', 'code_quality', 'performance', 'accessibility',
+        'testing', 'maintainability', 'ci_cd', 'licensing', 'community'
+      ];
+      for (const category of fixedCategoryOrder) {
+        const score = repo.category_scores?.[category] || 0;
+        const icon = categoryIcons[category] || 'fa-question-circle';
+        const name = categoryNames[category] || category;
+        let colorClass;
+        let gradientClass;
+        if (score >= 70) {
+          colorClass = 'bg-green-500';
+          gradientClass = 'category-bar-gradient-high';
+        }
+        else if (score >= 40) {
+          colorClass = 'bg-yellow-500';
+          gradientClass = 'category-bar-gradient-medium';
+        }
+        else {
+          colorClass = 'bg-red-500';
+          gradientClass = 'category-bar-gradient-low';
+        }
+        const heightPercentage = Math.max(5, score);
+        categoryBarChartHtml += `
+          <div class="flex flex-col items-center group" title="${name}: ${score.toFixed(1)}">
+            <div class="relative w-5 h-20 bg-gray-200 rounded-t overflow-hidden" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; width: 0.8rem;">
+              <div class="${colorClass} ${gradientClass} absolute bottom-0 w-full rounded-t transition-all duration-300" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; height: ${heightPercentage}%;"></div>
+            </div>
+            <span class="text-xs mt-1 text-gray-600">${Math.round(score)}</span>
+            <i class="fas ${icon} text-gray-500 mt-1 group-hover:text-blue-500 transition-colors"></i>
+          </div>
+        `;
+      }
+      categoryBarChartHtml += `</div>`;
+      // --- End Category Bar Chart ---
+
+
+      card.innerHTML = `
+        <div class="p-5 flex-grow flex flex-col">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">
+                <a href="${repoData.html_url || '#'}" target="_blank" class="hover:text-blue-600 transition-colors">
+                  ${repoData.name || 'Unnamed Repository'}
+                </a>
+              </h3>
+              <p class="text-sm text-gray-600">${repoData.full_name || ''}</p>
+            </div>
+            <div class="flex items-center text-gray-600">
+              <span class="flex items-center text-sm mr-3">
+                <i class="fas fa-star text-yellow-400 mr-1"></i> ${stars}
+              </span>
+              <span class="flex items-center text-sm">
+                <i class="fas fa-code-branch mr-1"></i> ${forks}
+              </span>
+            </div>
+          </div>
+
+          <p class="text-gray-700 mb-2 text-sm" style="border-radius: 5px; font-size: small; color: #737373; padding-bottom: 1rem;">${description}</p>
+
+          <!-- Spacer to push everything below to the bottom -->
+          <div class="flex-grow"></div>
+
+          <!-- Category Score Bar Chart - Now at the bottom -->
+          ${categoryBarChartHtml}
+
+          <div class="mb-4">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-sm font-medium text-gray-700">Repolizer score:</span>
+              <span class="text-sm font-semibold ${scoreColorClass}">${overallScore.toFixed(1)}</span>
+            </div>
+            <div class="score-bar bg-gray-200">
+              <div class="score-bar-fill ${scoreBarFillClass}" style="width: ${overallScore}%"></div>
+            </div>
+          </div>
+
+          <!-- Report Buttons Section - Now at the bottom -->
+          <div class="mt-2 border-t pt-4">
+            <p class="text-center text-sm font-medium text-gray-700 mb-2" style="font-size: 1rem; font-weight: bold; padding-bottom: 10px; color: #575757;">VIEW REPORT</p>
+            <div class="flex justify-center space-x-3">
+              <a href="/repo/${repoId}" title="Free Report"
+                 class="inline-flex items-center justify-center px-4 py-2 font-bold rounded-lg shadow-sm text-sm transition-all duration-200 bg-gray-100 hover:bg-gray-200" style="width: 30%; height: 4rem; font-size: 1.1rem; font-weight: normal; color: #717171;">
+                <i class="fas fa-chart-bar mr-2"></i>
+                FREE
+              </a>
+              <button type="button" title="Full Report (Paid)"
+                      class="open-modal-button inline-flex items-center justify-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
+                      data-repo-id="${repoId}">
+                <i class="fas fa-credit-card mr-2"></i>
+                FULL
+              </button>
+              <button type="button" title="Share Repository Report"
+                      class="share-button inline-flex items-center justify-center px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow-sm text-sm transition-all duration-200" style="width: 30%; height: 4rem; font-size: 1.1rem;"
+                      data-repo-id="${repoId}" data-repo-name="${repoData.full_name || ''}">
+                <i class="fas fa-share-alt mr-2"></i>
+                SHARE
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3 flex justify-between items-center text-sm text-gray-600 border-t">
+          <span class="flex items-center">
+            <i class="far fa-calendar-alt mr-1"></i> ${updatedAt}
+          </span>
+          ${languageBadge}
+        </div>
+      `;
+
+      // Add event listener to the modal button (no change needed here)
+      const fullReportButton = card.querySelector('.open-modal-button');
+      if (fullReportButton) {
+          fullReportButton.addEventListener('click', (event) => {
+              const clickedRepoId = event.currentTarget.getAttribute('data-repo-id');
+              const repoForModal = filteredRepos.find(r => String(r.repository?.id) === String(clickedRepoId));
+              if (repoForModal) {
+                  openModal(repoForModal);
+              } else {
+                  console.error("Could not find repository data for modal:", clickedRepoId);
+                  alert("Error: Could not load repository details for the full report.");
+              }
+          });
+      }
+
+      // Add event listener to the share button
+      const shareButton = card.querySelector('.share-button');
+      if (shareButton) {
+          shareButton.addEventListener('click', (event) => {
+              const repoId = event.currentTarget.getAttribute('data-repo-id');
+              const repoName = event.currentTarget.getAttribute('data-repo-name');
+              
+              // Open our new share modal instead of previous implementation
+              openShareModal(repoId, repoName);
+          });
+      }
+
+      return card;
+    }
+
+    // Function to format large numbers with k/M/B suffix
+    function formatNumber(num) {
+      if (num === null || num === undefined) return '0';
+      
+      // Convert to number if it's a string
+      num = typeof num === 'string' ? parseInt(num, 10) : num;
+      
+      if (isNaN(num)) return '0';
+      
+      // Format with k, M, B suffixes for thousand, million, billion
+      if (num >= 1000000000) {
+        return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+      }
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+      }
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+      }
+      return num.toString();
+    }
+
+    // Function to truncate text
+    function truncateText(text, maxLength) {
+      if (!text) return '';
+      if (text.length > maxLength) {
+        return text.substring(0, maxLength) + '...';
+      }
+      return text;
+    }
+
+    // Function to format date
+    function formatDate(dateString) {
+      if (!dateString) return 'Unknown';
+      
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+      } catch (e) {
+        console.warn('Invalid date:', dateString);
+        return 'Invalid date';
+      }
+    }
+
+    // Function to get language color
+    function getLanguageColor(language) {
+      const colors = {
+        'JavaScript': '#f1e05a',
+        'Python': '#3572a5',
+        'HTML': '#e34c26',
+        'CSS': '#563d7c',
+        'Java': '#b07219',
+        'TypeScript': '#2b7489',
+        'Ruby': '#701516',
+        'Go': '#00ADD8',
+        'C#': '#178600',
+        'C++': '#f34b7d',
+        'PHP': '#4F5D95'
+      };
+
+      return colors[language] || '#8F8F8F';
+    }
     
-    // ...existing code for other functions and event handlers...
+    // Share Modal Functionality
+    const shareModal = document.getElementById('share-modal');
+    const closeShareModal = document.getElementById('close-share-modal');
+    const shareRepoName = document.getElementById('share-repo-name');
+    const shareUrl = document.getElementById('share-url');
+    const copyButton = document.getElementById('copy-button');
+    const copyShareUrl = document.getElementById('copy-share-url');
+    const emailShareButton = document.getElementById('email-share-button');
+    const copySuccess = document.getElementById('copy-success');
+    const socialShareButtons = document.querySelectorAll('.social-share-button');
+    
+    // Function to open share modal
+    function openShareModal(repoId, repoName) {
+      if (!shareModal) return;
+      
+      const fullRepoUrl = `${window.location.origin}/repo/${repoId}`;
+      
+      // Set repo name and share URL
+      if (shareRepoName) shareRepoName.textContent = repoName || 'Repository Report';
+      if (shareUrl) shareUrl.value = fullRepoUrl;
+      
+      // Show the modal
+      shareModal.classList.remove('hidden');
+      document.body.classList.add('blur-background');
+      
+      // Focus the share URL input for easy copying
+      if (shareUrl) setTimeout(() => shareUrl.select(), 100);
+    }
+    
+    // Function to close share modal
+    function hideShareModal() {
+      if (shareModal) {
+        shareModal.classList.add('hidden');
+        document.body.classList.remove('blur-background');
+        if (copySuccess) copySuccess.classList.add('hidden');
+      }
+    }
+    
+    // Function to copy the share URL to clipboard
+    function copyShareUrlToClipboard() {
+      if (!shareUrl) return;
+      
+      shareUrl.select();
+      navigator.clipboard.writeText(shareUrl.value)
+        .then(() => {
+          if (copySuccess) {
+            copySuccess.classList.remove('hidden');
+            setTimeout(() => {
+              copySuccess.classList.add('hidden');
+            }, 3000);
+          }
+        })
+        .catch(err => {
+          console.error('Error copying text: ', err);
+          alert('Failed to copy the link. Please select and copy it manually.');
+        });
+    }
+    
+    // Function to share via email
+    function shareViaEmail(url, repoName) {
+      const subject = encodeURIComponent(`Repolizer Report for ${repoName}`);
+      const body = encodeURIComponent(`Check out this repository health analysis on Repolizer: ${url}`);
+      window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    }
+    
+    // Function to share via social platforms
+    function shareViaSocial(platform, url, repoName) {
+      let shareUrl;
+      switch (platform) {
+        case 'linkedin':
+          shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+          break;
+        case 'reddit':
+          const redditTitle = encodeURIComponent(`Repolizer Health Analysis for ${repoName}`);
+          shareUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${redditTitle}`;
+          break;
+        case 'whatsapp':
+          const whatsappText = encodeURIComponent(`Check out this Repolizer health analysis for ${repoName}: ${url}`);
+          shareUrl = `https://wa.me/?text=${whatsappText}`;
+          break;
+        default:
+          return;
+      }
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+    
+    // Set up event listeners for the share modal
+    if (closeShareModal) {
+      closeShareModal.addEventListener('click', hideShareModal);
+    }
+    
+    // Close modal when clicking outside
+    if (shareModal) {
+      shareModal.addEventListener('click', (e) => {
+        if (e.target === shareModal) {
+          hideShareModal();
+        }
+      });
+    }
+    
+    // Copy button click handlers
+    if (copyButton) {
+      copyButton.addEventListener('click', copyShareUrlToClipboard);
+    }
+    
+    if (copyShareUrl) {
+      copyShareUrl.addEventListener('click', copyShareUrlToClipboard);
+    }
+    
+    // Email share button handler
+    if (emailShareButton) {
+      emailShareButton.addEventListener('click', () => {
+        if (shareUrl && shareRepoName) {
+          shareViaEmail(shareUrl.value, shareRepoName.textContent);
+        }
+      });
+    }
+    
+    // Social share button handlers
+    if (socialShareButtons) {
+      socialShareButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const platform = button.getAttribute('data-platform');
+          if (shareUrl && shareRepoName) {
+            shareViaSocial(platform, shareUrl.value, shareRepoName.textContent);
+          }
+        });
+      });
+    }
+    
+    // Escape key to close modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && shareModal && !shareModal.classList.contains('hidden')) {
+        hideShareModal();
+      }
+    });
+
+    // Function to handle full report button click
+    function openModal(repoData) {
+        // Show the coming soon modal instead of any previous implementation
+        const modal = document.getElementById('coming-soon-modal');
+        if (modal) {
+            modal.classList.add('active');
+            
+            // Handle close button click
+            const closeButton = modal.querySelector('.coming-soon-close');
+            const okButton = document.getElementById('coming-soon-ok');
+            
+            const closeModal = () => {
+                modal.classList.remove('active');
+            };
+            
+            if (closeButton) {
+                closeButton.addEventListener('click', closeModal);
+            }
+            
+            if (okButton) {
+                okButton.addEventListener('click', closeModal);
+            }
+            
+            // Close modal when clicking outside of content
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            // Auto-close after 5 seconds
+            setTimeout(closeModal, 5000);
+        }
+    }
   });
-    </script>
-    {% endraw %}
+</script>
 </body>
 </html>

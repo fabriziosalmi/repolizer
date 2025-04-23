@@ -18,7 +18,6 @@ from app_utils import enqueue_output, run_analyzer, get_results_file_info # Impo
 from collections import defaultdict
 from caching_middleware import timed_cache, clear_cache, clear_cache_pattern  # Import our caching middleware
 from email.utils import formatdate, parsedate_to_datetime # Import for Last-Modified and If-Modified-Since support
-import traceback # Add traceback import
 
 app = Flask(__name__)
 
@@ -499,16 +498,7 @@ def stop_scraper():
 @timed_cache(seconds=60*15)  # Increase cache time to 15 minutes
 def index():
     # Publicly accessible
-    # Determine which results file to use
-    results_file_info = get_results_file_info()
-    result_path = results_file_info.get('filename', 'results.jsonl') # Default to results.jsonl
-    if not results_file_info.get('path'): # If no results file exists, try sample
-        sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
-        if os.path.exists(sample_path):
-            result_path = 'sample_results.jsonl'
-
-    # Pass the determined result_path to the template
-    return render_template('repo_viewer.html', resultPath=result_path)
+    return render_template('repo_viewer.html')
 
 @app.route('/scraper')
 @login_required # Protect this page
@@ -648,9 +638,8 @@ def serve_result_file(filename):
 def repo_detail(repo_id):
     print(f"--- Starting repo_detail for ID/Name: {repo_id} ---") # DEBUG
     # Load results.jsonl or sample_results.jsonl
-    results_file_info = get_results_file_info()
-    file_path = results_file_info.get('path')
-    if not file_path:
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
+    if not os.path.exists(file_path):
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
         if os.path.exists(sample_path):
             file_path = sample_path
@@ -761,11 +750,9 @@ def repo_detail(repo_id):
 def repo_history(repo_id):
     """Render the analysis history page for a specific repository"""
     print(f"--- Starting repo_history for ID/Name: {repo_id} ---") # DEBUG
-    # Ensure we use the correct file path determination logic
-    results_file_info = get_results_file_info()
-    file_path = results_file_info.get('path')
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results.jsonl')
 
-    if not file_path:
+    if not os.path.exists(file_path):
         # Try sample data if main file doesn't exist
         sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_results.jsonl')
         if os.path.exists(sample_path):
@@ -1405,30 +1392,6 @@ def offline():
 def service_worker():
     """Serve service worker with correct content type"""
     return app.send_static_file('sw.js'), 200, {'Content-Type': 'application/javascript'}
-
-# Add the missing function for clearing cache by function
-def clear_cache_for_function(func):
-    """
-    Clear the cache for a specific function decorated with @timed_cache.
-    
-    Args:
-        func: The function object whose cache should be cleared
-    """
-    if hasattr(func, '__qualname__'):
-        # Get the function's qualified name and use it as a pattern
-        pattern = f"{func.__qualname__}:"
-        clear_cache_pattern(pattern)
-        return True
-    elif hasattr(func, '__name__'):
-        # Fallback to regular name if qualified name is not available
-        pattern = f"{func.__name__}:"
-        clear_cache_pattern(pattern)
-        return True
-    else:
-        # Last resort: try to clear everything (not ideal)
-        print("Warning: Couldn't determine function name for cache clearing, clearing all cache")
-        clear_cache()
-        return False
 
 if __name__ == '__main__':
     # Check if the templates directory exists, create it if not
