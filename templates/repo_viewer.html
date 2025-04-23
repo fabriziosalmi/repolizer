@@ -66,6 +66,30 @@
         .hidden {
             display: none !important;
         }
+        
+        /* Mobile-specific optimizations */
+        @media (max-width: 768px) {
+            .repo-card {
+                /* Simplify effects on mobile for better performance */
+                animation: none !important;
+                -webkit-animation: none !important;
+                transition: transform 0.2s ease !important;
+            }
+            
+            .repo-card:hover {
+                transform: none !important;
+                animation: none !important;
+                -webkit-animation: none !important;
+                outline-color: #3b82f6 !important; /* Single color instead of gradient */
+            }
+            
+            /* Reduce visual complexity on mobile */
+            .category-bar-gradient-high,
+            .category-bar-gradient-medium,
+            .category-bar-gradient-low {
+                background-image: none !important;
+            }
+        }
     </style>
     
     <!-- Custom JS for the page - defer loading -->
@@ -76,6 +100,7 @@
     
     <!-- Font Awesome for icons - loaded asynchronously -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     
     <!-- Non-critical styles loaded after page render -->
     <style>
@@ -433,6 +458,10 @@
     </header>
 
     <main class="container mx-auto p-4 flex-grow">
+        <div id="mobile-notice" class="hidden mb-4 p-3 bg-blue-100 text-blue-800 rounded-md text-sm">
+            <p><i class="fas fa-info-circle mr-1"></i> Mobile version: Showing limited repositories for better performance.</p>
+        </div>
+
         <div class="mb-6 flex justify-between items-center" style="display: none;"> <!-- Simple container for title and count -->
             <div class="text-sm text-gray-600">
                 <span id="repo-count" class="font-semibold" style="color: white; font-size: large;">0</span><span class="font-semibold" style="color: white; font-size: normal;"> repositories</span>
@@ -452,6 +481,14 @@
             <i class="fas fa-search text-gray-400 text-5xl mb-4"></i>
             <p class="text-xl text-gray-600">No repositories found matching your search criteria.</p>
         </div>
+
+        <div id="load-error" class="hidden text-center py-8">
+            <i class="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
+            <p class="text-xl text-white mb-4">We encountered an issue loading the repository data.</p>
+            <button id="retry-load" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i> Retry Loading
+            </button>
+        </div>
     </main>
 
     <footer class="bg-gray-800 text-white mt-auto py-6" style="background-color: rgba(31, 41, 55, 0.28);">
@@ -468,9 +505,33 @@
     let currentLanguage = 'all';
     let minScoreFilter = 0;
     let currentPage = 1;
-    const reposPerPage = 30;
+    let reposPerPage = 30;
     let isLoadingData = false;
     let cachedRepositories = null;
+    let isMobile = false;
+    let loadAttempts = 0;
+    const MAX_LOAD_ATTEMPTS = 3;
+    
+    // Mobile detection
+    function checkIfMobile() {
+        return window.innerWidth < 768 || 
+               /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    
+    // Set initial mobile state and adjust settings
+    function setupForMobileIfNeeded() {
+        isMobile = checkIfMobile();
+        
+        // Adjust repository count for mobile
+        if (isMobile) {
+            reposPerPage = 10; // Load fewer repos per page on mobile
+            document.getElementById('mobile-notice').classList.remove('hidden');
+            console.log('Mobile device detected, optimizing for performance');
+        }
+    }
+    
+    // Call mobile setup
+    setupForMobileIfNeeded();
     
     // Get elements from the DOM
     const reposContainer = document.getElementById('repo-grid');
@@ -481,6 +542,8 @@
     const sortSelect = document.getElementById('sort-select');
     const languageFilterSelect = document.getElementById('language-filter-select');
     const scoreFilterSelect = document.getElementById('score-filter-select');
+    const loadError = document.getElementById('load-error');
+    const retryLoad = document.getElementById('retry-load');
     
     // Create pagination container at the bottom of the page
     const paginationContainer = document.createElement('div');
@@ -542,8 +605,11 @@
     // Cache data in localStorage
     function cacheData(data) {
         try {
+            // On mobile, only cache up to 100 repositories to avoid storage quota issues
+            const dataToCache = isMobile ? data.slice(0, 100) : data;
+            
             localStorage.setItem('repolizerRepositories', JSON.stringify({
-                data,
+                data: dataToCache,
                 timestamp: Date.now()
             }));
         } catch (e) {
@@ -567,12 +633,38 @@
     
     console.log(`Loading repositories from: ${resultPath}, page ${currentPage}`);
 
-    // Modified function to load repositories incrementally
+    // Function to show error state
+    function showError(message) {
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+            loadingIndicator.classList.add('hidden');
+        }
+        
+        if (loadError) {
+            const errorMsg = loadError.querySelector('p');
+            if (errorMsg) {
+                errorMsg.textContent = message || 'We encountered an issue loading the repository data.';
+            }
+            loadError.classList.remove('hidden');
+        }
+    }
+    
+    // Function to hide error state
+    function hideError() {
+        if (loadError) {
+            loadError.classList.add('hidden');
+        }
+    }
+
+    // Modified function to load repositories incrementally with better mobile support
     async function loadRepositories() {
         if (isLoadingData) return;
         isLoadingData = true;
+        hideError();
         
         try {
+            loadAttempts++;
+            
             // Check for cached data first
             cachedRepositories = getCachedData();
             
@@ -591,116 +683,216 @@
                 noResults.classList.add('hidden');
             }
             
-            // First try the specified results file
+            // For mobile, we'll use a simplified approach with a complete fetch rather than streaming
+            if (isMobile) {
+                console.log('Using simplified data loading for mobile');
+                
+                // On mobile, we'll try to fetch a smaller dataset first
+                const mobileResultPath = 'sample_results.jsonl'; // Try to use sample data first on mobile
+                
+                try {
+                    const response = await fetch(mobileResultPath);
+                    
+                    if (response.ok) {
+                        const text = await response.text();
+                        const lines = text.split('\n').filter(line => line.trim() !== '');
+                        const repoDataMap = {};
+                        
+                        // Process each line (limited to max 50 on mobile for performance)
+                        const maxLines = Math.min(lines.length, 50);
+                        
+                        for (let i = 0; i < maxLines; i++) {
+                            try {
+                                const parsedRepo = JSON.parse(lines[i]);
+                                if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                                    repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                                }
+                            } catch (e) {
+                                console.warn('Error parsing line:', e);
+                            }
+                            
+                            // Update loading progress
+                            if (i % 10 === 0 && loadingIndicator.querySelector('span')) {
+                                loadingIndicator.querySelector('span').textContent = 
+                                    `Loading repositories... (${i}/${maxLines})`;
+                                await new Promise(r => setTimeout(r, 0)); // Allow UI to update
+                            }
+                        }
+                        
+                        // Convert map to array
+                        allRepos = Object.values(repoDataMap);
+                        
+                        // Cache and process the data
+                        cacheData(allRepos);
+                        processRepositoryData(allRepos);
+                        return;
+                    } else {
+                        console.log('Mobile sample data not found, falling back to main data source');
+                        // Continue to fetch the main data source
+                    }
+                } catch (mobileError) {
+                    console.error('Error loading mobile sample data:', mobileError);
+                    // Continue to fetch the main data source
+                }
+            }
+            
+            // Standard approach for desktop or mobile fallback
             const response = await fetch(resultPath);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
             }
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let partialLine = '';
-            const repoDataMap = {};
-            
-            // Process the stream in chunks
-            let processedLines = 0;
-            const processingStartTime = performance.now();
-            
-            const processChunk = async (result) => {
-                if (result.done) {
-                    // Process any remaining partial line
-                    if (partialLine.trim()) {
-                        try {
-                            const parsedRepo = JSON.parse(partialLine);
-                            if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                                repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                            }
-                        } catch (e) {
-                            console.warn('Error parsing final line:', e);
-                        }
-                    }
-                    
-                    // Done reading the file
-                    allRepos = Object.values(repoDataMap);
-                    console.log(`Completed loading ${allRepos.length} repositories in ${((performance.now() - processingStartTime) / 1000).toFixed(2)}s`);
-                    
-                    // Cache the results
-                    cacheData(allRepos);
-                    
-                    // Process the data
-                    processRepositoryData(allRepos);
-                    return;
-                }
+            // Choose processing method based on device
+            if (isMobile) {
+                // Simple processing for mobile
+                const text = await response.text();
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const repoDataMap = {};
                 
-                // Process this chunk
-                const chunk = decoder.decode(result.value, {stream: true});
-                const lines = (partialLine + chunk).split('\n');
-                partialLine = lines.pop() || ''; // Last line might be incomplete
+                // On mobile, limit to first 50 entries for performance
+                const maxLines = Math.min(lines.length, 50);
                 
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    
+                for (let i = 0; i < maxLines; i++) {
                     try {
-                        const parsedRepo = JSON.parse(line);
+                        const parsedRepo = JSON.parse(lines[i]);
                         if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
                             repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                            processedLines++;
-                            
-                            // Every 100 lines, update UI to show progress
-                            if (processedLines % 100 === 0) {
-                                // Quick progress update
-                                if (loadingIndicator.querySelector('span')) {
-                                    loadingIndicator.querySelector('span').textContent = 
-                                        `Loading repositories... (${processedLines} processed)`;
-                                }
-                                
-                                // Allow UI to update
-                                await new Promise(r => setTimeout(r, 0));
-                            }
                         }
                     } catch (e) {
                         console.warn('Error parsing line:', e);
                     }
+                    
+                    // Update loading progress
+                    if (i % 10 === 0 && loadingIndicator.querySelector('span')) {
+                        loadingIndicator.querySelector('span').textContent = 
+                            `Loading repositories... (${i}/${maxLines})`;
+                        await new Promise(r => setTimeout(r, 0)); // Allow UI to update
+                    }
                 }
                 
-                // Continue reading
-                reader.read().then(processChunk);
-            };
+                allRepos = Object.values(repoDataMap);
+            } else {
+                // Stream processing for desktop
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let partialLine = '';
+                const repoDataMap = {};
+                
+                // Process the stream in chunks
+                let processedLines = 0;
+                const processingStartTime = performance.now();
+                
+                const processChunk = async (result) => {
+                    if (result.done) {
+                        // Process any remaining partial line
+                        if (partialLine.trim()) {
+                            try {
+                                const parsedRepo = JSON.parse(partialLine);
+                                if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                                    repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                                }
+                            } catch (e) {
+                                console.warn('Error parsing final line:', e);
+                            }
+                        }
+                        
+                        // Done reading the file
+                        allRepos = Object.values(repoDataMap);
+                        console.log(`Completed loading ${allRepos.length} repositories in ${((performance.now() - processingStartTime) / 1000).toFixed(2)}s`);
+                        
+                        // Cache the results
+                        cacheData(allRepos);
+                        
+                        // Process the data
+                        processRepositoryData(allRepos);
+                        return;
+                    }
+                    
+                    // Process this chunk
+                    const chunk = decoder.decode(result.value, {stream: true});
+                    const lines = (partialLine + chunk).split('\n');
+                    partialLine = lines.pop() || ''; // Last line might be incomplete
+                    
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        
+                        try {
+                            const parsedRepo = JSON.parse(line);
+                            if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                                repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                                processedLines++;
+                                
+                                // Update UI every 100 lines
+                                if (processedLines % 100 === 0) {
+                                    if (loadingIndicator.querySelector('span')) {
+                                        loadingIndicator.querySelector('span').textContent = 
+                                            `Loading repositories... (${processedLines} processed)`;
+                                    }
+                                    await new Promise(r => setTimeout(r, 0)); // Allow UI to update
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Error parsing line:', e);
+                        }
+                    }
+                    
+                    // Continue reading
+                    reader.read().then(processChunk);
+                };
+                
+                // Start stream reading for desktop
+                try {
+                    await reader.read().then(processChunk);
+                    return; // Exit function as processChunk will call processRepositoryData
+                } catch (streamError) {
+                    console.error('Error during stream processing:', streamError);
+                    throw streamError; // Re-throw to be caught by outer catch
+                }
+            }
             
-            // Start reading
-            reader.read().then(processChunk);
+            // Only for mobile or if we bypassed stream processing
+            cacheData(allRepos);
+            processRepositoryData(allRepos);
             
         } catch (error) {
             console.error('Error loading repositories:', error);
             
             // Try fallback if main file fails
-            if (resultPath !== 'repositories.jsonl') {
+            if (resultPath !== 'repositories.jsonl' && loadAttempts <= MAX_LOAD_ATTEMPTS) {
                 try {
                     const fallbackResponse = await fetch('repositories.jsonl');
                     if (fallbackResponse.ok) {
-                        // Process fallback with similar streaming approach
-                        // ...implementation similar to above...
+                        const text = await fallbackResponse.text();
+                        const lines = text.split('\n').filter(line => line.trim() !== '');
+                        const repoDataMap = {};
+                        
+                        // Limit processing for performance
+                        const maxLines = isMobile ? Math.min(lines.length, 50) : lines.length;
+                        
+                        for (let i = 0; i < maxLines; i++) {
+                            try {
+                                const parsedRepo = JSON.parse(lines[i]);
+                                if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                                    repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                                }
+                            } catch (e) {
+                                console.warn('Error parsing fallback line:', e);
+                            }
+                        }
+                        
+                        allRepos = Object.values(repoDataMap);
+                        cacheData(allRepos);
+                        processRepositoryData(allRepos);
+                        return;
                     }
                 } catch (fallbackError) {
                     console.error("Error fetching fallback data:", fallbackError);
                 }
             }
             
-            // Ensure the loading indicator is hidden
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-                loadingIndicator.classList.add('hidden');
-            }
-            
-            if (noResults) {
-                noResults.classList.remove('hidden');
-                
-                const errorMsg = noResults.querySelector('p');
-                if (errorMsg) {
-                    errorMsg.textContent = `Error loading repository data: ${error.message}`;
-                }
-            }
+            // Show error UI if all attempts failed
+            showError(`Error loading repository data: ${error.message}`);
             isLoadingData = false;
         }
     }
@@ -709,26 +901,28 @@
     function processRepositoryData(repos) {
         // Process each repo to calculate category averages
         repos.forEach(repo => {
-            // Add category averages
-            repo.category_scores = {};
+            // Add category averages if not already calculated
+            if (!repo.category_scores) {
+                repo.category_scores = {};
 
-            // For each category, calculate average score
-            Object.keys(categoryNames).forEach(category => {
-                if (repo[category]) {
-                    const checks = Object.values(repo[category]).filter(check => 
-                        typeof check === 'object' && check !== null && 'score' in check
-                    );
-                    
-                    if (checks.length > 0) {
-                        const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
-                        repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
+                // For each category, calculate average score
+                Object.keys(categoryNames).forEach(category => {
+                    if (repo[category]) {
+                        const checks = Object.values(repo[category]).filter(check => 
+                            typeof check === 'object' && check !== null && 'score' in check
+                        );
+                        
+                        if (checks.length > 0) {
+                            const sum = checks.reduce((total, check) => total + (check.score || 0), 0);
+                            repo.category_scores[category] = parseFloat((sum / checks.length).toFixed(1));
+                        } else {
+                            repo.category_scores[category] = 0;
+                        }
                     } else {
                         repo.category_scores[category] = 0;
                     }
-                } else {
-                    repo.category_scores[category] = 0;
-                }
-            });
+                });
+            }
         });
 
         allRepos = repos;
@@ -763,6 +957,14 @@
     
     // Start loading repositories
     loadRepositories();
+    
+    // Add retry button functionality
+    if (retryLoad) {
+        retryLoad.addEventListener('click', () => {
+            hideError();
+            loadRepositories();
+        });
+    }
 
     // Event listener for search input
     if (searchInput) {
@@ -1025,18 +1227,19 @@
 
     // Function to create a repository card (Updated Button Section)
     function createRepoCard(repo) {
+      // Optimize card creation for mobile
       const card = document.createElement('div');
       card.className = 'repo-card bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col transition-all duration-300 ease-in-out hover:shadow-lg';
 
       const repoData = repo.repository || {};
       const repoId = repoData.id || '';
 
-      // ... (rest of the card creation logic: stars, forks, description, chart, score bar) ...
+      // Simplified data for mobile
       const stars = formatNumber(repoData.stargazers_count || 0);
       const forks = formatNumber(repoData.forks_count || 0);
       const updatedAt = repoData.updated_at ? formatDate(repoData.updated_at) : 'unknown';
       const description = repoData.description
-        ? truncateText(repoData.description, 120)
+        ? truncateText(repoData.description, isMobile ? 80 : 120) // Shorter description on mobile
         : 'No description available';
       const languageColor = getLanguageColor(repoData.language);
       const languageBadge = repoData.language ?
@@ -1048,47 +1251,64 @@
       const scoreColorClass = overallScore >= 70 ? 'text-green-600' : (overallScore >= 40 ? 'text-yellow-600' : 'text-red-600');
       const scoreBarFillClass = overallScore >= 70 ? 'score-high' : (overallScore >= 40 ? 'score-medium' : 'score-low');
 
-      // --- Category Bar Chart ---
-      let categoryBarChartHtml = `
-        <div class="category-bar-chart flex justify-between items-end h-24 mt-2 mb-3 px-1" style="margin-top: 2.5rem;">
-      `;
-      const fixedCategoryOrder = [
-        'documentation', 'security', 'code_quality', 'performance', 'accessibility',
-        'testing', 'maintainability', 'ci_cd', 'licensing', 'community'
-      ];
-      for (const category of fixedCategoryOrder) {
-        const score = repo.category_scores?.[category] || 0;
-        const icon = categoryIcons[category] || 'fa-question-circle';
-        const name = categoryNames[category] || category;
-        let colorClass;
-        let gradientClass;
-        if (score >= 70) {
-          colorClass = 'bg-green-500';
-          gradientClass = 'category-bar-gradient-high';
-        }
-        else if (score >= 40) {
-          colorClass = 'bg-yellow-500';
-          gradientClass = 'category-bar-gradient-medium';
-        }
-        else {
-          colorClass = 'bg-red-500';
-          gradientClass = 'category-bar-gradient-low';
-        }
-        const heightPercentage = Math.max(5, score);
-        categoryBarChartHtml += `
-          <div class="flex flex-col items-center group" title="${name}: ${score.toFixed(1)}">
-            <div class="relative w-5 h-20 bg-gray-200 rounded-t overflow-hidden" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; width: 0.8rem;">
-              <div class="${colorClass} ${gradientClass} absolute bottom-0 w-full rounded-t transition-all duration-300" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; height: ${heightPercentage}%;"></div>
-            </div>
-            <span class="text-xs mt-1 text-gray-600">${Math.round(score)}</span>
-            <i class="fas ${icon} text-gray-500 mt-1 group-hover:text-blue-500 transition-colors"></i>
-          </div>
-        `;
+      // Category Bar Chart HTML - skip on mobile for better performance
+      let categoryBarChartHtml = '';
+      
+      if (!isMobile) {
+          // Full category chart for desktop
+          categoryBarChartHtml = `
+              <div class="category-bar-chart flex justify-between items-end h-24 mt-2 mb-3 px-1" style="margin-top: 2.5rem;">
+          `;
+          
+          const fixedCategoryOrder = [
+              'documentation', 'security', 'code_quality', 'performance', 'accessibility',
+              'testing', 'maintainability', 'ci_cd', 'licensing', 'community'
+          ];
+          
+          for (const category of fixedCategoryOrder) {
+              const score = repo.category_scores?.[category] || 0;
+              const icon = categoryIcons[category] || 'fa-question-circle';
+              const name = categoryNames[category] || category;
+              let colorClass;
+              let gradientClass;
+              
+              if (score >= 70) {
+                  colorClass = 'bg-green-500';
+                  gradientClass = 'category-bar-gradient-high';
+              }
+              else if (score >= 40) {
+                  colorClass = 'bg-yellow-500';
+                  gradientClass = 'category-bar-gradient-medium';
+              }
+              else {
+                  colorClass = 'bg-red-500';
+                  gradientClass = 'category-bar-gradient-low';
+              }
+              
+              const heightPercentage = Math.max(5, score);
+              categoryBarChartHtml += `
+                  <div class="flex flex-col items-center group" title="${name}: ${score.toFixed(1)}">
+                      <div class="relative w-5 h-20 bg-gray-200 rounded-t overflow-hidden" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; width: 0.8rem;">
+                          <div class="${colorClass} ${gradientClass} absolute bottom-0 w-full rounded-t transition-all duration-300" style="border-top-left-radius: 1rem; border-top-right-radius: 1rem; height: ${heightPercentage}%;"></div>
+                      </div>
+                      <span class="text-xs mt-1 text-gray-600">${Math.round(score)}</span>
+                      <i class="fas ${icon} text-gray-500 mt-1 group-hover:text-blue-500 transition-colors"></i>
+                  </div>
+              `;
+          }
+          
+          categoryBarChartHtml += `</div>`;
+      } else {
+          // Simplified version for mobile - just show overall score more prominently
+          categoryBarChartHtml = `
+              <div class="mt-4 mb-2 text-center">
+                  <span class="text-lg font-bold ${scoreColorClass}">${overallScore.toFixed(1)}</span>
+                  <span class="text-gray-600 text-sm ml-1">/ 100</span>
+              </div>
+          `;
       }
-      categoryBarChartHtml += `</div>`;
-      // --- End Category Bar Chart ---
 
-
+      // Build the card HTML - simplified for mobile
       card.innerHTML = `
         <div class="p-5 flex-grow flex flex-col">
           <div class="flex justify-between items-start mb-3">
@@ -1115,7 +1335,7 @@
           <!-- Spacer to push everything below to the bottom -->
           <div class="flex-grow"></div>
 
-          <!-- Category Score Bar Chart - Now at the bottom -->
+          <!-- Category Score Bar Chart - Different for mobile and desktop -->
           ${categoryBarChartHtml}
 
           <div class="mb-4">
@@ -1128,7 +1348,7 @@
             </div>
           </div>
 
-          <!-- Report Buttons Section - Now at the bottom -->
+          <!-- Report Buttons Section -->
           <div class="mt-2 border-t pt-4">
             <p class="text-center text-sm font-medium text-gray-700 mb-2" style="font-size: 1rem; font-weight: bold; padding-bottom: 10px; color: #575757;">VIEW REPORT</p>
             <div class="flex justify-center space-x-3">
@@ -1160,7 +1380,7 @@
         </div>
       `;
 
-      // Add event listener to the modal button (no change needed here)
+      // Add event listeners for buttons
       const fullReportButton = card.querySelector('.open-modal-button');
       if (fullReportButton) {
           fullReportButton.addEventListener('click', (event) => {
@@ -1175,14 +1395,11 @@
           });
       }
 
-      // Add event listener to the share button
       const shareButton = card.querySelector('.share-button');
       if (shareButton) {
           shareButton.addEventListener('click', (event) => {
               const repoId = event.currentTarget.getAttribute('data-repo-id');
               const repoName = event.currentTarget.getAttribute('data-repo-name');
-              
-              // Open our new share modal instead of previous implementation
               openShareModal(repoId, repoName);
           });
       }
