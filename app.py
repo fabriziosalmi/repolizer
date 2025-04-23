@@ -1394,3 +1394,15 @@ if __name__ == '__main__':
     print("Repository Health Analyzer will load data from results.jsonl")
     print("Press Ctrl+C to stop the server")
     app.run(host='0.0.0.0', port='8000', debug=True) # Added host='0.0.0.0'
+
+# Add PWA offline route
+@app.route('/offline')
+def offline():
+    """Serve the offline page when no network connection is available"""
+    return render_template('offline.html', current_year=datetime.datetime.now().year)
+
+# Service worker route (serve at root level)
+@app.route('/sw.js')
+def service_worker():
+    """Serve service worker with correct content type"""
+    return app.send_static_file('sw.js'), 200, {'Content-Type': 'application/javascript'}

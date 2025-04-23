@@ -1,16 +1,52 @@
 {
-  "name": "Repolizer",
+  "name": "Repolizer - GitHub Repository Analyzer",
   "short_name": "Repolizer",
-  "description": "GitHub Repository Health Analyzer",
+  "description": "Analyze GitHub repositories for best practices and health metrics",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1f2937",
-  "theme_color": "#1f2937",
-  "orientation": "any",
+  "background_color": "#00DBDE",
+  "theme_color": "#00DBDE",
+  "orientation": "portrait-primary",
   "icons": [
+    {
+      "src": "/static/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "/static/icons/icon-192x192.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-384x384.png",
+      "sizes": "384x384",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -19,6 +55,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "description": "View repository dashboard",
+      "url": "/",
+      "icons": [{ "src": "/static/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Scraper",
+      "short_name": "Scraper",
+      "description": "Scrape GitHub repositories",
+      "url": "/scraper",
+      "icons": [{ "src": "/static/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }
