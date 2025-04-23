@@ -2,176 +2,596 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Repository Report: {{ repo.repository.name }}</title>
+    <title>Repository Health Report: {{ repo.repository.name }}</title>
     <style>
+        @page {
+            margin: 1cm;
+            @top-center {
+                content: "Repolizer Repository Health Report";
+                font-size: 9pt;
+                color: #666;
+            }
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+                color: #666;
+            }
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             line-height: 1.6;
             color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            font-size: 11pt;
         }
+        
+        .watermark {
+            position: fixed;
+            top: 45%;
+            width: 100%;
+            text-align: center;
+            opacity: 0.08;
+            transform: rotate(-45deg);
+            font-size: 80pt;
+            font-weight: bold;
+            z-index: -1000;
+        }
+        
         .header {
             text-align: center;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            margin-bottom: 5px;
-            color: #2563eb;
-        }
-        .section {
-            margin-bottom: 30px;
-        }
-        .section h2 {
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-            color: #1e40af;
-        }
-        .score {
-            font-size: 24px;
-            font-weight: bold;
-            padding: 10px;
-            border-radius: 5px;
-            display: inline-block;
+            border-bottom: 2px solid #4a6cf7;
+            padding-bottom: 10px;
             margin-bottom: 20px;
         }
+        
+        .header h1 {
+            color: #1a365d;
+            margin-bottom: 5px;
+            font-size: 24pt;
+        }
+        
+        .header .subtitle {
+            color: #718096;
+            font-size: 13pt;
+            font-weight: normal;
+        }
+        
+        .header img.logo {
+            height: 60px;
+            margin-bottom: 10px;
+        }
+        
+        .meta-info {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f8fafc;
+            border-radius: 5px;
+            border-left: 4px solid #4a6cf7;
+        }
+        
+        .meta-info p {
+            margin: 4px 0;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        
+        .section h2 {
+            color: #1a365d;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+            font-size: 16pt;
+        }
+        
+        .section h3 {
+            color: #2d3748;
+            font-size: 14pt;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .overall-score {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .score-box {
+            display: inline-block;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            font-size: 36pt;
+            line-height: 120px;
+            text-align: center;
+            font-weight: bold;
+            margin: 0 auto;
+            color: white;
+        }
+        
         .score-high {
-            background-color: #d1fae5;
-            color: #047857;
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            box-shadow: 0 4px 6px rgba(56, 161, 105, 0.3);
         }
+        
         .score-medium {
-            background-color: #fef3c7;
-            color: #b45309;
+            background: linear-gradient(135deg, #ecc94b, #d69e2e);
+            box-shadow: 0 4px 6px rgba(214, 158, 46, 0.3);
         }
+        
         .score-low {
-            background-color: #fee2e2;
-            color: #b91c1c;
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+            box-shadow: 0 4px 6px rgba(229, 62, 62, 0.3);
         }
+        
+        .score-description {
+            text-align: center;
+            font-size: 12pt;
+            margin-top: 10px;
+            color: #4a5568;
+        }
+        
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin: 15px 0;
         }
-        th, td {
-            padding: 8px 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
+        
         th {
-            background-color: #f9fafb;
+            background-color: #edf2f7;
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #cbd5e0;
+            color: #2d3748;
+            font-weight: bold;
         }
-        .footer {
-            margin-top: 40px;
-            text-align: center;
-            font-size: 12px;
-            color: #6b7280;
+        
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
         }
-        .repo-meta {
-            background-color: #f9fafb;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+        
+        tr:hover {
+            background-color: #f8fafc;
         }
-        .repo-meta p {
-            margin: 5px 0;
-        }
-        .categories {
+        
+        .category-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
+            margin: 0 -10px;
+            justify-content: space-between;
         }
-        .category {
-            flex: 1 0 30%;
-            min-width: 200px;
+        
+        .category-card {
+            width: calc(33% - 20px);
+            margin: 10px;
             padding: 15px;
-            background-color: #f9fafb;
+            background-color: #fff;
             border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            break-inside: avoid;
+        }
+        
+        .category-card h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #2d3748;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+        
+        .category-score {
+            font-size: 18pt;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .score-green {
+            color: #38a169;
+        }
+        
+        .score-yellow {
+            color: #d69e2e;
+        }
+        
+        .score-red {
+            color: #e53e3e;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: #edf2f7;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .progress-fill-green {
+            height: 100%;
+            background-color: #48bb78;
+            border-radius: 5px;
+        }
+        
+        .progress-fill-yellow {
+            height: 100%;
+            background-color: #ecc94b;
+            border-radius: 5px;
+        }
+        
+        .progress-fill-red {
+            height: 100%;
+            background-color: #f56565;
+            border-radius: 5px;
+        }
+        
+        .category-checks-count {
+            text-align: center;
+            font-size: 9pt;
+            color: #718096;
+        }
+        
+        .recommendations {
+            background-color: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .recommendations h3 {
+            color: #2b6cb0;
+            margin-top: 0;
+        }
+        
+        .recommendations ul {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        
+        .recommendations li {
+            margin-bottom: 5px;
+        }
+        
+        .charts-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        
+        .chart {
+            width: calc(50% - 10px);
+            text-align: center;
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .summary-table {
+            margin-top: 20px;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 9pt;
+            color: #718096;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9pt;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .badge-low {
+            background-color: #f56565;
+        }
+        
+        .badge-medium {
+            background-color: #ecc94b;
+            color: #744210;
+        }
+        
+        .badge-high {
+            background-color: #48bb78;
+        }
+        
+        .issue-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fff5f5;
+            border-left: 3px solid #f56565;
+            border-radius: 3px;
+        }
+        
+        .issue-title {
+            font-weight: bold;
+            color: #c53030;
+        }
+        
+        .issue-message {
+            color: #742a2a;
+            font-size: 10pt;
+            margin-top: 5px;
+        }
+        
+        .text-small {
+            font-size: 10pt;
+        }
+        
+        .text-xs {
+            font-size: 9pt;
+        }
+        
+        .col-2 {
+            column-count: 2;
+            column-gap: 20px;
+        }
+        
+        /* Special styles for two-column layouts */
+        .two-column-section {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
         }
     </style>
 </head>
 <body>
+    <div class="watermark">REPOLIZER</div>
+    
     <div class="header">
+        <img src="data:image/png;base64,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" alt="Repolizer Logo" class="logo">
         <h1>Repository Health Report</h1>
-        <p>Generated by Repolizer on {{ current_year }}-{% raw %}{{ '%02d' % datetime.now().month }}{% endraw %}-{% raw %}{{ '%02d' % datetime.now().day }}{% endraw %}</p>
+        <p class="subtitle">{{ repo.repository.full_name }}</p>
+        <p class="text-small">Generated on {{ now().strftime('%Y-%m-%d') }} at {{ now().strftime('%H:%M') }}</p>
+    </div>
+    
+    <!-- Table of Contents -->
+    <div class="section">
+        <h2>Table of Contents</h2>
+        <ol>
+            <li>Repository Overview</li>
+            <li>Overall Health Score</li>
+            <li>Category Scores</li>
+            <li>Key Findings</li>
+            <li>Critical Issues</li>
+            <li>Recommendations</li>
+            <li>Detailed Category Analysis</li>
+        </ol>
     </div>
 
+    <!-- Repository Info -->
     <div class="section">
-        <h2>Repository Information</h2>
-        <div class="repo-meta">
-            <p><strong>Name:</strong> {{ repo.repository.name }}</p>
-            <p><strong>Full Name:</strong> {{ repo.repository.full_name }}</p>
+        <h2>1. Repository Overview</h2>
+        <div class="meta-info">
+            <p><strong>Repository:</strong> {{ repo.repository.full_name }}</p>
             <p><strong>Description:</strong> {{ repo.repository.description or 'No description available' }}</p>
-            <p><strong>URL:</strong> {{ repo.repository.html_url }}</p>
             <p><strong>Language:</strong> {{ repo.repository.language or 'Not specified' }}</p>
-            <p><strong>Stars:</strong> {{ repo.repository.stargazers_count }}</p>
-            <p><strong>Forks:</strong> {{ repo.repository.forks_count }}</p>
-            <p><strong>Last Updated:</strong> {{ repo.repository.updated_at }}</p>
+            <p><strong>Stars:</strong> {{ repo.repository.stargazers_count|default(0) }} | <strong>Forks:</strong> {{ repo.repository.forks_count|default(0) }} | <strong>Open Issues:</strong> {{ repo.repository.open_issues_count|default(0) }}</p>
+            <p><strong>Created:</strong> {{ repo.repository.created_at|default('Unknown') }} | <strong>Last Updated:</strong> {{ repo.repository.updated_at|default('Unknown') }}</p>
+            <p><strong>Link:</strong> <a href="{{ repo.repository.html_url }}">{{ repo.repository.html_url }}</a></p>
         </div>
     </div>
 
+    <!-- Overall Score -->
     <div class="section">
-        <h2>Overall Score</h2>
-        {% set score = repo.overall_score|float %}
-        {% if score >= 70 %}
-            <div class="score score-high">{{ score|round(1) }}/100</div>
-            <p>This repository has a <strong>good</strong> overall health score.</p>
-        {% elif score >= 40 %}
-            <div class="score score-medium">{{ score|round(1) }}/100</div>
-            <p>This repository has a <strong>moderate</strong> overall health score.</p>
-        {% else %}
-            <div class="score score-low">{{ score|round(1) }}/100</div>
-            <p>This repository has a <strong>poor</strong> overall health score.</p>
-        {% endif %}
+        <h2>2. Overall Health Score</h2>
+        <div class="overall-score">
+            {% set score = repo.overall_score|float %}
+            <div class="score-box {% if score >= 70 %}score-high{% elif score >= 40 %}score-medium{% else %}score-low{% endif %}">
+                {{ score|round|int }}
+            </div>
+            <p class="score-description">
+                {% if score >= 70 %}
+                    This repository has a <strong>good</strong> overall health score.
+                {% elif score >= 40 %}
+                    This repository has a <strong>moderate</strong> overall health score.
+                {% else %}
+                    This repository has a <strong>poor</strong> overall health score.
+                {% endif %}
+            </p>
+        </div>
     </div>
 
+    <!-- Category Scores Section -->
     <div class="section">
-        <h2>Category Scores</h2>
-        <div class="categories">
+        <h2>3. Category Scores</h2>
+        <div class="category-grid">
             {% for category in ['documentation', 'security', 'code_quality', 'performance', 'accessibility', 'testing', 'maintainability', 'ci_cd', 'licensing', 'community'] %}
                 {% if repo[category] is defined and repo[category]|length > 0 %}
-                    <div class="category">
-                        <h3>{{ category|title }}</h3>
-                        {% set checks = [] %}
-                        {% for check_name, check in repo[category].items() %}
-                            {% if check is mapping and check.score is defined %}
-                                {% do checks.append(check) %}
-                            {% endif %}
-                        {% endfor %}
-                        
-                        {% if checks|length > 0 %}
-                            {% set avg_score = checks|map(attribute='score')|sum / checks|length %}
-                            <p>
-                                Average Score: 
-                                <strong>
-                                    {% if avg_score >= 70 %}
-                                        <span style="color: #047857;">{{ avg_score|round(1) }}</span>
-                                    {% elif avg_score >= 40 %}
-                                        <span style="color: #b45309;">{{ avg_score|round(1) }}</span>
-                                    {% else %}
-                                        <span style="color: #b91c1c;">{{ avg_score|round(1) }}</span>
-                                    {% endif %}
-                                </strong>
-                            </p>
-                            <p>Number of checks: {{ checks|length }}</p>
-                        {% else %}
-                            <p>No scores available</p>
+                    {% set checks = [] %}
+                    {% for check_name, check in repo[category].items() %}
+                        {% if check is mapping and check.score is defined %}
+                            {% do checks.append(check) %}
                         {% endif %}
-                    </div>
+                    {% endfor %}
+                    
+                    {% if checks|length > 0 %}
+                        {% set avg_score = checks|map(attribute='score')|sum / checks|length %}
+                        <div class="category-card">
+                            <h4>{{ category|title }}</h4>
+                            <div class="category-score {% if avg_score >= 70 %}score-green{% elif avg_score >= 40 %}score-yellow{% else %}score-red{% endif %}">
+                                {{ avg_score|round(1) }}
+                            </div>
+                            <div class="progress-bar">
+                                <div class="{% if avg_score >= 70 %}progress-fill-green{% elif avg_score >= 40 %}progress-fill-yellow{% else %}progress-fill-red{% endif %}" style="width: {{ avg_score }}%;"></div>
+                            </div>
+                            <div class="category-checks-count">{{ checks|length }} check{{ 's' if checks|length != 1 else '' }}</div>
+                        </div>
+                    {% endif %}
                 {% endif %}
             {% endfor %}
         </div>
     </div>
 
+    <!-- Key Findings -->
     <div class="section">
-        <h2>Detailed Checks</h2>
-        {% for category in ['documentation', 'security', 'code_quality', 'performance', 'accessibility', 'testing', 'maintainability', 'ci_cd', 'licensing', 'community'] %}
+        <h2>4. Key Findings</h2>
+        <div class="col-2">
+            <!-- Strengths -->
+            <div class="two-column-section">
+                <h3>Strengths</h3>
+                <ul>
+                    {% set strengths = [] %}
+                    {% for category in ['documentation', 'security', 'code_quality', 'performance', 'accessibility', 'testing', 'maintainability', 'ci_cd', 'licensing', 'community'] %}
+                        {% if repo[category] is defined %}
+                            {% for check_name, check in repo[category].items() %}
+                                {% if check is mapping and check.score is defined and check.score >= 80 %}
+                                    {% do strengths.append({'category': category, 'name': check_name, 'score': check.score}) %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if strengths|length > 0 %}
+                        {% for strength in strengths|sort(attribute='score', reverse=true)[:5] %}
+                            <li><strong>{{ strength.name }}</strong> ({{ strength.category|title }}) - Score: {{ strength.score }}</li>
+                        {% endfor %}
+                    {% else %}
+                        <li>No significant strengths identified.</li>
+                    {% endif %}
+                </ul>
+            </div>
+            
+            <!-- Areas for Improvement -->
+            <div class="two-column-section">
+                <h3>Areas for Improvement</h3>
+                <ul>
+                    {% set weaknesses = [] %}
+                    {% for category in ['documentation', 'security', 'code_quality', 'performance', 'accessibility', 'testing', 'maintainability', 'ci_cd', 'licensing', 'community'] %}
+                        {% if repo[category] is defined %}
+                            {% for check_name, check in repo[category].items() %}
+                                {% if check is mapping and check.score is defined and check.score < 50 %}
+                                    {% do weaknesses.append({'category': category, 'name': check_name, 'score': check.score}) %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if weaknesses|length > 0 %}
+                        {% for weakness in weaknesses|sort(attribute='score')[:5] %}
+                            <li><strong>{{ weakness.name }}</strong> ({{ weakness.category|title }}) - Score: {{ weakness.score }}</li>
+                        {% endfor %}
+                    {% else %}
+                        <li>No significant areas for improvement identified.</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Issues -->
+    <div class="section">
+        <h2>5. Critical Issues</h2>
+        {% set critical_issues = [] %}
+        {% for category in ['security', 'code_quality', 'performance'] %}
+            {% if repo[category] is defined %}
+                {% for check_name, check in repo[category].items() %}
+                    {% if check is mapping and check.score is defined and check.score < 30 %}
+                        {% do critical_issues.append({'category': category, 'name': check_name, 'score': check.score, 'message': check.message}) %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+        
+        {% if critical_issues|length > 0 %}
+            {% for issue in critical_issues|sort(attribute='score')[:3] %}
+                <div class="issue-item">
+                    <div class="issue-title">{{ issue.name }} ({{ issue.category|title }})</div>
+                    <div class="issue-message">{{ issue.message }}</div>
+                </div>
+            {% endfor %}
+            
+            {% if critical_issues|length > 3 %}
+                <p class="text-small">Plus {{ critical_issues|length - 3 }} more critical issues. See detailed analysis for more information.</p>
+            {% endif %}
+        {% else %}
+            <p>No critical issues were identified in this repository.</p>
+        {% endif %}
+    </div>
+
+    <!-- Recommendations -->
+    <div class="section">
+        <h2>6. Recommendations</h2>
+        <div class="recommendations">
+            <h3>Priority Recommendations</h3>
+            <ul>
+                {% set security_issues = [] %}
+                {% if repo.security is defined %}
+                    {% for check_name, check in repo.security.items() %}
+                        {% if check is mapping and check.score is defined and check.score < 60 %}
+                            {% do security_issues.append({'name': check_name, 'score': check.score, 'message': check.message}) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                
+                {% if security_issues|length > 0 %}
+                    {% for issue in security_issues|sort(attribute='score')[:2] %}
+                        <li><strong>Improve {{ issue.name }}:</strong> {{ issue.message }}</li>
+                    {% endfor %}
+                {% endif %}
+                
+                {% set code_issues = [] %}
+                {% if repo.code_quality is defined %}
+                    {% for check_name, check in repo.code_quality.items() %}
+                        {% if check is mapping and check.score is defined and check.score < 60 %}
+                            {% do code_issues.append({'name': check_name, 'score': check.score, 'message': check.message}) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                
+                {% if code_issues|length > 0 %}
+                    {% for issue in code_issues|sort(attribute='score')[:1] %}
+                        <li><strong>Enhance {{ issue.name }}:</strong> {{ issue.message }}</li>
+                    {% endfor %}
+                {% endif %}
+                
+                {% set doc_issues = [] %}
+                {% if repo.documentation is defined %}
+                    {% for check_name, check in repo.documentation.items() %}
+                        {% if check is mapping and check.score is defined and check.score < 60 %}
+                            {% do doc_issues.append({'name': check_name, 'score': check.score, 'message': check.message}) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                
+                {% if doc_issues|length > 0 %}
+                    {% for issue in doc_issues|sort(attribute='score')[:1] %}
+                        <li><strong>Improve {{ issue.name }}:</strong> {{ issue.message }}</li>
+                    {% endfor %}
+                {% endif %}
+                
+                {% if security_issues|length == 0 and code_issues|length == 0 and doc_issues|length == 0 %}
+                    <li>No specific recommendations at this time. The repository is in good health.</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Detailed Analysis -->
+    <div class="section">
+        <h2>7. Detailed Category Analysis</h2>
+        {% for category in ['security', 'code_quality', 'documentation', 'performance', 'accessibility', 'testing', 'maintainability', 'ci_cd', 'licensing', 'community'] %}
             {% if repo[category] is defined and repo[category]|length > 0 %}
                 <h3>{{ category|title }}</h3>
                 <table>
                     <tr>
-                        <th>Check</th>
-                        <th>Score</th>
+                        <th style="width: 25%;">Check</th>
+                        <th style="width: 15%;">Score</th>
                         <th>Message</th>
                     </tr>
                     {% for check_name, check in repo[category].items() %}
@@ -179,13 +599,9 @@
                             <tr>
                                 <td>{{ check_name }}</td>
                                 <td>
-                                    {% if check.score >= 70 %}
-                                        <span style="color: #047857;">{{ check.score }}</span>
-                                    {% elif check.score >= 40 %}
-                                        <span style="color: #b45309;">{{ check.score }}</span>
-                                    {% else %}
-                                        <span style="color: #b91c1c;">{{ check.score }}</span>
-                                    {% endif %}
+                                    <span class="badge {% if check.score >= 70 %}badge-high{% elif check.score >= 40 %}badge-medium{% else %}badge-low{% endif %}">
+                                        {{ check.score }}
+                                    </span>
                                 </td>
                                 <td>{{ check.message }}</td>
                             </tr>
@@ -197,8 +613,9 @@
     </div>
 
     <div class="footer">
-        <p>Report generated by Repolizer - Repository Health Analysis Tool</p>
-        <p>© {{ current_year }} Repolizer</p>
+        <p>This report was generated by Repolizer - Repository Health Analysis Tool</p>
+        <p>&copy; {{ now().year }} Repolizer. All rights reserved.</p>
+        <p>Analysis results should be treated as recommendations and may require further investigation.</p>
     </div>
 </body>
 </html>
