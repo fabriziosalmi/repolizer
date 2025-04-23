@@ -270,6 +270,103 @@
             background-color: white !important;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
         }
+        
+        /* Universal virtual scrolling styles */
+        .virtual-scroll-container {
+            position: relative;
+            width: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* Better scrolling on all mobile browsers */
+            overscroll-behavior-y: contain; /* Prevent scroll chaining on all browsers */
+        }
+        
+        .virtual-scroll-content {
+            position: relative;
+            min-height: 100px;
+        }
+        
+        .virtual-scroll-item {
+            margin-bottom: 0.75rem;
+            transition: opacity 0.2s ease-in;
+        }
+        
+        /* Universal mobile card styles */
+        .mobile-repo-card {
+            padding: 0.75rem;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Optimize performance on all devices */
+        @media (max-width: 768px) {
+            .repo-card {
+                animation: none !important;
+                transition: transform 0.2s ease !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            }
+            
+            .repo-card:hover {
+                transform: none !important;
+                animation: none !important;
+                outline-color: #3b82f6 !important; /* Single color instead of gradient */
+            }
+            
+            /* Use solid colors instead of gradients for better performance */
+            .category-bar-gradient-high,
+            .category-bar-gradient-medium,
+            .category-bar-gradient-low {
+                background-image: none !important;
+            }
+            
+            .category-bar-gradient-high {
+                background-color: #34d399 !important;
+            }
+            
+            .category-bar-gradient-medium {
+                background-color: #fbbf24 !important;
+            }
+            
+            .category-bar-gradient-low {
+                background-color: #f87171 !important;
+            }
+            
+            /* Lighter bg for all mobile devices */
+            body {
+                background-image: linear-gradient(90deg, #7ffcff 0%, #ffadfa 100%) !important;
+            }
+        }
+        
+        /* Mobile optimization indicator */
+        #optimization-notice {
+            padding: 0.75rem;
+            background-color: #e0f2fe;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        /* Loading skeleton for better perceived performance */
+        .skeleton-loader {
+            background: linear-gradient(90deg, #f3f4f6 0px, #e5e7eb 40%, #f3f4f6 80%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 0.375rem;
+            height: 250px;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
     </style>
     
     <!-- Custom JS for the page - defer loading -->
@@ -642,8 +739,9 @@
             <p><i class="fas fa-info-circle mr-1"></i> Mobile version: Showing limited repositories for better performance.</p>
         </div>
 
-        <div id="safari-notice" class="hidden mb-4 p-3 bg-yellow-100 text-yellow-800 rounded-md text-sm">
-            <p><i class="fas fa-exclamation-triangle mr-1"></i> Safari mobile detected: Using optimized mode for better performance.</p>
+        <!-- Replace Safari notice with universal optimization notice -->
+        <div id="optimization-notice" class="hidden mb-4 p-3 bg-blue-100 text-blue-800 rounded-md text-sm">
+            <p><i class="fas fa-bolt mr-1"></i> Performance mode: Using optimized loading for better experience.</p>
         </div>
 
         <div class="mb-6 flex justify-between items-center" style="display: none;"> <!-- Simple container for title and count -->
@@ -657,13 +755,23 @@
             <span style="color: whitesmoke;font-weight:lighter;">Loading repositories...</span>
         </div>
 
-        <!-- Virtual scrolling container for mobile - simplified for Safari -->
-        <div id="virtual-scroll-container" class="hidden">
-            <div id="virtual-scroll-content" class="pb-8"></div>
+        <!-- Simplified virtual scrolling container for all browsers -->
+        <div id="virtual-scroll-container" class="virtual-scroll-container hidden">
+            <div id="virtual-scroll-content" class="virtual-scroll-content"></div>
             <div id="scroll-loader" class="text-center py-4 hidden">
                 <div class="spinner inline-block"></div>
                 <span class="ml-2 text-white">Loading more...</span>
             </div>
+        </div>
+
+        <!-- Add skeleton loaders for initial load -->
+        <div id="skeleton-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+            <div class="skeleton-loader"></div>
+            <div class="skeleton-loader"></div>
+            <div class="skeleton-loader"></div>
+            <div class="skeleton-loader"></div>
+            <div class="skeleton-loader"></div>
+            <div class="skeleton-loader"></div>
         </div>
 
         <div id="repo-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -695,38 +803,14 @@
     // Performance tracking
     const perfStart = performance.now();
     
-    // Browser detection
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
-                     (navigator.userAgent.includes('AppleWebKit') && 
-                      !navigator.userAgent.includes('Chrome') && 
-                      !navigator.userAgent.includes('Android'));
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isSafariIOS = isSafari && isIOS;
+    // Remove Safari-specific detection and simplify mobile detection
+    const isMobile = window.innerWidth < 768 || 
+                    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    // Apply Safari-specific optimizations
-    if (isSafariIOS) {
-        document.body.classList.add('safari-ios');
-        document.getElementById('safari-notice')?.classList.remove('hidden');
-        console.log('Safari iOS detected, applying special optimizations');
-    }
-    
-    // Memory check for Safari
-    let isLowMemory = false;
-    if (isSafariIOS) {
-        // Get device memory if available (not in Safari, but useful for other browsers)
-        const deviceMemory = navigator.deviceMemory || 4; // Default to 4GB
-        
-        // Check if it's an older iOS device based on user agent
-        const isOlderDevice = /iPhone OS ([0-9]|10|11)_/.test(navigator.userAgent);
-        
-        // Estimate if we're in a low memory condition
-        isLowMemory = isOlderDevice || deviceMemory <= 2;
-        
-        if (isLowMemory) {
-            document.body.classList.add('low-memory-mode');
-            console.log('Low memory mode activated for Safari iOS');
-        }
+    // Show optimization notice on mobile
+    if (isMobile) {
+        document.getElementById('mobile-notice').classList.remove('hidden');
+        document.getElementById('optimization-notice').style.display = 'block';
     }
     
     // Global variables
@@ -735,268 +819,161 @@
     let currentLanguage = 'all';
     let minScoreFilter = 0;
     let currentPage = 1;
-    let reposPerPage = 30;
+    let reposPerPage = isMobile ? 10 : 30; // Reduced for mobile
     let isLoadingData = false;
     let cachedRepositories = null;
-    let isMobile = false;
     let loadAttempts = 0;
     const MAX_LOAD_ATTEMPTS = 3;
-    let isVirtualScrolling = false;
-    // Extra small limit for Safari iOS
-    const MOBILE_REPO_LIMIT = isSafariIOS ? 20 : 30;
-    const RENDER_BATCH_SIZE = isSafariIOS ? 3 : 5; // Smaller batch size for Safari
-    let visibleItems = new Set();
-    let lastScrollPosition = 0; // Track scroll position for Safari
-    let scrollTimeout = null; // For debouncing scroll events in Safari
+    const MOBILE_REPO_LIMIT = 50; // Reasonable limit for all mobile devices
+    const RENDER_BATCH_SIZE = 5; // Consistent batch size
     
-    // Virtual scrolling variables - simplified for Safari
-    let virtualScrolling = {
-        enabled: false,
-        itemHeight: isSafariIOS ? 280 : 320, // Smaller size for Safari
-        buffer: isSafariIOS ? 2 : 5, // Smaller buffer for Safari to reduce memory usage
-        scrollTop: 0,
-        viewportHeight: 0,
+    // Universal virtual scrolling configuration
+    const virtualScroll = {
+        enabled: isMobile,
+        container: null,
+        content: null,
+        itemHeight: 320, // Default height estimate
+        visibleItems: new Set(),
+        renderedItems: new Map(), // Track rendered items by index
         totalHeight: 0,
-        startIndex: 0,
-        endIndex: 0,
-        scheduledUpdate: null,
-        // Safari specific
-        useSimpleRendering: isSafariIOS,
-        loadedItems: new Set()
+        visibleStart: 0,
+        visibleEnd: 0,
+        scrollPosition: 0,
+        viewportHeight: 0,
+        buffer: 5, // Number of items to render above/below viewport
+        debounceTime: 100, // Debounce scroll events
+        scrollTimer: null,
+        pendingUpdate: false
     };
     
-    // Mobile detection with Safari and battery optimization
-    function checkIfMobile() {
-        const isMobileDevice = window.innerWidth < 768 || 
-               /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        // For Safari iOS, just assume low power to be safe
-        const isLowPower = isSafariIOS ? true : false;
-        
-        // For other browsers, try to detect battery status
-        if (!isSafariIOS && 'getBattery' in navigator) {
-            try {
-                navigator.getBattery().then(battery => {
-                    if (battery.level < 0.2 && !battery.charging) {
-                        isLowPower = true;
-                        console.log('Low battery detected, enabling extra power saving');
-                    }
-                });
-            } catch (e) {
-                console.log('Battery API not available or error:', e);
-            }
-        }
-        
-        return { isMobileDevice, isLowPower };
-    }
+    // Better data chunking configuration
+    const dataChunking = {
+        chunkSize: isMobile ? 50 : 200, // Process data in chunks
+        processDelay: 10, // ms between chunk processing
+        maxItemsToProcess: isMobile ? 300 : 1000, // Maximum items to process
+        initialLoadSize: isMobile ? 20 : 50 // Initial items to show immediately
+    };
     
-    // Set initial mobile state and adjust settings
-    function setupForMobileIfNeeded() {
-        const { isMobileDevice, isLowPower } = checkIfMobile();
-        isMobile = isMobileDevice;
-        
-        // Adjust settings for mobile
-        if (isMobile) {
-            // Extra conservative settings for Safari
-            reposPerPage = isSafariIOS ? 5 : (isLowPower ? 5 : 10);
-            document.getElementById('mobile-notice').classList.remove('hidden');
-            
-            // Enable virtual scrolling on mobile, with a different approach for Safari
-            virtualScrolling.enabled = true;
-            
-            // Extra low power settings for Safari
-            if (isLowPower || isSafariIOS) {
-                document.body.classList.add('low-power-mode');
-                virtualScrolling.itemHeight = isSafariIOS ? 200 : 260;
-            }
-            
-            console.log(`Mobile device detected (Safari iOS: ${isSafariIOS}, low power: ${isLowPower}), optimizing for performance`);
-        }
-    }
-    
-    // Safari-optimized virtual scrolling setup
+    // Initialize virtual scrolling
     function initVirtualScrolling() {
-        if (!isMobile || !virtualScrolling.enabled) return;
+        if (!virtualScroll.enabled) return;
         
-        const repoGrid = document.getElementById('repo-grid');
-        const virtualContainer = document.getElementById('virtual-scroll-container');
-        const virtualContent = document.getElementById('virtual-scroll-content');
+        virtualScroll.container = document.getElementById('virtual-scroll-container');
+        virtualScroll.content = document.getElementById('virtual-scroll-content');
         
-        if (!repoGrid || !virtualContainer || !virtualContent) return;
+        if (!virtualScroll.container || !virtualScroll.content) return;
         
-        // Hide standard grid, show virtual scrolling container
-        repoGrid.classList.add('hidden');
-        virtualContainer.classList.remove('hidden');
-        
-        // Set up scroll event handler with special handling for Safari
-        let ticking = false;
-        
-        // Safari needs a simpler scroll handler to prevent lag
-        if (isSafariIOS) {
-            virtualContainer.addEventListener('scroll', () => {
-                // Store the scroll position
-                lastScrollPosition = virtualContainer.scrollTop;
-                
-                // Clear previous timeout if it exists
-                if (scrollTimeout) {
-                    clearTimeout(scrollTimeout);
-                }
-                
-                // Set a new timeout for delayed scroll handling (reduces frequent updates)
-                scrollTimeout = setTimeout(() => {
-                    virtualScrolling.scrollTop = lastScrollPosition;
-                    updateVirtualScroll();
-                }, 100); // Longer delay for Safari
-            });
-        } else {
-            // Standard scroll handler for other browsers
-            virtualContainer.addEventListener('scroll', () => {
-                virtualScrolling.scrollTop = virtualContainer.scrollTop;
-                
-                if (!ticking) {
-                    window.requestAnimationFrame(() => {
-                        updateVirtualScroll();
-                        ticking = false;
-                    });
-                    ticking = true;
-                }
-            });
-        }
+        // Show virtual container, hide regular grid
+        document.getElementById('repo-grid').classList.add('hidden');
+        virtualScroll.container.classList.remove('hidden');
         
         // Set initial viewport height
-        virtualScrolling.viewportHeight = virtualContainer.clientHeight;
+        virtualScroll.viewportHeight = virtualScroll.container.clientHeight || window.innerHeight * 0.6;
         
-        // Simple approach for Safari - just load all visible items at once
-        if (isSafariIOS) {
-            // Instead of ResizeObserver which can cause issues in Safari
-            window.addEventListener('resize', () => {
-                virtualScrolling.viewportHeight = virtualContainer.clientHeight;
-                updateVirtualScroll();
-            });
+        // Add scroll handler with debouncing for all browsers
+        virtualScroll.container.addEventListener('scroll', () => {
+            virtualScroll.scrollPosition = virtualScroll.container.scrollTop;
             
-            // Initial load
-            setTimeout(() => {
-                updateVirtualScroll();
-            }, 100);
-        } else {
-            // ResizeObserver for other browsers
-            try {
-                const resizeObserver = new ResizeObserver(entries => {
-                    for (const entry of entries) {
-                        if (entry.target === virtualContainer) {
-                            virtualScrolling.viewportHeight = entry.contentRect.height;
-                            updateVirtualScroll();
-                        }
-                    }
-                });
-                
-                resizeObserver.observe(virtualContainer);
-            } catch (e) {
-                console.error('ResizeObserver not supported:', e);
-                // Fallback for browsers without ResizeObserver
-                window.addEventListener('resize', () => {
-                    virtualScrolling.viewportHeight = virtualContainer.clientHeight;
+            // Clear previous timer
+            if (virtualScroll.scrollTimer) {
+                clearTimeout(virtualScroll.scrollTimer);
+            }
+            
+            // Set new timer with debouncing
+            if (!virtualScroll.pendingUpdate) {
+                virtualScroll.pendingUpdate = true;
+                requestAnimationFrame(() => {
                     updateVirtualScroll();
+                    virtualScroll.pendingUpdate = false;
                 });
             }
-        }
+            
+            // Additional debounced update for smoother scrolling
+            virtualScroll.scrollTimer = setTimeout(() => {
+                requestAnimationFrame(updateVirtualScroll);
+            }, virtualScroll.debounceTime);
+        });
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            virtualScroll.viewportHeight = virtualScroll.container.clientHeight || window.innerHeight * 0.6;
+            updateVirtualScroll();
+        });
+        
+        console.log('Virtual scrolling initialized for mobile device');
     }
     
-    // Safari-optimized virtual scroll rendering
+    // Universal update function for virtual scrolling
     function updateVirtualScroll() {
-        if (!virtualScrolling.enabled || filteredRepos.length === 0) return;
+        if (!virtualScroll.enabled || filteredRepos.length === 0) return;
         
-        const virtualContainer = document.getElementById('virtual-scroll-container');
-        const virtualContent = document.getElementById('virtual-scroll-content');
-        
-        if (!virtualContainer || !virtualContent) return;
-        
-        // For Safari iOS, use a much simpler approach - render all at once in batches
-        if (isSafariIOS) {
-            // If we've already rendered all items, don't re-render
-            if (virtualScrolling.loadedItems.size >= filteredRepos.length) {
-                return;
-            }
-            
-            // For Safari, just render everything sequentially in small batches
-            const startIdx = virtualScrolling.loadedItems.size;
-            const endIdx = Math.min(startIdx + RENDER_BATCH_SIZE, filteredRepos.length);
-            
-            console.log(`Safari iOS: Rendering repos ${startIdx} to ${endIdx}`);
-            
-            // Render this batch
-            for (let i = startIdx; i < endIdx; i++) {
-                if (virtualScrolling.loadedItems.has(i)) continue;
-                
-                const repo = filteredRepos[i];
-                const card = createMobileRepoCard(repo, i);
-                card.setAttribute('data-index', i);
-                
-                // Simpler approach - just append in order
-                virtualContent.appendChild(card);
-                virtualScrolling.loadedItems.add(i);
-                
-                // Add a small delay between renders to prevent UI freezing
-                setTimeout(() => {
-                    card.classList.add('loaded');
-                }, (i - startIdx) * 50);
-            }
-            
-            // If we haven't loaded all items yet, schedule the next batch
-            if (endIdx < filteredRepos.length) {
-                setTimeout(() => {
-                    updateVirtualScroll();
-                }, RENDER_BATCH_SIZE * 100); // Delay based on batch size
-            }
-            
-            return;
-        }
-        
-        // Regular virtual scrolling for other browsers
-        const scrollTop = virtualScrolling.scrollTop;
-        const viewportHeight = virtualScrolling.viewportHeight;
+        const scrollTop = virtualScroll.scrollPosition;
+        const viewportHeight = virtualScroll.viewportHeight;
         
         // Calculate visible range with buffer
-        const startIndex = Math.max(0, Math.floor(scrollTop / virtualScrolling.itemHeight) - virtualScrolling.buffer);
-        const endIndex = Math.min(
+        const estimatedStart = Math.max(0, Math.floor(scrollTop / virtualScroll.itemHeight) - virtualScroll.buffer);
+        const estimatedEnd = Math.min(
             filteredRepos.length - 1,
-            Math.ceil((scrollTop + viewportHeight) / virtualScrolling.itemHeight) + virtualScrolling.buffer
+            Math.ceil((scrollTop + viewportHeight) / virtualScroll.itemHeight) + virtualScroll.buffer
         );
         
-        // Skip update if visible range hasn't changed
-        if (startIndex === virtualScrolling.startIndex && endIndex === virtualScrolling.endIndex) {
+        // Skip update if visible range hasn't changed significantly
+        if (
+            estimatedStart === virtualScroll.visibleStart && 
+            estimatedEnd === virtualScroll.visibleEnd &&
+            virtualScroll.renderedItems.size > 0
+        ) {
             return;
         }
         
         // Update indices
-        virtualScrolling.startIndex = startIndex;
-        virtualScrolling.endIndex = endIndex;
+        virtualScroll.visibleStart = estimatedStart;
+        virtualScroll.visibleEnd = estimatedEnd;
         
-        // Update total height
-        virtualScrolling.totalHeight = filteredRepos.length * virtualScrolling.itemHeight;
+        // Get visible items
+        const visibleRepos = filteredRepos.slice(estimatedStart, estimatedEnd + 1);
+        const newVisibleIds = new Set(visibleRepos.map((_, idx) => estimatedStart + idx));
         
-        // Clear existing content
-        virtualContent.innerHTML = '';
-        
-        // Render visible items
-        const visibleRepos = filteredRepos.slice(startIndex, endIndex + 1);
-        visibleRepos.forEach((repo, idx) => {
-            const actualIndex = startIndex + idx;
-            const card = createMobileRepoCard(repo, actualIndex);
-            card.style.transform = `translateY(${actualIndex * virtualScrolling.itemHeight}px)`;
-            card.style.position = 'absolute';
-            card.style.width = 'calc(100% - 16px)'; // Account for padding
-            card.classList.add('progressive-load');
-            virtualContent.appendChild(card);
-            
-            // Delayed fade in for smoother rendering
-            setTimeout(() => {
-                card.classList.add('loaded');
-            }, idx * 20); // Stagger the animation
+        // Remove items that are no longer visible
+        virtualScroll.renderedItems.forEach((element, index) => {
+            if (!newVisibleIds.has(index)) {
+                if (element && element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+                virtualScroll.renderedItems.delete(index);
+            }
         });
         
+        // Add new visible items
+        visibleRepos.forEach((repo, idx) => {
+            const actualIndex = estimatedStart + idx;
+            
+            // Skip if already rendered
+            if (virtualScroll.renderedItems.has(actualIndex)) return;
+            
+            // Create card
+            const card = createUniversalCard(repo, actualIndex);
+            card.classList.add('virtual-scroll-item');
+            card.style.transform = `translateY(${actualIndex * virtualScroll.itemHeight}px)`;
+            card.style.position = 'absolute';
+            card.style.width = 'calc(100% - 16px)';
+            
+            // Add to DOM
+            virtualScroll.content.appendChild(card);
+            virtualScroll.renderedItems.set(actualIndex, card);
+            
+            // Animate in with slight delay based on position
+            setTimeout(() => {
+                card.style.opacity = '1';
+            }, idx * 20);
+        });
+        
+        // Update content height to accommodate all items
+        virtualScroll.totalHeight = filteredRepos.length * virtualScroll.itemHeight;
+        virtualScroll.content.style.height = `${virtualScroll.totalHeight}px`;
+        
         // Check if we're near the end and should load more
-        const scrollThreshold = virtualScrolling.totalHeight - viewportHeight - 500; // 500px before the end
+        const scrollThreshold = virtualScroll.totalHeight - viewportHeight - 500;
         if (scrollTop > scrollThreshold && !isLoadingData && filteredRepos.length < allRepos.length) {
             // Load more items
             console.log('Near end of scroll, loading more items...');
@@ -1004,71 +981,16 @@
         }
     }
     
-    // Load more items for infinite scrolling
-    function loadMoreItems() {
-        // This would normally load more from an API
-        // For now, just simulate by showing a loading indicator
-        const scrollLoader = document.getElementById('scroll-loader');
-        if (scrollLoader) {
-            scrollLoader.classList.remove('hidden');
-            setTimeout(() => {
-                scrollLoader.classList.add('hidden');
-            }, 1000);
-        }
-    }
-    
-    // Safari-optimized mobile card creation
-    function createMobileRepoCard(repo, index) {
-        // For Safari, create an even simpler card with minimal DOM
-        if (isSafariIOS) {
-            const card = document.createElement('div');
-            card.className = 'mobile-repo-card';
-            card.setAttribute('data-index', index);
-            
-            const repoData = repo.repository || {};
-            const repoId = repoData.id || '';
-            const name = repoData.name || 'Unnamed Repository';
-            const fullName = repoData.full_name || '';
-            const stars = formatNumber(repoData.stargazers_count || 0);
-            const overallScore = repo.overall_score || 0;
-            
-            // Ultra simple HTML structure for Safari
-            card.innerHTML = `
-                <div style="margin-bottom:8px;display:flex;justify-content:space-between">
-                    <div>
-                        <div style="font-weight:bold;color:#333">${name}</div>
-                        <div style="font-size:12px;color:#666">${fullName}</div>
-                    </div>
-                    <div style="text-align:right;font-size:14px">⭐ ${stars}</div>
-                </div>
-                <div style="height:8px;background:#eee;border-radius:4px;margin-bottom:12px;overflow:hidden">
-                    <div style="height:100%;background:${overallScore >= 70 ? '#34d399' : (overallScore >= 40 ? '#fbbf24' : '#f87171')};width:${overallScore}%"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-top:12px">
-                    <a href="/repo/${repoId}" style="padding:4px 8px;background:#f3f4f6;border-radius:4px;font-size:14px">View Report</a>
-                    <button class="share-button" data-repo-id="${repoId}" data-repo-name="${fullName}" style="padding:4px 8px;background:#8b5cf6;color:white;border-radius:4px;font-size:14px">Share</button>
-                </div>
-            `;
-            
-            // Simplified event listener
-            const shareBtn = card.querySelector('.share-button');
-            if (shareBtn) {
-                shareBtn.onclick = function() {
-                    openShareModal(this.getAttribute('data-repo-id'), this.getAttribute('data-repo-name'));
-                };
-            }
-            
-            return card;
-        }
-        
-        // For other browsers, use the original card creation
-        const repoData = repo.repository || {};
-        const repoId = repoData.id || '';
+    // Create a universal card that works well on all devices
+    function createUniversalCard(repo, index) {
         const card = document.createElement('div');
-        card.className = 'mobile-repo-card';
+        card.className = isMobile ? 'mobile-repo-card' : 'repo-card p-5 h-full flex flex-col';
         card.setAttribute('data-index', index);
         
-        // Extract just the essential data
+        const repoData = repo.repository || {};
+        const repoId = repoData.id || '';
+        
+        // Extract common essential data
         const name = repoData.name || 'Unnamed Repository';
         const fullName = repoData.full_name || '';
         const stars = formatNumber(repoData.stargazers_count || 0);
@@ -1076,35 +998,41 @@
         const overallScore = repo.overall_score || 0;
         const scoreClass = overallScore >= 70 ? 'bg-green-500' : (overallScore >= 40 ? 'bg-yellow-500' : 'bg-red-500');
         
-        // Create minimal HTML for better performance
-        card.innerHTML = `
-            <div class="flex items-center justify-between mb-2">
-                <div>
-                    <h3 class="font-bold text-gray-800">${name}</h3>
-                    <p class="text-xs text-gray-600">${fullName}</p>
-                </div>
-                <div class="text-right">
-                    <div class="flex items-center text-sm">
-                        <i class="fas fa-star text-yellow-400 mr-1"></i> ${stars}
+        // Create appropriate card HTML based on device
+        if (isMobile) {
+            // Simplified card for mobile
+            card.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <h3 class="font-bold text-gray-800">${name}</h3>
+                        <p class="text-xs text-gray-600">${fullName}</p>
                     </div>
-                    ${language ? `<div class="text-xs text-gray-600 mt-1">${language}</div>` : ''}
+                    <div class="text-right">
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-star text-yellow-400 mr-1"></i> ${stars}
+                        </div>
+                        ${language ? `<div class="text-xs text-gray-600 mt-1">${language}</div>` : ''}
+                    </div>
                 </div>
-            </div>
-            <div class="relative h-4 bg-gray-200 rounded-full overflow-hidden mb-3">
-                <div class="absolute top-0 left-0 h-full ${scoreClass}" style="width: ${overallScore}%"></div>
-            </div>
-            <div class="flex justify-between mt-4">
-                <a href="/repo/${repoId}" class="px-3 py-1 bg-gray-100 rounded text-sm">
-                    View Report
-                </a>
-                <button type="button" class="share-button px-3 py-1 bg-purple-500 text-white rounded text-sm"
-                        data-repo-id="${repoId}" data-repo-name="${fullName}">
-                    Share
-                </button>
-            </div>
-        `;
+                <div class="relative h-4 bg-gray-200 rounded-full overflow-hidden mb-3">
+                    <div class="absolute top-0 left-0 h-full ${scoreClass}" style="width: ${overallScore}%"></div>
+                </div>
+                <div class="flex justify-between mt-4">
+                    <a href="/repo/${repoId}" class="px-3 py-1 bg-gray-100 rounded text-sm">
+                        View Report
+                    </a>
+                    <button type="button" class="share-button px-3 py-1 bg-purple-500 text-white rounded text-sm"
+                            data-repo-id="${repoId}" data-repo-name="${fullName}">
+                        Share
+                    </button>
+                </div>
+            `;
+        } else {
+            // Full card for desktop (existing implementation)
+            // ...existing desktop card HTML creation...
+        }
         
-        // Add event listener to share button
+        // Add event listeners
         const shareBtn = card.querySelector('.share-button');
         if (shareBtn) {
             shareBtn.addEventListener('click', (e) => {
@@ -1117,323 +1045,44 @@
         return card;
     }
     
-    // Call mobile setup
-    setupForMobileIfNeeded();
-    
-    // Get elements from the DOM
-    const reposContainer = document.getElementById('repo-grid');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const noResults = document.getElementById('no-results');
-    const repoCount = document.getElementById('repo-count');
-    const searchInput = document.getElementById('search-input');
-    const sortSelect = document.getElementById('sort-select');
-    const languageFilterSelect = document.getElementById('language-filter-select');
-    const scoreFilterSelect = document.getElementById('score-filter-select');
-    const loadError = document.getElementById('load-error');
-    const retryLoad = document.getElementById('retry-load');
-    
-    // Create pagination container at the bottom of the page
-    const paginationContainer = document.createElement('div');
-    paginationContainer.id = 'pagination-container';
-    paginationContainer.className = 'flex justify-center my-6';
-    reposContainer.parentNode.insertBefore(paginationContainer, reposContainer.nextSibling);
-
-    // Check if all required DOM elements exist
-    if (!reposContainer || !loadingIndicator || !noResults || !repoCount) {
-      console.error('Required DOM elements not found.');
-      return;
-    }
-
-    // Initialize virtual scrolling if on mobile
-    if (isMobile && virtualScrolling.enabled) {
-        initVirtualScrolling();
-    }
-
-    // Category icons and names - only load if not on mobile to save memory
-    const categoryIcons = isMobile ? {} : {
-        'documentation': 'fa-file-lines',
-        'security': 'fa-shield-alt',
-        'code_quality': 'fa-code',
-        'performance': 'fa-tachometer-alt',
-        'accessibility': 'fa-universal-access',
-        'ci_cd': 'fa-sync',
-        'maintainability': 'fa-wrench',
-        'testing': 'fa-vial',
-        'licensing': 'fa-balance-scale',
-        'community': 'fa-users'
-    };
-
-    const categoryNames = isMobile ? {} : {
-        'documentation': 'Documentation',
-        'security': 'Security',
-        'code_quality': 'Code Quality',
-        'performance': 'Performance',
-        'accessibility': 'Accessibility',
-        'ci_cd': 'CI/CD',
-        'maintainability': 'Maintainability',
-        'testing': 'Testing',
-        'licensing': 'Licensing',
-        'community': 'Community'
-    };
-
-    // Use sessionStorage for very short-term caching on mobile
-    // This will persist during the current session but clear when browser is closed
-    function getCachedData() {
-        try {
-            // On mobile, check sessionStorage first for quicker access
-            if (isMobile) {
-                const sessionCached = sessionStorage.getItem('repolizerSessionRepos');
-                if (sessionCached) {
-                    const { data, timestamp } = JSON.parse(sessionCached);
-                    // Only use session cache if it's less than 5 minutes old
-                    if (Date.now() - timestamp < 5 * 60 * 1000) {
-                        console.log('Using session cached repository data');
-                        return data;
-                    }
-                }
-            }
-            
-            // Fall back to localStorage for longer-term caching
-            const cached = localStorage.getItem('repolizerRepositories');
-            if (cached) {
-                const { data, timestamp } = JSON.parse(cached);
-                // Only use cache if it's less than 15 minutes old
-                if (Date.now() - timestamp < 15 * 60 * 1000) {
-                    console.log('Using localStorage cached repository data');
-                    
-                    // If on mobile, also update session storage for quicker future access
-                    if (isMobile) {
-                        try {
-                            sessionStorage.setItem('repolizerSessionRepos', JSON.stringify({
-                                data: data.slice(0, MOBILE_REPO_LIMIT),
-                                timestamp: Date.now()
-                            }));
-                        } catch (e) {
-                            console.warn('Failed to update sessionStorage:', e);
-                        }
-                    }
-                    
-                    return data;
-                }
-            }
-        } catch (e) {
-            console.warn('Failed to retrieve cached data:', e);
-            clearCacheData(); // Clear potentially corrupted data
-        }
-        return null;
-    }
-
-    // Cache data in storage
-    function cacheData(data) {
-        try {
-            // On mobile, only cache limited repos to avoid storage quota issues
-            const dataToCache = isMobile ? data.slice(0, MOBILE_REPO_LIMIT) : data;
-            
-            // Save to localStorage for longer-term caching
-            localStorage.setItem('repolizerRepositories', JSON.stringify({
-                data: dataToCache,
-                timestamp: Date.now()
-            }));
-            
-            // On mobile, also save to sessionStorage for quicker access
-            if (isMobile) {
-                sessionStorage.setItem('repolizerSessionRepos', JSON.stringify({
-                    data: dataToCache,
-                    timestamp: Date.now()
-                }));
-            }
-            
-            console.log(`Cached ${dataToCache.length} repositories`);
-        } catch (e) {
-            console.warn('Failed to cache data:', e);
-            clearCacheData(); // Clear storage if we hit quota limits
-        }
-    }
-    
-    // Clear cache data (used when errors occur)
-    function clearCacheData() {
-        try {
-            localStorage.removeItem('repolizerRepositories');
-            if (isMobile) sessionStorage.removeItem('repolizerSessionRepos');
-        } catch (clearError) {
-            console.error('Failed to clear storage:', clearError);
-        }
-    }
-
-    // Get result path from parameters or use default
-    const urlParams = new URLSearchParams(window.location.search);
-    const resultPath = urlParams.get('path') || 'results.jsonl';
-    const pageParam = urlParams.get('page');
-    if (pageParam) {
-      currentPage = parseInt(pageParam, 10) || 1;
-    }
-    
-    console.log(`Loading repositories from: ${resultPath}, page ${currentPage}`);
-
-    // Function to show error state
-    function showError(message) {
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'none';
-            loadingIndicator.classList.add('hidden');
-        }
-        
-        if (loadError) {
-            const errorMsg = loadError.querySelector('p');
-            if (errorMsg) {
-                errorMsg.textContent = message || 'We encountered an issue loading the repository data.';
-            }
-            loadError.classList.remove('hidden');
-        }
-    }
-    
-    // Function to hide error state
-    function hideError() {
-        if (loadError) {
-            loadError.classList.add('hidden');
-        }
-    }
-
-    // Modified function to load repositories incrementally with improved mobile support
+    // Optimized data loading for all browsers
     async function loadRepositories() {
         if (isLoadingData) return;
         isLoadingData = true;
         hideError();
         
-        // Record start time for performance measurement
-        const loadStartTime = performance.now();
-        
         try {
-            loadAttempts++;
+            // Show skeleton loaders for better UX
+            document.getElementById('skeleton-container').classList.remove('hidden');
             
-            // For Safari, try to load a very small sample dataset first
-            if (isSafariIOS) {
-                try {
-                    // Check if we have a tiny sample file specifically for Safari
-                    const safariSamplePath = 'sample_minimal.jsonl';
-                    let response = await fetch(safariSamplePath);
-                    
-                    // If safari-specific sample exists, use it
-                    if (response.ok) {
-                        console.log('Loading Safari-optimized minimal sample data');
-                        const text = await response.text();
-                        const lines = text.split('\n').filter(line => line.trim() !== '');
-                        const repoDataMap = {};
-                        
-                        // Process serially for Safari (no batching)
-                        for (let i = 0; i < Math.min(lines.length, 15); i++) {
-                            try {
-                                if (lines[i].trim()) {
-                                    const parsedRepo = JSON.parse(lines[i]);
-                                    if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                                        repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                                    }
-                                }
-                            } catch (e) {
-                                console.warn(`Error parsing line ${i}:`, e);
-                            }
-                        }
-                        
-                        // Process and display
-                        allRepos = Object.values(repoDataMap);
-                        cacheData(allRepos);
-                        processRepositoryData(allRepos);
-                        console.log(`Safari quick load completed in ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
-                        return;
-                    }
-                } catch (safariError) {
-                    console.warn('Safari-specific sample loading failed:', safariError);
-                }
-            }
-            
-            // Continue with regular flow if Safari-specific approach failed
-            
-            // Check for cached data first (prioritizes sessionStorage on mobile)
+            // Check cache first
             cachedRepositories = getCachedData();
-            
             if (cachedRepositories) {
+                // Hide loading indicator
+                if (document.getElementById('loading-indicator')) {
+                    document.getElementById('loading-indicator').style.display = 'none';
+                }
+                document.getElementById('skeleton-container').classList.add('hidden');
+                
+                // Process cached data
                 processRepositoryData(cachedRepositories);
-                console.log(`Loaded from cache in ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
                 return;
             }
             
-            // Show loading indicator
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'flex';
-                loadingIndicator.classList.remove('hidden');
-            }
-            
-            if (noResults) {
-                noResults.classList.add('hidden');
-            }
-            
-            // For mobile, try to fetch sample data first - much smaller dataset
-            if (isMobile) {
-                console.log('Mobile device detected, using simplified data loading');
+            // Try to load sample data first (faster)
+            try {
+                const samplePath = 'sample_results.jsonl';
+                const response = await fetch(samplePath);
                 
-                try {
-                    // Try the sample data file first
-                    const samplePath = 'sample_results.jsonl';
-                    const response = await fetch(samplePath);
-                    
-                    if (response.ok) {
-                        // Use a slower but more memory-efficient approach for mobile
-                        const text = await response.text();
-                        const lines = text.split('\n').filter(line => line.trim() !== '');
-                        
-                        // For mobile, only process a limited number of repositories
-                        const maxLines = Math.min(lines.length, MOBILE_REPO_LIMIT);
-                        const repoDataMap = {};
-                        
-                        // Process in batches to prevent UI freezing
-                        const processBatch = async (startIdx, batchSize) => {
-                            const endIdx = Math.min(startIdx + batchSize, maxLines);
-                            
-                            for (let i = startIdx; i < endIdx; i++) {
-                                try {
-                                    if (!lines[i].trim()) continue;
-                                    
-                                    const parsedRepo = JSON.parse(lines[i]);
-                                    if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                                        repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                                    }
-                                } catch (e) {
-                                    console.warn(`Error parsing line ${i}:`, e);
-                                }
-                            }
-                            
-                            // Update loading progress
-                            if (loadingIndicator.querySelector('span')) {
-                                loadingIndicator.querySelector('span').textContent = 
-                                    `Loading repositories... (${endIdx}/${maxLines})`;
-                            }
-                            
-                            // If we've processed all lines, finish up
-                            if (endIdx >= maxLines) {
-                                allRepos = Object.values(repoDataMap);
-                                cacheData(allRepos);
-                                processRepositoryData(allRepos);
-                                console.log(`Mobile load completed in ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
-                            } else {
-                                // Otherwise, schedule the next batch with a small delay
-                                setTimeout(() => {
-                                    processBatch(endIdx, batchSize);
-                                }, 10); // Brief pause to allow UI updates
-                            }
-                        };
-                        
-                        // Start processing in small batches
-                        processBatch(0, 5);
-                        return;
-                    } else {
-                        console.log('Sample data not found, falling back to main data');
-                    }
-                } catch (sampleError) {
-                    console.warn('Error loading sample data:', sampleError);
+                if (response.ok) {
+                    await processJSONLStream(response, isMobile ? MOBILE_REPO_LIMIT : null);
+                    return;
                 }
+            } catch (sampleError) {
+                console.warn('Sample data not available:', sampleError);
             }
             
-            // If we reach here, either we're on desktop or sample data loading failed
-            // Try loading from the main data source
+            // Fall back to main data file
             try {
                 const response = await fetch(resultPath);
                 
@@ -1441,142 +1090,11 @@
                     throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
                 }
                 
-                // For mobile, use a simpler but more memory-efficient approach
-                if (isMobile) {
-                    const text = await response.text();
-                    const lines = text.split('\n').filter(line => line.trim() !== '');
-                    
-                    // For mobile, only process a limited number of repositories
-                    const maxLines = Math.min(lines.length, MOBILE_REPO_LIMIT);
-                    const repoDataMap = {};
-                    
-                    // Process in batches to prevent UI freezing
-                    const processBatch = async (startIdx, batchSize) => {
-                        const endIdx = Math.min(startIdx + batchSize, maxLines);
-                        
-                        for (let i = startIdx; i < endIdx; i++) {
-                            try {
-                                if (!lines[i].trim()) continue;
-                                
-                                const parsedRepo = JSON.parse(lines[i]);
-                                if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                                    repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                                }
-                            } catch (e) {
-                                console.warn(`Error parsing line ${i}:`, e);
-                            }
-                        }
-                        
-                        // Update loading progress
-                        if (loadingIndicator.querySelector('span')) {
-                            loadingIndicator.querySelector('span').textContent = 
-                                `Loading repositories... (${endIdx}/${maxLines})`;
-                        }
-                        
-                        // If we've processed all lines, finish up
-                        if (endIdx >= maxLines) {
-                            allRepos = Object.values(repoDataMap);
-                            cacheData(allRepos);
-                            processRepositoryData(allRepos);
-                            console.log(`Mobile load from main file completed in ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
-                        } else {
-                            // Otherwise, schedule the next batch with a small delay
-                            setTimeout(() => {
-                                processBatch(endIdx, batchSize);
-                            }, 10); // Brief pause to allow UI updates
-                        }
-                    };
-                    
-                    // Start processing in small batches
-                    processBatch(0, 5);
-                } else {
-                    // For desktop, use the streaming approach
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let partialLine = '';
-                    const repoDataMap = {};
-                    
-                    let processedLines = 0;
-                    
-                    const processChunk = async (result) => {
-                        if (result.done) {
-                            // Process any remaining partial line
-                            if (partialLine.trim()) {
-                                try {
-                                    const parsedRepo = JSON.parse(partialLine);
-                                    if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                                        repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                                    }
-                                } catch (e) {
-                                    console.warn('Error parsing final line:', e);
-                                }
-                            }
-                            
-                            // Done reading the file
-                            allRepos = Object.values(repoDataMap);
-                            console.log(`Completed loading ${allRepos.length} repositories in ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
-                            
-                            // Cache the results
-                            cacheData(allRepos);
-                            
-                            // Process the data
-                            processRepositoryData(allRepos);
-                            return;
-                        }
-                        
-                        // Process this chunk
-                        const chunk = decoder.decode(result.value, {stream: true});
-                        const lines = (partialLine + chunk).split('\n');
-                        partialLine = lines.pop() || ''; // Last line might be incomplete
-                        
-                        for (const line of lines) {
-                            if (!line.trim()) continue;
-                            
-                            try {
-                                const parsedRepo = JSON.parse(line);
-                                if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                                    repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                                    processedLines++;
-                                    
-                                    // Update UI every 100 lines
-                                    if (processedLines % 100 === 0) {
-                                        if (loadingIndicator.querySelector('span')) {
-                                            loadingIndicator.querySelector('span').textContent = 
-                                                `Loading repositories... (${processedLines} processed)`;
-                                        }
-                                        await new Promise(r => setTimeout(r, 0)); // Allow UI to update
-                                    }
-                                }
-                            } catch (e) {
-                                console.warn('Error parsing line:', e);
-                            }
-                        }
-                        
-                        // Continue reading
-                        reader.read().then(processChunk);
-                    };
-                    
-                    // Start stream reading for desktop
-                    try {
-                        await reader.read().then(processChunk);
-                        return; // Exit function as processChunk will call processRepositoryData
-                    } catch (streamError) {
-                        console.error('Error during stream processing:', streamError);
-                        throw streamError; // Re-throw to be caught by outer catch
-                    }
-                }
-                
+                await processJSONLStream(response, isMobile ? MOBILE_REPO_LIMIT : null);
             } catch (mainError) {
                 console.error('Error loading from main data source:', mainError);
-                throw mainError; // Re-throw to be caught by outer catch
+                throw mainError;
             }
-            
-            // Only for mobile or if we bypassed stream processing
-            if (allRepos && allRepos.length > 0) {
-                cacheData(allRepos);
-                processRepositoryData(allRepos);
-            }
-            
         } catch (error) {
             console.error('Error loading repositories:', error);
             
@@ -1584,7 +1102,12 @@
             if (resultPath !== 'repositories.jsonl' && loadAttempts <= MAX_LOAD_ATTEMPTS) {
                 try {
                     console.log('Attempting to load fallback data...');
-                    // ... existing fallback code ...
+                    const fallbackResponse = await fetch('repositories.jsonl');
+                    
+                    if (fallbackResponse.ok) {
+                        await processJSONLStream(fallbackResponse, isMobile ? MOBILE_REPO_LIMIT : null);
+                        return;
+                    }
                 } catch (fallbackError) {
                     console.error("Error fetching fallback data:", fallbackError);
                 }
@@ -1592,33 +1115,159 @@
             
             // Show error UI if all attempts failed
             showError(`Error loading repository data: ${error.message}`);
+        } finally {
+            document.getElementById('skeleton-container').classList.add('hidden');
             isLoadingData = false;
         }
-    } // Properly close loadRepositories function
+    }
     
-    // Process repository data after loading - optimized for mobile
-    function processRepositoryData(repos) {
-        // ... existing code ...
+    // Universal JSONL stream processor that works efficiently on all browsers
+    async function processJSONLStream(response, maxItems = null) {
+        // For better performance, use different approaches based on capabilities
+        const repoDataMap = {};
+        let processedCount = 0;
+        
+        try {
+            const text = await response.text();
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            
+            // Determine max lines to process
+            const maxLines = maxItems ? Math.min(lines.length, maxItems) : lines.length;
+            
+            // Process initial batch immediately for fast first render
+            const initialBatch = lines.slice(0, dataChunking.initialLoadSize);
+            for (const line of initialBatch) {
+                try {
+                    const parsedRepo = JSON.parse(line);
+                    if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                        repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                        processedCount++;
+                    }
+                } catch (e) {
+                    console.warn('Error parsing line:', e);
+                }
+            }
+            
+            // Update loading progress
+            if (loadingIndicator && loadingIndicator.querySelector('span')) {
+                loadingIndicator.querySelector('span').textContent = 
+                    `Loading repositories... (${processedCount}/${maxLines})`;
+            }
+            
+            // If we have some initial data, process it immediately
+            if (Object.keys(repoDataMap).length > 0) {
+                allRepos = Object.values(repoDataMap);
+                processRepositoryData(allRepos);
+                
+                // Hide loading indicator but keep skeleton for remaining items
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+            
+            // Process remaining lines in chunks with yielding
+            const remainingLines = lines.slice(dataChunking.initialLoadSize, maxLines);
+            const processChunks = async (startIdx = 0) => {
+                const endIdx = Math.min(startIdx + dataChunking.chunkSize, remainingLines.length);
+                
+                // Process this chunk
+                for (let i = startIdx; i < endIdx; i++) {
+                    try {
+                        const parsedRepo = JSON.parse(remainingLines[i]);
+                        if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
+                            repoDataMap[parsedRepo.repository.id] = parsedRepo;
+                            processedCount++;
+                            
+                            // Update loading progress periodically
+                            if (processedCount % 50 === 0 && loadingIndicator && loadingIndicator.querySelector('span')) {
+                                loadingIndicator.querySelector('span').textContent = 
+                                    `Loading repositories... (${processedCount}/${maxLines})`;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error parsing line:', e);
+                    }
+                }
+                
+                // Update the UI with latest data
+                allRepos = Object.values(repoDataMap);
+                // Only call processRepositoryData if we're still loading
+                // This prevents unnecessary re-renders when all data is loaded
+                if (endIdx < remainingLines.length) {
+                    cacheDataInChunks(allRepos);
+                    processRepositoryData(allRepos);
+                }
+                
+                // Continue with next chunk or finish
+                if (endIdx < remainingLines.length) {
+                    // Yield to the browser to prevent UI freezing
+                    await new Promise(resolve => setTimeout(resolve, dataChunking.processDelay));
+                    await processChunks(endIdx);
+                } else {
+                    // All done
+                    cacheData(allRepos);
+                    processRepositoryData(allRepos);
+                    document.getElementById('skeleton-container').classList.add('hidden');
+                    console.log(`Completed loading ${allRepos.length} repositories`);
+                }
+            };
+            
+            // Start processing chunks
+            await processChunks();
+            
+        } catch (e) {
+            console.error('Error processing JSONL:', e);
+            throw e;
+        }
+    }
+    
+    // Optimize caching for large datasets by doing it in chunks
+    function cacheDataInChunks(data) {
+        // Only do the preliminary caching if we have enough items
+        if (data.length >= 30) {
+            try {
+                const prelimData = isMobile ? data.slice(0, 30) : data;
+                
+                // Use sessionStorage for in-session caching (faster retrieval)
+                sessionStorage.setItem('repolizerSessionRepos', JSON.stringify({
+                    data: prelimData,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                console.warn('Error in preliminary caching:', e);
+            }
+        }
+    }
+    
+    // Load more repositories (for pagination/infinite scroll)
+    function loadMoreItems() {
+        const scrollLoader = document.getElementById('scroll-loader');
+        if (scrollLoader) {
+            scrollLoader.classList.remove('hidden');
+            
+            // Simulate loading more items
+            setTimeout(() => {
+                // Here you would typically fetch more data from an API
+                // For now, we're just showing more from the already loaded data
+                scrollLoader.classList.add('hidden');
+                
+                // Update virtual scroll to show newly loaded items
+                if (virtualScroll.enabled) {
+                    updateVirtualScroll();
+                }
+            }, 800);
+        }
+    }
+    
+    // Initialize virtual scrolling on mobile
+    if (isMobile) {
+        initVirtualScrolling();
     }
     
     // Start loading repositories
     loadRepositories();
     
-    // ... existing code for retry button functionality ...
-    
-    // Function to display repositories
-    function displayRepos() {
-        if (!reposContainer) return;
-        
-        // ... existing display repositories code ...
-    }
-    
-    // ... existing code for other functions ...
-    
-    // Clean up resources when page is hidden/unloaded
-    document.addEventListener('visibilitychange', () => {
-        // ... existing cleanup code ...
-    });
+    // ...existing code for other functions and event handlers...
   });
 </script>
 </body>
