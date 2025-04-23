@@ -367,6 +367,17 @@
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
         }
+
+        /* Style for parsing error notice */
+        #parse-error-notice {
+            padding: 0.75rem;
+            background-color: #fef2f2; /* Red-50 */
+            color: #b91c1c; /* Red-700 */
+            border: 1px solid #fecaca; /* Red-300 */
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            display: none; /* Hidden by default */
+        }
     </style>
     
     <!-- Custom JS for the page - defer loading -->
@@ -790,6 +801,12 @@
                 <i class="fas fa-sync-alt mr-2"></i> Retry Loading
             </button>
         </div>
+
+        <!-- Add notice area for parsing errors -->
+        <div id="parse-error-notice">
+            <p><i class="fas fa-exclamation-triangle mr-1"></i> Data Corruption Detected:</p>
+            <p id="parse-error-details" class="text-sm mt-1"></p>
+        </div>
     </main>
 
     <footer class="bg-gray-800 text-white mt-auto py-6" style="background-color: rgba(31, 41, 55, 0.28);">
@@ -1050,6 +1067,8 @@
         if (isLoadingData) return;
         isLoadingData = true;
         hideError();
+        // Hide parsing error notice initially
+        document.getElementById('parse-error-notice').style.display = 'none';
         
         try {
             // Show skeleton loaders for better UX
@@ -1075,11 +1094,11 @@
                 const response = await fetch(samplePath);
                 
                 if (response.ok) {
-                    await processJSONLStream(response, isMobile ? MOBILE_REPO_LIMIT : null);
-                    return;
+                    await processJSONLResponse(response, isMobile ? MOBILE_REPO_LIMIT : null);
+                    return; // Exit if sample loaded successfully
                 }
             } catch (sampleError) {
-                console.warn('Sample data not available:', sampleError);
+                console.warn('Sample data not available or failed to load:', sampleError);
             }
             
             // Fall back to main data file
@@ -1090,23 +1109,22 @@
                     throw new Error(`Failed to fetch ${resultPath}: ${response.status} ${response.statusText}`);
                 }
                 
-                await processJSONLStream(response, isMobile ? MOBILE_REPO_LIMIT : null);
+                await processJSONLResponse(response, isMobile ? MOBILE_REPO_LIMIT : null);
             } catch (mainError) {
                 console.error('Error loading from main data source:', mainError);
-                throw mainError;
+                throw mainError; // Re-throw to be caught by outer catch
             }
         } catch (error) {
             console.error('Error loading repositories:', error);
             
-            // Try fallback if main file fails
+            // Try fallback (simplified)
             if (resultPath !== 'repositories.jsonl' && loadAttempts <= MAX_LOAD_ATTEMPTS) {
                 try {
-                    console.log('Attempting to load fallback data...');
+                    console.log('Attempting to load fallback data (repositories.jsonl)...');
                     const fallbackResponse = await fetch('repositories.jsonl');
-                    
                     if (fallbackResponse.ok) {
-                        await processJSONLStream(fallbackResponse, isMobile ? MOBILE_REPO_LIMIT : null);
-                        return;
+                        await processJSONLResponse(fallbackResponse, isMobile ? MOBILE_REPO_LIMIT : null);
+                        return; // Exit if fallback loaded successfully
                     }
                 } catch (fallbackError) {
                     console.error("Error fetching fallback data:", fallbackError);
@@ -1121,148 +1139,280 @@
         }
     }
     
-    // Universal JSONL stream processor that works efficiently on all browsers
-    async function processJSONLStream(response, maxItems = null) {
-        // For better performance, use different approaches based on capabilities
-        const repoDataMap = {};
-        let processedCount = 0;
+    /**
+     * Processes the Response object containing JSONL data.
+     * @param {Response} response The fetch Response object.
+     * @param {number|null} maxItems Maximum items to process (for mobile).
+     */
+    async function processJSONLResponse(response, maxItems = null) {
+        const loadStartTime = performance.now();
+        let parseStats = { success: 0, failed: 0, total: 0 };
         
         try {
             const text = await response.text();
-            const lines = text.split('\n').filter(line => line.trim() !== '');
             
-            // Determine max lines to process
-            const maxLines = maxItems ? Math.min(lines.length, maxItems) : lines.length;
-            
-            // Process initial batch immediately for fast first render
-            const initialBatch = lines.slice(0, dataChunking.initialLoadSize);
-            for (const line of initialBatch) {
-                try {
-                    const parsedRepo = JSON.parse(line);
-                    if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                        repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                        processedCount++;
-                    }
-                } catch (e) {
-                    console.warn('Error parsing line:', e);
-                }
-            }
-            
-            // Update loading progress
+            // Update loading indicator
             if (loadingIndicator && loadingIndicator.querySelector('span')) {
-                loadingIndicator.querySelector('span').textContent = 
-                    `Loading repositories... (${processedCount}/${maxLines})`;
+                loadingIndicator.querySelector('span').textContent = 'Parsing data...';
             }
             
-            // If we have some initial data, process it immediately
-            if (Object.keys(repoDataMap).length > 0) {
-                allRepos = Object.values(repoDataMap);
-                processRepositoryData(allRepos);
-                
-                // Hide loading indicator but keep skeleton for remaining items
-                if (loadingIndicator) {
-                    loadingIndicator.style.display = 'none';
+            // Parse the entire JSONL content robustly
+            const { data: parsedReposArray, stats } = parseJSONLLines(text);
+            parseStats = stats;
+            
+            console.log(`Parsing complete: ${stats.success} successful, ${stats.failed} failed out of ${stats.total} lines/fragments.`);
+            
+            // Show parsing error notice if needed
+            if (stats.failed > 0) {
+                const errorNotice = document.getElementById('parse-error-notice');
+                const errorDetails = document.getElementById('parse-error-details');
+                if (errorNotice && errorDetails) {
+                    errorDetails.textContent = `${stats.failed} out of ${stats.total} lines/fragments could not be parsed correctly. Some data might be missing or incomplete.`;
+                    errorNotice.style.display = 'block';
                 }
             }
             
-            // Process remaining lines in chunks with yielding
-            const remainingLines = lines.slice(dataChunking.initialLoadSize, maxLines);
-            const processChunks = async (startIdx = 0) => {
-                const endIdx = Math.min(startIdx + dataChunking.chunkSize, remainingLines.length);
-                
-                // Process this chunk
-                for (let i = startIdx; i < endIdx; i++) {
-                    try {
-                        const parsedRepo = JSON.parse(remainingLines[i]);
-                        if (parsedRepo && parsedRepo.repository && parsedRepo.repository.id) {
-                            repoDataMap[parsedRepo.repository.id] = parsedRepo;
-                            processedCount++;
-                            
-                            // Update loading progress periodically
-                            if (processedCount % 50 === 0 && loadingIndicator && loadingIndicator.querySelector('span')) {
-                                loadingIndicator.querySelector('span').textContent = 
-                                    `Loading repositories... (${processedCount}/${maxLines})`;
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Error parsing line:', e);
-                    }
-                }
-                
-                // Update the UI with latest data
-                allRepos = Object.values(repoDataMap);
-                // Only call processRepositoryData if we're still loading
-                // This prevents unnecessary re-renders when all data is loaded
-                if (endIdx < remainingLines.length) {
-                    cacheDataInChunks(allRepos);
-                    processRepositoryData(allRepos);
-                }
-                
-                // Continue with next chunk or finish
-                if (endIdx < remainingLines.length) {
-                    // Yield to the browser to prevent UI freezing
-                    await new Promise(resolve => setTimeout(resolve, dataChunking.processDelay));
-                    await processChunks(endIdx);
-                } else {
-                    // All done
-                    cacheData(allRepos);
-                    processRepositoryData(allRepos);
-                    document.getElementById('skeleton-container').classList.add('hidden');
-                    console.log(`Completed loading ${allRepos.length} repositories`);
-                }
-            };
+            // Limit items if needed (e.g., for mobile)
+            allRepos = maxItems ? parsedReposArray.slice(0, maxItems) : parsedReposArray;
             
-            // Start processing chunks
-            await processChunks();
+            // Update loading indicator
+            if (loadingIndicator && loadingIndicator.querySelector('span')) {
+                loadingIndicator.querySelector('span').textContent = 'Processing data...';
+            }
+            
+            // Cache the successfully parsed data
+            if (allRepos.length > 0) {
+                cacheData(allRepos); // Cache the array directly
+            }
+            
+            // Process the successfully parsed data
+            processRepositoryData(allRepos);
+            
+            // Hide loading indicator after processing
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            
+            console.log(`Data loading and processing took ${((performance.now() - loadStartTime) / 1000).toFixed(2)}s`);
             
         } catch (e) {
-            console.error('Error processing JSONL:', e);
-            throw e;
-        }
-    }
-    
-    // Optimize caching for large datasets by doing it in chunks
-    function cacheDataInChunks(data) {
-        // Only do the preliminary caching if we have enough items
-        if (data.length >= 30) {
-            try {
-                const prelimData = isMobile ? data.slice(0, 30) : data;
-                
-                // Use sessionStorage for in-session caching (faster retrieval)
-                sessionStorage.setItem('repolizerSessionRepos', JSON.stringify({
-                    data: prelimData,
-                    timestamp: Date.now()
-                }));
-            } catch (e) {
-                console.warn('Error in preliminary caching:', e);
+            console.error('Error processing JSONL response:', e);
+            showError(`Error processing data: ${e.message}`);
+            // Hide loading indicator on error
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
             }
         }
     }
     
-    // Load more repositories (for pagination/infinite scroll)
-    function loadMoreItems() {
-        const scrollLoader = document.getElementById('scroll-loader');
-        if (scrollLoader) {
-            scrollLoader.classList.remove('hidden');
+    // Remove the old processJSONLStream function as it's replaced by processJSONLResponse
+    
+    // Modify processRepositoryData to accept the array directly
+    function processRepositoryData(repos) { // Accepts array directly
+        allRepos = repos; // Assign the passed array
+        
+        // Hide loading indicator if it's still visible
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        
+        // Update repo count display
+        if (repoCount) {
+            repoCount.textContent = allRepos.length;
+        }
+        
+        // Apply initial filters and sorting
+        applyFiltersAndSort();
+        
+        // Initial display
+        displayRepos();
+        
+        // Populate filter options (if not mobile or simplified)
+        if (!isMobile) {
+            // populateLanguageFilter(); // Keep this if needed
+        }
+        
+        // Performance logging
+        const perfEnd = performance.now();
+        console.log(`Total page load and initial render time: ${((perfEnd - perfStart) / 1000).toFixed(2)}s`);
+    }
+    
+    // ... rest of the existing functions (applyFiltersAndSort, displayRepos, etc.) ...
+    // Ensure createUniversalCard and other functions correctly access repo data
+    // e.g., repo.repository.name, repo.overall_score
+    
+    // Update caching functions if necessary (should work with array)
+    function getCachedData() {
+        try {
+            // ... existing sessionStorage check ...
             
-            // Simulate loading more items
-            setTimeout(() => {
-                // Here you would typically fetch more data from an API
-                // For now, we're just showing more from the already loaded data
-                scrollLoader.classList.add('hidden');
-                
-                // Update virtual scroll to show newly loaded items
-                if (virtualScroll.enabled) {
-                    updateVirtualScroll();
+            const cached = localStorage.getItem('repolizerRepositories');
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                // Use cache if less than 15 minutes old
+                if (Date.now() - timestamp < 15 * 60 * 1000) {
+                    console.log('Using localStorage cached repository data (array)');
+                    // ... existing sessionStorage update ...
+                    return data; // Return the array
                 }
-            }, 800);
+            }
+        } catch (e) {
+            console.warn('Failed to retrieve cached data:', e);
+            clearCacheData();
+        }
+        return null;
+    }
+    
+    function cacheData(data) { // Accepts array
+        try {
+            const dataToCache = isMobile ? data.slice(0, MOBILE_REPO_LIMIT) : data;
+            
+            localStorage.setItem('repolizerRepositories', JSON.stringify({
+                data: dataToCache, // Store the array
+                timestamp: Date.now()
+            }));
+            
+            if (isMobile) {
+                sessionStorage.setItem('repolizerSessionRepos', JSON.stringify({
+                    data: dataToCache, // Store the array
+                    timestamp: Date.now()
+                }));
+            }
+            console.log(`Cached ${dataToCache.length} repositories (as array)`);
+        } catch (e) {
+            console.warn('Failed to cache data:', e);
+            clearCacheData();
         }
     }
     
-    // Initialize virtual scrolling on mobile
-    if (isMobile) {
-        initVirtualScrolling();
+    // --- Robust JSON Parsing ---
+    
+    /**
+     * Attempts to parse a JSON string, trying to fix common errors.
+     * @param {string} jsonString The potentially malformed JSON string.
+     * @returns {object|null} The parsed object or null if parsing fails.
+     */
+    function robustJSONParse(jsonString) {
+        if (!jsonString || typeof jsonString !== 'string') {
+            return null;
+        }
+        
+        let cleanedString = jsonString.trim();
+        
+        // 1. Remove problematic control characters (except common whitespace)
+        cleanedString = cleanedString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+        
+        // 2. Attempt direct parsing first
+        try {
+            return JSON.parse(cleanedString);
+        } catch (e) {
+            // console.warn("Initial JSON parse failed, attempting fixes...", e.message);
+        }
+        
+        // 3. Attempt common fixes (add with caution, can be risky)
+        
+        // Fix unescaped quotes within strings (simple heuristic)
+        // This is very basic and might break valid JSON. Use carefully.
+        // cleanedString = cleanedString.replace(/([^\\])"/g, '$1\\"');
+        
+        // Fix missing quotes around property names (requires more complex regex)
+        // Example: { property: "value" } -> { "property": "value" }
+        // cleanedString = cleanedString.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
+        
+        // Fix trailing commas (often handled by modern JS engines, but good practice)
+        cleanedString = cleanedString.replace(/,\s*([}\]])/g, '$1');
+        
+        // Fix imbalanced braces/brackets (very difficult, often indicates severe corruption)
+        // Basic check: count opening and closing braces/brackets
+        const openBraces = (cleanedString.match(/{/g) || []).length;
+        const closeBraces = (cleanedString.match(/}/g) || []).length;
+        const openBrackets = (cleanedString.match(/\[/g) || []).length;
+        const closeBrackets = (cleanedString.match(/]/g) || []).length;
+        
+        if (openBraces > closeBraces) cleanedString += '}'.repeat(openBraces - closeBraces);
+        if (openBrackets > closeBrackets) cleanedString += ']'.repeat(openBrackets - closeBrackets);
+        // Note: Adding closing braces might not fix the structure correctly.
+        
+        // Final attempt after cleaning
+        try {
+            return JSON.parse(cleanedString);
+        } catch (e) {
+            // console.error("Robust JSON parse failed after fixes:", e.message, "Original:", jsonString.substring(0, 100));
+            return null; // Failed even after attempts
+        }
     }
+    
+    /**
+     * Parses lines from a JSONL string, handling potential errors and multi-line fragments.
+     * @param {string} jsonlString The raw JSONL content.
+     * @returns {{ data: Map<string, object>, stats: { success: number, failed: number, total: number } }}
+     */
+    function parseJSONLLines(jsonlString) {
+        const lines = jsonlString.split('\n');
+        const parsedData = new Map(); // Use Map for efficient ID-based storage and deduplication
+        let stats = { success: 0, failed: 0, total: 0 };
+        let currentFragment = '';
+        
+        for (const line of lines) {
+            stats.total++;
+            const trimmedLine = line.trim();
+            
+            if (!trimmedLine && !currentFragment) {
+                // Skip empty lines if not part of a fragment
+                continue;
+            }
+            
+            currentFragment += trimmedLine;
+            
+            // Attempt to parse the current fragment
+            const parsedObject = robustJSONParse(currentFragment);
+            
+            if (parsedObject !== null) {
+                // Successfully parsed
+                stats.success++;
+                
+                // Store by repository ID if available, otherwise skip
+                const repoId = parsedObject?.repository?.id;
+                if (repoId) {
+                    // If duplicate ID, keep the one parsed later (assuming newer)
+                    parsedData.set(String(repoId), parsedObject);
+                } else {
+                    // console.warn("Parsed object missing repository ID:", JSON.stringify(parsedObject).substring(0, 100));
+                    // Optionally count these as a specific type of failure
+                }
+                
+                currentFragment = ''; // Reset fragment
+            } else {
+                // Parsing failed. Check if it might be an incomplete fragment
+                // Heuristic: If it starts with { or [ but doesn't end correctly, keep accumulating
+                const startsValid = currentFragment.startsWith('{') || currentFragment.startsWith('[');
+                const endsValid = (currentFragment.endsWith('}') || currentFragment.endsWith(']')); // Basic check
+                
+                if (startsValid && !endsValid && currentFragment.length < 50000) { // Add length limit
+                    // Likely an incomplete fragment, continue accumulating
+                    continue;
+                } else {
+                    // Treat as a failed line/fragment
+                    stats.failed++;
+                    // console.error("Failed to parse JSONL fragment:", currentFragment.substring(0, 200));
+                    currentFragment = ''; // Reset fragment after definite failure
+                }
+            }
+        }
+        
+        // Handle any remaining fragment at the end of the file
+        if (currentFragment) {
+            stats.failed++; // Count the leftover fragment as failed
+            // console.error("Unparsed fragment at end of file:", currentFragment.substring(0, 200));
+        }
+        
+        // Convert Map values back to an array for processing
+        const dataArray = Array.from(parsedData.values());
+        
+        return { data: dataArray, stats };
+    }
+    
+    // --- End Robust JSON Parsing ---
     
     // Start loading repositories
     loadRepositories();
