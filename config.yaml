@@ -1,7 +1,7 @@
 # GitHub Scraping Configuration
 github:
   tokens:
-    - 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
+    - github_pat_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
   rotation_strategy: round_robin  # or random
   request_delay_ms: 1000  # delay between requests
   max_retries: 3
