@@ -268,27 +268,9 @@ repolizer/
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🔗 Links
-
-- **Documentation**: [docs/](docs/)
-- **Troubleshooting**: [docs/troubleshooting.md](docs/troubleshooting.md)
-- **API Reference**: [docs/api.md](docs/api.md)
-- **Contributing**: [docs/contributing.md](docs/contributing.md)
-
-## 📈 Roadmap
-
-- [ ] **Advanced Security Scanning**: SAST/DAST integration
-- [ ] **Machine Learning Insights**: Predictive analysis and recommendations
-- [ ] **Team Collaboration**: Multi-user support and role management
-- [ ] **CI/CD Integration**: GitHub Actions, GitLab CI plugins
-- [ ] **Extended Language Support**: More programming language analyzers
-- [ ] **API Access**: REST API for programmatic access
-- [ ] **Enterprise Features**: SSO, audit logs, compliance reporting
-
 ## 💬 Support
 
 - **Issues**: Report bugs and feature requests on GitHub Issues
-- **Discussions**: Join community discussions on GitHub Discussions
 - **Documentation**: Check the [docs/](docs/) directory for detailed guides
 
 ---
