@@ -4,6 +4,13 @@
 
 **Repolizer** is a comprehensive GitHub repository health analysis tool with web UI that evaluates repositories across multiple dimensions to provide actionable insights for maintaining and improving code quality, security, and best practices.
 
+## Screenshots
+
+![screenshot1](https://github.com/fabriziosalmi/repolizer/blob/main/screenshot_1.png?raw=true)
+![screenshot2](https://github.com/fabriziosalmi/repolizer/blob/main/screenshot_2.png?raw=true)
+![screenshot3](https://github.com/fabriziosalmi/repolizer/blob/main/screenshot_3.png?raw=true)
+![screenshot4](https://github.com/fabriziosalmi/repolizer/blob/main/screenshot_4.png?raw=true)
+
 ## 🌟 Features
 
 ### Core Functionality
